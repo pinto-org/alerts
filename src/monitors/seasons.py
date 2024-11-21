@@ -23,6 +23,7 @@ class SeasonsMonitor(Monitor):
         # Read-only access to self.channel_to_wallets, which may be modified by other threads.
         self.channel_to_wallets = channel_to_wallets
         self._eth_event_client = EthEventsClient(EventClientType.SEASON)
+        self._eth_all_wells = EthEventsClient(EventClientType.WELL, WHITELISTED_WELLS)
         self.beanstalk_graph_client = BeanstalkGraphClient()
         self.bean_client = BeanClient()
         self.beanstalk_client = BeanstalkClient()
@@ -42,6 +43,11 @@ class SeasonsMonitor(Monitor):
                 if len(sunrise_logs) > 0:
                     current_season_stats.sunrise_hash = sunrise_logs[0].txn_hash.hex()
                     current_season_stats.plenty_logs = get_logs_by_names(["SeasonOfPlentyWell"], sunrise_logs[0].logs)
+                    if len(current_season_stats.plenty_logs) > 0:
+                        # Get swap logs if there was flood plenty
+                        sunrise_swap_logs = self._eth_all_wells.get_log_range(current_season_stats.sunrise_block)
+                        if len(sunrise_swap_logs) > 0:
+                            current_season_stats.flood_swap_logs = get_logs_by_names(["Swap"], sunrise_swap_logs[0].logs)
 
                 # Report season summary to users.
                 self.message_function(
@@ -138,6 +144,7 @@ class SeasonsMonitor(Monitor):
         # Full string message.
         if not short_str:
             # Flood stats
+            flood_beans = 0
             if hasattr(current_season_stats, 'plenty_logs') and len(current_season_stats.plenty_logs) > 0:
                 ret_string += f"\n\n**It is Flooding!**"
                 for i in range(len(current_season_stats.plenty_logs)):
@@ -149,11 +156,15 @@ class SeasonsMonitor(Monitor):
                     value = plenty_amount * self.beanstalk_client.get_token_usd_price(token)/ 10 ** erc20_info.decimals
                     ret_string += f"\n{amount} {erc20_info.symbol} ({round_num(value, precision=0, incl_dollar=True)})"
 
+                    flood_beans += current_season_stats.flood_swap_logs[i].args.get('amountIn') / 10 ** 6
+
             # ret_string += f"\n🪙 TWA ETH price is ${round_num(eth_price, 2)}"
             # ret_string += f"\n🪙 TWA wstETH price is ${round_num(wsteth_price, 2)} (1 wstETH = {round_num(wsteth_eth_price, 4)} ETH)"
             # Bean Supply stats.
             ret_string += f"\n\n**Supply**"
             ret_string += f"\n🌱 {round_num(reward_beans, 0, avoid_zero=True)} Pinto minted"
+            if flood_beans > 0:
+                ret_string += f"\n☔ {round_num(flood_beans, 0)} Pinto minted during Flood"
             ret_string += f"\n☀️ {round_num(incentive_beans, 0)} Pinto gm reward"
             ret_string += f"\n🚜 {round_num(sown_beans, 0, avoid_zero=True)} Pinto Sown"
 
