@@ -1,0 +1,4 @@
+pyTelegramBotAPI==4.0
+discord.py==1.7
+tweepy==4.13.0
+opensea-api==0.1.7
