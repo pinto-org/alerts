@@ -112,7 +112,7 @@ def embellish_token_emojis(text):
     # For each word in the mapping, replace in a case-insensitive way
     for word in DISCORD_TOKEN_EMOJIS:
         # Use re.IGNORECASE to match the word regardless of case
-        pattern = rf'(\b|\s)([<>])?(\d[\d,\.]*\s)?({re.escape(word)})\b'
+        pattern = rf'(\b|\s)([<])?(\d[\d,\.]*\s)?({re.escape(word)})\b'
         text = re.sub(pattern, replacer, text, flags=re.IGNORECASE)
 
     return text

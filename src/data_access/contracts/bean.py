@@ -82,3 +82,7 @@ class BeanClient(ChainClient):
     def well_bean_price(self, well_addr):
         """Current float Bean price in the given well."""
         return bean_to_float(self.get_pool_info(well_addr)["price"])
+
+    def block_price(self, block_number='latest'):
+        raw_price_info = call_contract_function_with_retry(self.price_contract.functions.price(), block_number=block_number)
+        return bean_to_float(BeanClient.map_price_info(raw_price_info)["price"])
