@@ -143,10 +143,13 @@ class SeasonsMonitor(Monitor):
 
         # Full string message.
         if not short_str:
+            season_block = self.beanstalk_client.get_season_block()
             # Flood stats
             flood_beans = 0
             if hasattr(current_season_stats, 'plenty_logs') and len(current_season_stats.plenty_logs) > 0:
+                pre_flood_price = self.bean_client.block_price(season_block - 1)
                 ret_string += f"\n\n**It is Flooding!**"
+                ret_string += f"\nPinto price was {round_num(pre_flood_price, precision=4, incl_dollar=True)}"
                 for i in range(len(current_season_stats.plenty_logs)):
                     log = current_season_stats.plenty_logs[i]
                     token = log.args.get('token')
@@ -154,7 +157,7 @@ class SeasonsMonitor(Monitor):
                     erc20_info = get_erc20_info(token)
                     amount = round_token(plenty_amount, erc20_info.decimals, token)
                     value = plenty_amount * self.beanstalk_client.get_token_usd_price(token)/ 10 ** erc20_info.decimals
-                    ret_string += f"\n{amount} {erc20_info.symbol} ({round_num(value, precision=0, incl_dollar=True)})"
+                    ret_string += f"\n> {amount} {erc20_info.symbol} ({round_num(value, precision=0, incl_dollar=True)})"
 
                     flood_beans += current_season_stats.flood_swap_logs[i].args.get('amountIn') / 10 ** 6
 
@@ -183,7 +186,6 @@ class SeasonsMonitor(Monitor):
             ret_string += f"\n🏦 {round_num(current_silo_bdv, 0)} PDV in Silo"
 
             # Gets current and previous season seeds for each asset
-            season_block = self.beanstalk_client.get_season_block()
             parallelized = []
             for asset_changes in silo_assets_changes:
                 parallelized.append(lambda token=asset_changes.token: self.beanstalk_client.get_seeds(token))
