@@ -5,7 +5,7 @@
 
 [![Discord][discord-badge]][discord-url]
 
-**Alerts upon events emitted by [Pinto](https://github.com/pintomoney/protocol).**
+**Alerts upon events emitted by [Pinto](https://github.com/pinto-org/protocol).**
 
 ## Bots
 
