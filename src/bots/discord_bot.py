@@ -69,7 +69,7 @@ class DiscordClient(discord.ext.commands.Bot):
             self._chat_id_market = BS_DISCORD_CHANNEL_ID_TEST_BOT
             self._chat_id_barn_raise = BS_DISCORD_CHANNEL_ID_TEST_BOT
             self._chat_id_contract_migrated = BS_DISCORD_CHANNEL_ID_TEST_BOT
-            self._chat_id_everything = None
+            self._chat_id_everything = BS_DISCORD_CHANNEL_ID_EVERYTHING_TEST
             self._chat_id_telegram_fwd = BS_TELEGRAM_FWD_CHAT_ID_TEST
             self.channels_to_fwd = [BS_DISCORD_CHANNEL_ID_FWD_TEST]
             logging.info("Configured as a staging instance.")

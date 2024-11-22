@@ -65,7 +65,8 @@ class BeanstalkMonitor(Monitor):
 
         # Process conversion logs as a batch.
         if event_in_logs("Convert", event_logs):
-            self.message_function(self.silo_conversion_str(event_logs))
+            msg, is_lambda = self.silo_conversion_str(event_logs)
+            self.message_function(msg, not is_lambda)
             return
         # Else handle txn logs individually using default strings.
 
@@ -203,12 +204,9 @@ class BeanstalkMonitor(Monitor):
         return event_str
 
     def silo_conversion_str(self, event_logs):
-        """Create a human-readable string representing a silo position conversion.
-
-        Assumes that there are no non-Bean swaps contained in the event logs.
-        Assumes event_logs is not empty.
-        Assumes embedded AddDeposit logs have been removed from logs.
-        Uses events from Beanstalk contract.
+        """
+        Returns string, boolean
+        boolean indicates whether this is a lambda convert
         """
         bean_price = self.bean_client.avg_bean_price()
         # Find the relevant logs, should contain one RemoveDeposit and one AddDeposit.
@@ -252,7 +250,8 @@ class BeanstalkMonitor(Monitor):
         event_str += f"\n<https://basescan.org/tx/{event_logs[0].transactionHash.hex()}>"
         # Empty line that does not get stripped.
         event_str += "\n_ _"
-        return event_str
+        # Indicate whether this is lambda convert
+        return event_str, add_token_addr == remove_token_addr
 
     def rinse_str(self, event_logs):
         bean_amount = 0.0

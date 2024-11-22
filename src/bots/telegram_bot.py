@@ -51,9 +51,9 @@ class TelegramBot(object):
         # self.barn_raise_monitor = BarnRaiseMonitor(self.send_msg, prod=prod, dry_run=dry_run)
         # self.barn_raise_monitor.start()
 
-    def send_msg(self, msg):
-        # Ignore empty messages.
-        if not msg:
+    def send_msg(self, msg, primary=True):
+        # Ignore empty/nonprimary messages.
+        if not msg or not primary:
             return
         # Remove URL pointy brackets used by md formatting to suppress link previews.
         msg_split = msg.rsplit("<http", 1)
