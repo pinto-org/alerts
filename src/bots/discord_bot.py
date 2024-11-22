@@ -58,6 +58,7 @@ class DiscordClient(discord.ext.commands.Bot):
             self._chat_id_contract_migrated = BS_DISCORD_CHANNEL_ID_CONTRACT_MIGRATED
             self._chat_id_everything = BS_DISCORD_CHANNEL_ID_EVERYTHING
             self._chat_id_telegram_fwd = BS_TELEGRAM_FWD_CHAT_ID_PRODUCTION
+            self.channels_to_fwd = [BS_DISCORD_CHANNEL_ID_ANNOUNCEMENTS]
             logging.info("Configured as a production instance.")
         else:
             self._chat_id_report = BS_DISCORD_CHANNEL_ID_TEST_BOT
@@ -70,6 +71,7 @@ class DiscordClient(discord.ext.commands.Bot):
             self._chat_id_contract_migrated = BS_DISCORD_CHANNEL_ID_TEST_BOT
             self._chat_id_everything = None
             self._chat_id_telegram_fwd = BS_TELEGRAM_FWD_CHAT_ID_TEST
+            self.channels_to_fwd = [BS_DISCORD_CHANNEL_ID_FWD_TEST]
             logging.info("Configured as a staging instance.")
 
         # Load wallet map from source. Map may be modified by this thread only (via discord.py lib).
@@ -83,7 +85,6 @@ class DiscordClient(discord.ext.commands.Bot):
 
         self.msg_queue = []
 
-        self.channels_to_fwd = [BS_DISCORD_CHANNEL_ID_ANNOUNCEMENTS, BS_DISCORD_CHANNEL_ID_WEEKLY_UPDATES]
         self.tele_bot = None
         if telegram_token is not None:
             self.tele_bot = telebot.TeleBot(telegram_token, parse_mode="Markdown")
@@ -255,6 +256,7 @@ class DiscordClient(discord.ext.commands.Bot):
                     logging.warning(f"Clipping message length down to 2000.")
 
                 # Add token emoji
+                tg_msg = msg
                 msg = embellish_token_emojis(msg)
 
                 logging.info(f"Sending message through {channel} channel:\n{msg}\n")
@@ -279,7 +281,6 @@ class DiscordClient(discord.ext.commands.Bot):
                     await self._channel_contract_migrated.send(msg)
                 elif channel is Channel.TELEGRAM_FWD:
                     if self.tele_bot is not None:
-                        tg_msg = util.strip_custom_discord_emojis(msg)
                         self.tele_bot.send_message(chat_id=self._chat_id_telegram_fwd, text=tg_msg)
                     else:
                         logging.warning("Discord tele_bot not configured to forward. Ignoring...")
