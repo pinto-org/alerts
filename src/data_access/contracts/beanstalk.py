@@ -11,15 +11,11 @@ class BeanstalkClient(ChainClient):
     def get_season(self):
         """Get current season."""
         return call_contract_function_with_retry(self.contract.functions.season())
-
-    def get_weather(self):
-        """Get current weather (temperature) object."""
-        return call_contract_function_with_retry(self.contract.functions.weather())
-
-    def get_season_start_soil(self):
-        """Amount of soil added/removed this season."""
-        return soil_to_float(self.get_weather()[0])
     
+    def get_max_temp(self):
+        """Gets the current max temperature"""
+        return call_contract_function_with_retry(self.contract.functions.maxTemperature()) / 10 ** 6
+
     def get_season_block(self):
         """Get the block in which the latest season started"""
         return call_contract_function_with_retry(self.contract.functions.sunriseBlock())

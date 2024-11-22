@@ -150,6 +150,15 @@ class BeanstalkMonitor(Monitor):
                     f"🚜 {round_num(beans_amount, 0, avoid_zero=True)} Pinto Sown for "
                     f"{round_num(pods_amount, 0, avoid_zero=True)} Pods ({round_num(beans_value, 0, avoid_zero=True, incl_dollar=True)})"
                 )
+                effective_temp = int(round(pods_amount / beans_value - 1, 2) * 100)
+                max_temp = int(self.beanstalk_client.get_max_temp())
+                if effective_temp != max_temp:
+                    event_str += (
+                        f"\n_Morning Temperature: {effective_temp}%_"
+                        f"\n_Max Temperature: {max_temp}%_"
+                    )
+                else:
+                    event_str += f"\n_Temperature: {effective_temp}%_"
                 event_str += f"\n{value_to_emojis(beans_value)}"
             elif event_log.event == "Harvest":
                 event_str += f"👩‍🌾 {round_num(beans_amount, 0, avoid_zero=True)} Pods Harvested for Pinto ({round_num(beans_value, 0, avoid_zero=True, incl_dollar=True)})"
