@@ -51,7 +51,7 @@ class TelegramBot(object):
         # self.barn_raise_monitor = BarnRaiseMonitor(self.send_msg, prod=prod, dry_run=dry_run)
         # self.barn_raise_monitor.start()
 
-    def send_msg(self, msg, to_main=True, to_tg=None):
+    def send_msg(self, msg, to_main=True, to_tg=True):
         # Ignore empty/nonprimary messages.
         if not msg or not to_main or not to_tg:
             return
