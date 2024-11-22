@@ -58,7 +58,7 @@ class DiscordClient(discord.ext.commands.Bot):
             self._chat_id_contract_migrated = BS_DISCORD_CHANNEL_ID_CONTRACT_MIGRATED
             self._chat_id_everything = BS_DISCORD_CHANNEL_ID_EVERYTHING
             self._chat_id_telegram_fwd = BS_TELEGRAM_FWD_CHAT_ID_PRODUCTION
-            self.channels_to_fwd = [BS_DISCORD_CHANNEL_ID_ANNOUNCEMENTS, BS_DISCORD_CHANNEL_ID_WEEKLY_UPDATES]
+            self.channels_to_fwd = [BS_DISCORD_CHANNEL_ID_ANNOUNCEMENTS]
             logging.info("Configured as a production instance.")
         else:
             self._chat_id_report = BS_DISCORD_CHANNEL_ID_TEST_BOT
