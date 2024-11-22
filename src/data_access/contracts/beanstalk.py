@@ -94,8 +94,8 @@ if __name__ == "__main__":
     # logging.info(f"season {bs.get_season()}")
     # logging.info(f"bean seeds {bs.get_seeds(BEAN_ADDR)}")
     # logging.info(f"season block {bs.get_season_block()}")
-    client = EthEventsClient(EventClientType.BEANSTALK)
-    events = client.get_log_range(22201548, 22201548)
+    client = EthEventsClient(EventClientType.SEASON)
+    events = client.get_log_range(22722127, 'latest')
     for i in range(len(events)):
         logging.info(f"found txn: {events[i].txn_hash.hex()}")
     # logging.info(f"lp bdv {bs.get_bdv(get_erc20_info(PINTO_CBETH_ADDR), 20566115)}")
