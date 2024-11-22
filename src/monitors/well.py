@@ -91,20 +91,18 @@ class WellsMonitor(Monitor):
 
     def _handle_txn_logs(self, txn_hash, event_logs):
         """Process the well event logs for a single txn."""
-        # Sometimes ignore Silo Convert txns, which will be handled by the Beanstalk monitor.
-        if self.bean_reporting is True and event_sig_in_txn(
-            BEANSTALK_EVENT_MAP["Convert"], txn_hash
-        ):
-            logging.info("Ignoring well txn, reporting as convert instead.")
-            return
+
+        # Convert alerts should appear in both exchange + silo event channels, but don't doublepost in telegram
+        is_convert = event_sig_in_txn(BEANSTALK_EVENT_MAP["Convert"], txn_hash)
+        to_tg = self.bean_reporting is False or not is_convert 
 
         for event_log in event_logs:
             if event_log.get("address") in self.pool_addresses:
-                event_str = well_event_str(event_log, self.bean_reporting, self.basin_graph_client, self.bean_client, web3=self._web3)
+                event_str = well_event_str(event_log, self.bean_reporting, self.basin_graph_client, self.bean_client, web3=self._web3, is_convert=is_convert)
                 if event_str:
-                    self.message_function(event_str)
+                    self.message_function(event_str, to_tg=to_tg)
     
-def well_event_str(event_log, bean_reporting, basin_graph_client, bean_client, web3=None):
+def well_event_str(event_log, bean_reporting, basin_graph_client, bean_client, web3=None, is_convert=False):
     bdv = value = None
     event_str = ""
     address = event_log.get("address")
@@ -129,6 +127,9 @@ def well_event_str(event_log, bean_reporting, basin_graph_client, bean_client, w
     is_swapish = False
     is_lpish = False
 
+    remove_lp_icon = "🔄" if is_convert else "📤"
+    add_lp_icon = "🔄" if is_convert else "📥"
+
     if event_log.event == "AddLiquidity":
         if tokenAmountsIn[0] == 0 and tokenAmountsIn[1] == 0:
             # When we initialize a new Well, 2 transactions have to occur for the multi flow pump
@@ -136,7 +137,7 @@ def well_event_str(event_log, bean_reporting, basin_graph_client, bean_client, w
             return ""
 
         is_lpish = True
-        event_str += f"📥 LP added - "
+        event_str += f"{add_lp_icon} LP added - "
         for i in range(len(tokens)):
             erc20_info = get_erc20_info(tokens[i])
             event_str += f"{round_token(tokenAmountsIn[i], erc20_info.decimals, erc20_info.addr)} {erc20_info.symbol}"
@@ -148,7 +149,7 @@ def well_event_str(event_log, bean_reporting, basin_graph_client, bean_client, w
         )
     elif event_log.event == "Sync":
         is_lpish = True
-        event_str += f"📥 LP added - "
+        event_str += f"{add_lp_icon} LP added - "
         # subgraph may be down, providing no deposit data.
         deposit = basin_graph_client.try_get_well_deposit_info(
             event_log.transactionHash, event_log.logIndex
@@ -167,7 +168,7 @@ def well_event_str(event_log, bean_reporting, basin_graph_client, bean_client, w
             ) * get_constant_product_well_lp_bdv(address, web3=web3)
     elif event_log.event == "RemoveLiquidity" or event_log.event == "RemoveLiquidityOneToken":
         is_lpish = True
-        event_str += f"📤 LP removed - "
+        event_str += f"{remove_lp_icon} LP removed - "
         for i in range(len(tokens)):
             erc20_info = get_erc20_info(tokens[i])
             if event_log.event == "RemoveLiquidityOneToken":
