@@ -51,10 +51,6 @@ class OtherWellsMonitor(Monitor):
 
             def erc20_linkstr(info):
                 result = f"[{info.symbol}](<https://basescan.org/address/{info.addr.lower()}>)"
-                # Embellish with discord emojis
-                if self._discord:
-                    if info.symbol == "BEAN":
-                        result = '<:bean:1256384062340464750> ' + result
                 return result
 
             event_str = (
