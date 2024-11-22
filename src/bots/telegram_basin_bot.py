@@ -39,9 +39,9 @@ class TelegramBasinBot(object):
         )
         self.wells_monitor_all.start()
 
-    def send_msg(self, msg):
-        # Ignore empty messages.
-        if not msg:
+    def send_msg(self, msg, to_main=True, to_tg=True):
+        # Ignore empty/nonprimary messages.
+        if not msg or not to_main or not to_tg:
             return
         # Remove URL pointy brackets used by md formatting to suppress link previews.
         msg = msg.replace("<http", "http").replace(">", "")

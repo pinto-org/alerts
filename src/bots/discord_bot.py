@@ -154,33 +154,33 @@ class DiscordClient(discord.ext.commands.Bot):
         """Send a message through the Discord bot in the error reporting channel."""
         self.msg_queue.append((Channel.REPORT, text))
 
-    def send_msg_peg(self, text, primary=True):
+    def send_msg_peg(self, text, to_main=True, to_tg=None):
         """Send a message through the Discord bot in the peg channel."""
-        self.msg_queue.append((Channel.PEG if primary else Channel.EVERYTHING, text))
+        self.msg_queue.append((Channel.PEG if to_main else Channel.EVERYTHING, text))
 
-    def send_msg_seasons(self, text, primary=True):
+    def send_msg_seasons(self, text, to_main=True, to_tg=None):
         """Send a message through the Discord bot in the seasons channel."""
-        self.msg_queue.append((Channel.SEASONS if primary else Channel.EVERYTHING, text))
+        self.msg_queue.append((Channel.SEASONS if to_main else Channel.EVERYTHING, text))
 
-    def send_msg_pool(self, text, primary=True):
+    def send_msg_pool(self, text, to_main=True, to_tg=None):
         """Send a message through the Discord bot in the pool channel."""
-        self.msg_queue.append((Channel.POOL if primary else Channel.EVERYTHING, text))
+        self.msg_queue.append((Channel.POOL if to_main else Channel.EVERYTHING, text))
 
-    def send_msg_beanstalk(self, text, primary=True):
+    def send_msg_beanstalk(self, text, to_main=True, to_tg=None):
         """Send a message through the Discord bot in the beanstalk channel."""
-        self.msg_queue.append((Channel.BEANSTALK if primary else Channel.EVERYTHING, text))
+        self.msg_queue.append((Channel.BEANSTALK if to_main else Channel.EVERYTHING, text))
 
-    def send_msg_market(self, text, primary=True):
+    def send_msg_market(self, text, to_main=True, to_tg=None):
         """Send a message through the Discord bot in the market channel."""
-        self.msg_queue.append((Channel.MARKET if primary else Channel.EVERYTHING, text))
+        self.msg_queue.append((Channel.MARKET if to_main else Channel.EVERYTHING, text))
 
-    def send_msg_barn_raise(self, text, primary=True):
+    def send_msg_barn_raise(self, text, to_main=True, to_tg=None):
         """Send a message through the Discord bot in the Barn Raise channel."""
-        self.msg_queue.append((Channel.BARN_RAISE if primary else Channel.EVERYTHING, text))
+        self.msg_queue.append((Channel.BARN_RAISE if to_main else Channel.EVERYTHING, text))
 
-    def send_msg_contract_migrated(self, text, primary=True):
+    def send_msg_contract_migrated(self, text, to_main=True, to_tg=None):
         """Send a message through the Discord bot in the Contract Migration channel."""
-        self.msg_queue.append((Channel.CONTRACT_MIGRATED if primary else Channel.EVERYTHING, text))
+        self.msg_queue.append((Channel.CONTRACT_MIGRATED if to_main else Channel.EVERYTHING, text))
 
     def send_msg_telegram_fwd(self, text):
         """Forward a message through the Telegram bot in the Beanstalk chat."""
