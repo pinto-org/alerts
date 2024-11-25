@@ -49,8 +49,9 @@ class SeasonsMonitor(Monitor):
                         # Get swap logs if there was flood plenty
                         sunrise_swap_logs = self._eth_all_wells.get_log_range(block, block)
                         if len(sunrise_swap_logs) > 0:
-                            current_season_stats.flood_swap_logs = get_logs_by_names(["Swap"], sunrise_swap_logs[0].logs)
-                            # TODO: filter by having same sunrise hash
+                            # Ensure these logs match the sunrise txn hash
+                            sunrise_tx_logs = next(txn.logs for txn in sunrise_swap_logs if txn.txn_hash.hex() == current_season_stats.sunrise_hash)
+                            current_season_stats.flood_swap_logs = get_logs_by_names(["Swap"], sunrise_tx_logs)
 
                 # Report season summary to users.
                 self.message_function(
