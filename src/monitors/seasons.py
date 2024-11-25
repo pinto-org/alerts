@@ -38,16 +38,19 @@ class SeasonsMonitor(Monitor):
             current_season_stats, last_season_stats = self._block_and_get_seasons_stats()
             # A new season has begun.
             if current_season_stats:
+                block = current_season_stats.sunrise_block
                 # Get the txn hash + any flood events for this sunrise call
-                sunrise_logs = self._eth_event_client.get_log_range(current_season_stats.sunrise_block)
+                sunrise_logs = self._eth_event_client.get_log_range(block, block)
                 if len(sunrise_logs) > 0:
                     current_season_stats.sunrise_hash = sunrise_logs[0].txn_hash.hex()
-                    current_season_stats.plenty_logs = get_logs_by_names(["SeasonOfPlentyWell"], sunrise_logs[0].logs)
-                    if len(current_season_stats.plenty_logs) > 0:
+                    current_season_stats.well_plenty_logs = get_logs_by_names(["SeasonOfPlentyWell"], sunrise_logs[0].logs)
+                    current_season_stats.field_plenty_logs = get_logs_by_names(["SeasonOfPlentyField"], sunrise_logs[0].logs)
+                    if len(current_season_stats.well_plenty_logs) > 0:
                         # Get swap logs if there was flood plenty
-                        sunrise_swap_logs = self._eth_all_wells.get_log_range(current_season_stats.sunrise_block)
+                        sunrise_swap_logs = self._eth_all_wells.get_log_range(block, block)
                         if len(sunrise_swap_logs) > 0:
                             current_season_stats.flood_swap_logs = get_logs_by_names(["Swap"], sunrise_swap_logs[0].logs)
+                            # TODO: filter by having same sunrise hash
 
                 # Report season summary to users.
                 self.message_function(
@@ -146,28 +149,38 @@ class SeasonsMonitor(Monitor):
             season_block = self.beanstalk_client.get_season_block()
             # Flood stats
             flood_beans = 0
-            if hasattr(current_season_stats, 'plenty_logs') and len(current_season_stats.plenty_logs) > 0:
+            if hasattr(current_season_stats, 'well_plenty_logs') and len(current_season_stats.well_plenty_logs) > 0:
                 pre_flood_price = self.bean_client.block_price(season_block - 1)
                 ret_string += f"\n\n**It is Flooding!**"
                 ret_string += f"\nPinto price was {round_num(pre_flood_price, precision=4, incl_dollar=True)}"
-                for i in range(len(current_season_stats.plenty_logs)):
-                    log = current_season_stats.plenty_logs[i]
+                field_beans = 0
+                well_beans = 0
+                if len(current_season_stats.field_plenty_logs) > 0:
+                    log = current_season_stats.field_plenty_logs[0]
+                    field_beans = log.args.get('toField') / 10 ** BEAN_DECIMALS
+                    ret_string += f"\n{round_num(field_beans, 0)} Pinto minted to the Field"
+
+                flood_breakdown = ""
+                for i in range(len(current_season_stats.well_plenty_logs)):
+                    log = current_season_stats.well_plenty_logs[i]
                     token = log.args.get('token')
                     plenty_amount = log.args.get('amount')
                     erc20_info = get_erc20_info(token)
                     amount = round_token(plenty_amount, erc20_info.decimals, token)
                     value = plenty_amount * self.beanstalk_client.get_token_usd_price(token)/ 10 ** erc20_info.decimals
-                    ret_string += f"\n> {amount} {erc20_info.symbol} ({round_num(value, precision=0, incl_dollar=True)})"
+                    flood_breakdown += f"\n> {amount} {erc20_info.symbol} ({round_num(value, precision=0, incl_dollar=True)})"
 
-                    flood_beans += current_season_stats.flood_swap_logs[i].args.get('amountIn') / 10 ** 6
+                    well_beans += current_season_stats.flood_swap_logs[i].args.get('amountIn') / 10 ** BEAN_DECIMALS
+
+                ret_string += f"\n{round_num(well_beans, 0)} Pinto minted and sold for:"
+                ret_string += flood_breakdown
+                flood_beans += field_beans + well_beans
 
             # ret_string += f"\n🪙 TWA ETH price is ${round_num(eth_price, 2)}"
             # ret_string += f"\n🪙 TWA wstETH price is ${round_num(wsteth_price, 2)} (1 wstETH = {round_num(wsteth_eth_price, 4)} ETH)"
             # Bean Supply stats.
             ret_string += f"\n\n**Supply**"
-            ret_string += f"\n🌱 {round_num(reward_beans, 0, avoid_zero=True)} Pinto minted"
-            if flood_beans > 0:
-                ret_string += f"\n☔ {round_num(flood_beans, 0)} Pinto minted during Flood"
+            ret_string += f"\n🌱 {round_num(reward_beans + flood_beans, 0, avoid_zero=True)} Pinto minted"
             ret_string += f"\n☀️ {round_num(incentive_beans, 0)} Pinto gm reward"
             ret_string += f"\n🚜 {round_num(sown_beans, 0, avoid_zero=True)} Pinto Sown"
 
