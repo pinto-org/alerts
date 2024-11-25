@@ -13,10 +13,12 @@ from collections import defaultdict
 class BeanstalkMonitor(Monitor):
     """Monitor the Beanstalk contract for events."""
 
-    def __init__(self, message_function, prod=False, dry_run=None):
+    def __init__(self, msg_silo, msg_field, prod=False, dry_run=None):
         super().__init__(
-            "Beanstalk", message_function, BEANSTALK_CHECK_RATE, prod=prod, dry_run=dry_run
+            "Beanstalk", None, BEANSTALK_CHECK_RATE, prod=prod, dry_run=dry_run
         )
+        self.msg_silo = msg_silo
+        self.msg_field = msg_field
         self._eth_event_client = EthEventsClient(EventClientType.BEANSTALK)
         self.bean_client = BeanClient()
         self.beanstalk_client = BeanstalkClient()
@@ -60,13 +62,13 @@ class BeanstalkMonitor(Monitor):
         if event_in_logs("ClaimFertilizer", event_logs):
             event_str = self.rinse_str(event_logs)
             if event_str:
-                self.message_function(event_str)
+                self.msg_silo(event_str)
             remove_events_from_logs_by_name("ClaimFertilizer", event_logs)
 
         # Process conversion logs as a batch.
         if event_in_logs("Convert", event_logs):
             msg, is_lambda = self.silo_conversion_str(event_logs)
-            self.message_function(msg, to_main=not is_lambda)
+            self.msg_silo(msg, to_main=not is_lambda)
             return
         # Else handle txn logs individually using default strings.
 
@@ -84,12 +86,12 @@ class BeanstalkMonitor(Monitor):
         for token in net_deposits:
             event_str = self.silo_event_str(token, net_deposits[token], txn_hash)
             if event_str:
-                self.message_function(event_str)
+                self.msg_silo(event_str)
 
         for event_log in event_logs:
-            event_str = self.single_event_str(event_log)
+            event_str = self.field_event_str(event_log)
             if event_str:
-                self.message_function(event_str)
+                self.msg_field(event_str)
     
     def silo_event_str(self, token_addr, net_amount, txn_hash):
         """Logs a Silo Deposit/Withdraw"""
@@ -126,7 +128,7 @@ class BeanstalkMonitor(Monitor):
         return event_str
 
 
-    def single_event_str(self, event_log):
+    def field_event_str(self, event_log):
         """Create a string representing a single event log.
 
         Events that are from a convert call should not be passed into this function as they
@@ -151,39 +153,15 @@ class BeanstalkMonitor(Monitor):
                     f"🚜 {round_num(beans_amount, 0, avoid_zero=True)} Pinto Sown for "
                     f"{round_num(pods_amount, 0, avoid_zero=True)} Pods ({round_num(beans_value, 0, avoid_zero=True, incl_dollar=True)})"
                 )
-                effective_temp = int(round(pods_amount / beans_amount - 1, 2) * 100)
+                effective_temp = round((pods_amount / beans_amount - 1) * 100, 1)
                 max_temp = int(self.beanstalk_client.get_max_temp())
+                if int(effective_temp) == max_temp:
+                    effective_temp = int(effective_temp)
                 event_str += f"\n_Sow Temperature: {effective_temp}% (Max: {max_temp}%)_"
                 event_str += f"\n{value_to_emojis(beans_value)}"
             elif event_log.event == "Harvest":
                 event_str += f"👩‍🌾 {round_num(beans_amount, 0, avoid_zero=True)} Pods Harvested for Pinto ({round_num(beans_value, 0, avoid_zero=True, incl_dollar=True)})"
                 event_str += f"\n{value_to_emojis(beans_value)}"
-
-        # Chop event.
-        elif event_log.event in ["Chop"]:
-            token = event_log.args.get("token")
-            underlying = UNRIPE_UNDERLYING_MAP[token]
-            _, _, chopped_symbol, chopped_decimals = get_erc20_info(token, self._web3).parse()
-            chopped_amount = token_to_float(event_log.args.get("amount"), chopped_decimals)
-            _, _, underlying_symbol, underlying_decimals = get_erc20_info(
-                underlying, self._web3
-            ).parse()
-            underlying_amount = token_to_float(
-                event_log.args.get("underlying"), underlying_decimals
-            )
-            if underlying == BEAN_ADDR:
-                underlying_token_value = bean_price
-            # If underlying assets are Bean-based LP represented in price aggregator.
-            # If not in aggregator, will return none and not display value.
-            else:
-                underlying_token_value = self.bean_client.get_lp_token_value(underlying, underlying_decimals)
-            event_str += f"⚰️ {round_num(chopped_amount, 0)} {chopped_symbol} Chopped for {round_num(underlying_amount, 0, avoid_zero=True)} {underlying_symbol}"
-            if underlying_token_value is not None:
-                underlying_value = underlying_amount * underlying_token_value
-                event_str += (
-                    f" ({round_num(underlying_value, 0, avoid_zero=True, incl_dollar=True)})"
-                )
-                event_str += f"\n{value_to_emojis(underlying_value)}"
 
         # Unknown event type.
         else:

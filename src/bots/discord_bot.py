@@ -31,13 +31,14 @@ class Channel(Enum):
     PEG = 0
     SEASONS = 1
     POOL = 2
-    BEANSTALK = 3
-    MARKET = 4
-    REPORT = 5
-    BARN_RAISE = 6
-    CONTRACT_MIGRATED = 7
-    EVERYTHING = 8
-    TELEGRAM_FWD = 9
+    SILO = 3
+    FIELD = 4
+    MARKET = 5
+    REPORT = 6
+    BARN_RAISE = 7
+    CONTRACT_MIGRATED = 8
+    EVERYTHING = 9
+    TELEGRAM_FWD = 10
 
 class DiscordClient(discord.ext.commands.Bot):
     def __init__(self, prod=False, telegram_token=None, dry_run=None):
@@ -52,7 +53,8 @@ class DiscordClient(discord.ext.commands.Bot):
             self._chat_id_peg = BS_DISCORD_CHANNEL_ID_PEG_CROSSES
             self._chat_id_seasons = BS_DISCORD_CHANNEL_ID_SEASONS
             self._chat_id_pool = BS_DISCORD_CHANNEL_ID_POOL
-            self._chat_id_beanstalk = BS_DISCORD_CHANNEL_ID_BEANSTALK
+            self._chat_id_silo = BS_DISCORD_CHANNEL_ID_SILO
+            self._chat_id_field = BS_DISCORD_CHANNEL_ID_FIELD
             self._chat_id_market = BS_DISCORD_CHANNEL_ID_MARKET
             self._chat_id_barn_raise = BS_DISCORD_CHANNEL_ID_BARN_RAISE
             self._chat_id_contract_migrated = BS_DISCORD_CHANNEL_ID_CONTRACT_MIGRATED
@@ -65,7 +67,8 @@ class DiscordClient(discord.ext.commands.Bot):
             self._chat_id_peg = BS_DISCORD_CHANNEL_ID_TEST_BOT
             self._chat_id_seasons = BS_DISCORD_CHANNEL_ID_TEST_BOT
             self._chat_id_pool = BS_DISCORD_CHANNEL_ID_TEST_BOT
-            self._chat_id_beanstalk = BS_DISCORD_CHANNEL_ID_TEST_BOT
+            self._chat_id_silo = BS_DISCORD_CHANNEL_ID_TEST_BOT
+            self._chat_id_field = BS_DISCORD_CHANNEL_ID_TEST_BOT
             self._chat_id_market = BS_DISCORD_CHANNEL_ID_TEST_BOT
             self._chat_id_barn_raise = BS_DISCORD_CHANNEL_ID_TEST_BOT
             self._chat_id_contract_migrated = BS_DISCORD_CHANNEL_ID_TEST_BOT
@@ -112,7 +115,7 @@ class DiscordClient(discord.ext.commands.Bot):
         self.well_monitor_whitelisted.start()
 
         self.beanstalk_monitor = BeanstalkMonitor(
-            self.send_msg_beanstalk, prod=prod, dry_run=dry_run
+            self.send_msg_silo, self.send_msg_field, prod=prod, dry_run=dry_run
         )
         self.beanstalk_monitor.start()
 
@@ -155,31 +158,27 @@ class DiscordClient(discord.ext.commands.Bot):
         self.msg_queue.append((Channel.REPORT, text))
 
     def send_msg_peg(self, text, to_main=True, to_tg=None):
-        """Send a message through the Discord bot in the peg channel."""
         self.msg_queue.append((Channel.PEG if to_main else Channel.EVERYTHING, text))
 
     def send_msg_seasons(self, text, to_main=True, to_tg=None):
-        """Send a message through the Discord bot in the seasons channel."""
         self.msg_queue.append((Channel.SEASONS if to_main else Channel.EVERYTHING, text))
 
     def send_msg_pool(self, text, to_main=True, to_tg=None):
-        """Send a message through the Discord bot in the pool channel."""
         self.msg_queue.append((Channel.POOL if to_main else Channel.EVERYTHING, text))
 
-    def send_msg_beanstalk(self, text, to_main=True, to_tg=None):
-        """Send a message through the Discord bot in the beanstalk channel."""
-        self.msg_queue.append((Channel.BEANSTALK if to_main else Channel.EVERYTHING, text))
+    def send_msg_silo(self, text, to_main=True, to_tg=None):
+        self.msg_queue.append((Channel.SILO if to_main else Channel.EVERYTHING, text))
+
+    def send_msg_field(self, text, to_main=True, to_tg=None):
+        self.msg_queue.append((Channel.FIELD if to_main else Channel.EVERYTHING, text))
 
     def send_msg_market(self, text, to_main=True, to_tg=None):
-        """Send a message through the Discord bot in the market channel."""
         self.msg_queue.append((Channel.MARKET if to_main else Channel.EVERYTHING, text))
 
     def send_msg_barn_raise(self, text, to_main=True, to_tg=None):
-        """Send a message through the Discord bot in the Barn Raise channel."""
         self.msg_queue.append((Channel.BARN_RAISE if to_main else Channel.EVERYTHING, text))
 
     def send_msg_contract_migrated(self, text, to_main=True, to_tg=None):
-        """Send a message through the Discord bot in the Contract Migration channel."""
         self.msg_queue.append((Channel.CONTRACT_MIGRATED if to_main else Channel.EVERYTHING, text))
 
     def send_msg_telegram_fwd(self, text):
@@ -191,7 +190,8 @@ class DiscordClient(discord.ext.commands.Bot):
         self._channel_peg = self.get_channel(self._chat_id_peg)
         self._channel_seasons = self.get_channel(self._chat_id_seasons)
         self._channel_pool = self.get_channel(self._chat_id_pool)
-        self._channel_beanstalk = self.get_channel(self._chat_id_beanstalk)
+        self._channel_silo = self.get_channel(self._chat_id_silo)
+        self._channel_field = self.get_channel(self._chat_id_field)
         self._channel_market = self.get_channel(self._chat_id_market)
         self._channel_barn_raise = self.get_channel(self._chat_id_barn_raise)
         self._channel_contract_migrated = self.get_channel(self._chat_id_contract_migrated)
@@ -204,7 +204,7 @@ class DiscordClient(discord.ext.commands.Bot):
 
         logging.info(
             f"Discord channels are {self._channel_report}, {self._channel_peg}, {self._channel_seasons}, "
-            f"{self._channel_pool}, {self._channel_beanstalk}, {self._channel_market}, "
+            f"{self._channel_pool}, {self._channel_silo}, {self._channel_field}, {self._channel_market}, "
             f"{self._channel_barn_raise}, {self._chat_id_contract_migrated}"
         )
 
@@ -271,8 +271,10 @@ class DiscordClient(discord.ext.commands.Bot):
                     await self._channel_seasons.send(msg)
                 elif channel is Channel.POOL:
                     await self._channel_pool.send(msg)
-                elif channel is Channel.BEANSTALK:
-                    await self._channel_beanstalk.send(msg)
+                elif channel is Channel.SILO:
+                    await self._channel_silo.send(msg)
+                elif channel is Channel.FIELD:
+                    await self._channel_field.send(msg)
                 elif channel is Channel.MARKET:
                     await self._channel_market.send(msg)
                 elif channel is Channel.BARN_RAISE:

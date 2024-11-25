@@ -42,7 +42,7 @@ class TelegramBot(object):
         )
         self.wells_monitor.start()
 
-        self.beanstalk_monitor = BeanstalkMonitor(self.send_msg, prod=prod, dry_run=dry_run)
+        self.beanstalk_monitor = BeanstalkMonitor(self.send_msg, self.send_msg, prod=prod, dry_run=dry_run)
         self.beanstalk_monitor.start()
 
         self.market_monitor = MarketMonitor(self.send_msg, prod=prod, dry_run=dry_run)

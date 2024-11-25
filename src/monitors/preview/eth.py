@@ -13,16 +13,23 @@ class EthPreviewMonitor(PreviewMonitor):
     """Monitor data that offers a view into Eth mainnet."""
 
     def __init__(self, name_function, status_function):
-        super().__init__("ETH", name_function, status_function)
+        super().__init__("ETH", name_function, status_function, 3)
         self.beanstalk_client = BeanstalkClient()
 
     def _monitor_method(self):
         while self._thread_active:
             self.wait_for_next_cycle()
-            gas_base_fee = get_gas_base_fee(Chain.BASE)
-            eth_price = self.eth_price()
-            self.name_function(f"{holiday_emoji()}{round_num(gas_base_fee, 3)} Gwei")
-            self.status_function(f"ETH: ${round_num(eth_price)}")
+            self.iterate_display_index()
 
-    def eth_price(self):
-        return self.beanstalk_client.get_token_usd_price(WETH)
+            gas_base_fee = get_gas_base_fee(Chain.BASE)
+            self.name_function(f"{holiday_emoji()}{round_num(gas_base_fee, 3)} Gwei")
+
+            if self.display_index == 0:
+                eth_price = self.beanstalk_client.get_token_usd_price(WETH)
+                self.status_function(f"ETH: ${round_num(eth_price)}")
+            elif self.display_index == 1:
+                btc_price = self.beanstalk_client.get_token_usd_price(CBBTC)
+                self.status_function(f"BTC: ${round_num(btc_price)}")
+            elif self.display_index == 2:
+                sol_price = self.beanstalk_client.get_token_usd_price(WSOL)
+                self.status_function(f"SOL: ${round_num(sol_price)}")

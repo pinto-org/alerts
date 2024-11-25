@@ -116,6 +116,11 @@ add_event_to_dict(
     SEASON_EVENT_MAP,
     SEASON_SIGNATURES_LIST,
 )
+add_event_to_dict(
+    "SeasonOfPlentyField(uint256)",
+    SEASON_EVENT_MAP,
+    SEASON_SIGNATURES_LIST,
+)
 
 # Farmer's market events.
 MARKET_EVENT_MAP = {}

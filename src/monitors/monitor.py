@@ -42,7 +42,7 @@ class Monitor:
 
     def stop(self):
         logging.info(f"Stopping {self.name} monitoring thread...")
-        if not self.prod:
+        if not self.prod and self.message_function is not None:
             self.message_function(f"{self.name} monitoring stopped.")
         self._thread_active = False
         self._thread_wrapper.join(3 * self.query_rate)
