@@ -176,6 +176,8 @@ class SeasonsMonitor(Monitor):
                 ret_string += f"\n{round_num(well_beans, 0)} Pinto minted and sold for:"
                 ret_string += flood_breakdown
                 flood_beans += field_beans + well_beans
+            elif self.beanstalk_client.is_raining():
+                ret_string += f"\n\n☔ **It is Raining!** ☔"
 
             # ret_string += f"\n🪙 TWA ETH price is ${round_num(eth_price, 2)}"
             # ret_string += f"\n🪙 TWA wstETH price is ${round_num(wsteth_price, 2)} (1 wstETH = {round_num(wsteth_eth_price, 4)} ETH)"
