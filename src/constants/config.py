@@ -100,6 +100,19 @@ DISCORD_TOKEN_EMOJIS = {
     "WSOL": "<:WSOL:1308203700149555231>" if is_prod else "<:WSOL:1304499424545996831>",
     "USDC": "<:USDC:1308203721225670656>" if is_prod else "<:USDC:1301707657270267966>",
 }
+TG_TOKEN_EMOJIS = {
+    "PINTO": "🟢",
+    "PINTOWETH": "🟤",
+    "PINTOCBETH": "🔴",
+    "PINTOCBBTC": "🟠",
+    "PINTOWSOL": "🟣",
+    "PINTOUSDC": "🔵",
+    "WETH": "🟤",
+    "CBETH": "🔴",
+    "CBBTC": "🟠",
+    "WSOL": "🟣",
+    "USDC": "🔵"
+}
 
 GRAPH_FIELDS_PLACEHOLDER = "_FIELDS_"
 

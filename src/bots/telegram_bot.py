@@ -18,6 +18,7 @@ from monitors.well import WellsMonitor
 from monitors.beanstalk import BeanstalkMonitor
 from monitors.market import MarketMonitor
 from monitors.barn import BarnRaiseMonitor
+from tools.util import embellish_token_emojis
 
 class TelegramBot(object):
     def __init__(self, token, prod=False, dry_run=None):
@@ -66,6 +67,8 @@ class TelegramBot(object):
             msg_split = msg.rsplit("<http", 1)
             if len(msg_split) == 2:
                 msg = msg_split[0] + "http" + msg_split[1].replace(">", "")
+
+            msg = embellish_token_emojis(msg, TG_TOKEN_EMOJIS)
 
             # Telegram API has rate limit of 30/s. In practice this is expected to almost never be exceeded,
             # thus a simple sleep is acceptable

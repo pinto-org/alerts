@@ -1,5 +1,5 @@
 import re
-from constants.config import DISCORD_TOKEN_EMOJIS
+from constants.config import DISCORD_TOKEN_EMOJIS, TG_TOKEN_EMOJIS
 from hexbytes.main import HexBytes
 import logging
 import json
@@ -99,18 +99,18 @@ def format_farm_call_str(decoded_txn, beanstalk_contract):
         ret_str += "\n\n"
     return ret_str
 
-def embellish_token_emojis(text):
+def embellish_token_emojis(text, mapping):
     # Function to handle case-sensitive replacement while preserving original case
     def replacer(match):
         pre_whitespace = match.group(1)
         sign = match.group(2) or ""
         number = match.group(3) or ""
         word = match.group(4)
-        emoji = DISCORD_TOKEN_EMOJIS[word.upper()]  # Retrieve emoji based on uppercase word
+        emoji = mapping[word.upper()]  # Retrieve emoji based on uppercase word
         return f"{pre_whitespace}{emoji} {sign}{number}{word}"
 
     # For each word in the mapping, replace in a case-insensitive way
-    for word in DISCORD_TOKEN_EMOJIS:
+    for word in mapping:
         # Use re.IGNORECASE to match the word regardless of case
         pattern = rf'(\b|\s)([<])?(\d[\d,\.]*\s)?({re.escape(word)})\b'
         text = re.sub(pattern, replacer, text, flags=re.IGNORECASE)
@@ -119,6 +119,7 @@ def embellish_token_emojis(text):
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
-    logging.info(f"With emoji {embellish_token_emojis('100 PINTO sold for <0.1 cbETH')}")
+    logging.info(f"With discord emoji {embellish_token_emojis('100 PINTO sold for <0.1 cbETH', DISCORD_TOKEN_EMOJIS)}")
+    logging.info(f"With telegram emoji {embellish_token_emojis('100 PINTO sold for <0.1 cbETH', TG_TOKEN_EMOJIS)}")
     receipt = get_txn_receipt_or_wait(web3, '0x8b0f3901f9a8ea224c691662877df79d6a9e2e160c2b3e2551e40793aed545d7')
     logging.info(f"got receipt {receipt}")
