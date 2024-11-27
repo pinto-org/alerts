@@ -377,7 +377,7 @@ class EthEventsClient:
         of interest this will return multiple entries.
         Catch any exceptions that may arise when attempting to connect to Infura.
         """
-        logging.info(f"Checking for new {self._event_client_type.name} entries with " f"{filter}.")
+        # logging.info(f"Checking for new {self._event_client_type.name} entries with " f"{filter}.")
         try_count = 0
         while try_count < 5:
             try_count += 1
