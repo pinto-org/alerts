@@ -145,39 +145,44 @@ class SeasonsMonitor(Monitor):
 
         ret_string += f'\n⚖️ {"+" if delta_b > 0 else ""}{round_num(delta_b, 0)} TWA deltaP'
 
+        rain_flood_string = ""
+
+        season_block = self.beanstalk_client.get_season_block()
+        # Flood stats
+        flood_beans = 0
+        if hasattr(current_season_stats, 'well_plenty_logs') and len(current_season_stats.well_plenty_logs) > 0:
+            pre_flood_price = self.bean_client.block_price(season_block - 1)
+            rain_flood_string += f"\n\n**It is Flooding!**"
+            rain_flood_string += f"\nPinto price was {round_num(pre_flood_price, precision=4, incl_dollar=True)}"
+            field_beans = 0
+            well_beans = 0
+            if len(current_season_stats.field_plenty_logs) > 0:
+                log = current_season_stats.field_plenty_logs[0]
+                field_beans = log.args.get('toField') / 10 ** BEAN_DECIMALS
+                rain_flood_string += f"\n{round_num(field_beans, 0)} Pinto minted to the Field"
+
+            flood_breakdown = ""
+            for i in range(len(current_season_stats.well_plenty_logs)):
+                log = current_season_stats.well_plenty_logs[i]
+                token = log.args.get('token')
+                plenty_amount = log.args.get('amount')
+                erc20_info = get_erc20_info(token)
+                amount = round_token(plenty_amount, erc20_info.decimals, token)
+                value = plenty_amount * self.beanstalk_client.get_token_usd_price(token)/ 10 ** erc20_info.decimals
+                flood_breakdown += f"\n> {amount} {erc20_info.symbol} ({round_num(value, precision=0, incl_dollar=True)})"
+
+                well_beans += current_season_stats.flood_swap_logs[i].args.get('amountIn') / 10 ** BEAN_DECIMALS
+
+            rain_flood_string += f"\n{round_num(well_beans, 0)} Pinto minted and sold for:"
+            rain_flood_string += flood_breakdown
+            flood_beans += field_beans + well_beans
+        elif self.beanstalk_client.is_raining():
+            rain_flood_string += f"\n\n☔ **It is Raining!** ☔"
+
         # Full string message.
         if not short_str:
-            season_block = self.beanstalk_client.get_season_block()
-            # Flood stats
-            flood_beans = 0
-            if hasattr(current_season_stats, 'well_plenty_logs') and len(current_season_stats.well_plenty_logs) > 0:
-                pre_flood_price = self.bean_client.block_price(season_block - 1)
-                ret_string += f"\n\n**It is Flooding!**"
-                ret_string += f"\nPinto price was {round_num(pre_flood_price, precision=4, incl_dollar=True)}"
-                field_beans = 0
-                well_beans = 0
-                if len(current_season_stats.field_plenty_logs) > 0:
-                    log = current_season_stats.field_plenty_logs[0]
-                    field_beans = log.args.get('toField') / 10 ** BEAN_DECIMALS
-                    ret_string += f"\n{round_num(field_beans, 0)} Pinto minted to the Field"
 
-                flood_breakdown = ""
-                for i in range(len(current_season_stats.well_plenty_logs)):
-                    log = current_season_stats.well_plenty_logs[i]
-                    token = log.args.get('token')
-                    plenty_amount = log.args.get('amount')
-                    erc20_info = get_erc20_info(token)
-                    amount = round_token(plenty_amount, erc20_info.decimals, token)
-                    value = plenty_amount * self.beanstalk_client.get_token_usd_price(token)/ 10 ** erc20_info.decimals
-                    flood_breakdown += f"\n> {amount} {erc20_info.symbol} ({round_num(value, precision=0, incl_dollar=True)})"
-
-                    well_beans += current_season_stats.flood_swap_logs[i].args.get('amountIn') / 10 ** BEAN_DECIMALS
-
-                ret_string += f"\n{round_num(well_beans, 0)} Pinto minted and sold for:"
-                ret_string += flood_breakdown
-                flood_beans += field_beans + well_beans
-            elif self.beanstalk_client.is_raining():
-                ret_string += f"\n\n☔ **It is Raining!** ☔"
+            ret_string += rain_flood_string
 
             # ret_string += f"\n🪙 TWA ETH price is ${round_num(eth_price, 2)}"
             # ret_string += f"\n🪙 TWA wstETH price is ${round_num(wsteth_price, 2)} (1 wstETH = {round_num(wsteth_eth_price, 4)} ETH)"
@@ -278,10 +283,13 @@ class SeasonsMonitor(Monitor):
                 total_liquidity += token_to_float(well_info['liquidity'], 6)
             total_liquidity = round_num(total_liquidity, 0)
             ret_string += f"\n\n🌊 Total Liquidity: ${total_liquidity}"
+            # ret_string += f"Hourly volume: {}" # TODO
 
             ret_string += f"\n"
             if reward_beans > 0:
-                ret_string += f"\n🌱 {round_num(reward_beans, 0, avoid_zero=True)} Pinto Minted"
+                ret_string += f"\n🌱 {round_num(reward_beans + flood_beans, 0, avoid_zero=True)} Pinto Minted"
+                if flood_beans > 0:
+                    ret_string += f"(💧 {round_num(flood_beans, 0)} from Flood)"
             if sown_beans > 0:
                 ret_string += f"\n🚜 {round_num(sown_beans, 0, avoid_zero=True)} Pinto Sown for {round_num(sown_beans * (1 + last_weather/100), 0, avoid_zero=True)} Pods"
 
