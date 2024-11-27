@@ -255,9 +255,9 @@ class DiscordClient(discord.ext.commands.Bot):
                     msg = msg[-2000:]
                     logging.warning(f"Clipping message length down to 2000.")
 
-                # Add token emoji
+                # Add token emoji. Dont embellish telegram msg (for tg this is only forwarded messages)
                 tg_msg = msg
-                msg = embellish_token_emojis(msg)
+                msg = embellish_token_emojis(msg, DISCORD_TOKEN_EMOJIS)
 
                 logging.info(f"Sending message through {channel} channel:\n{msg}\n")
                 # Ignore empty messages.
