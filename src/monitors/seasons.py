@@ -1,6 +1,7 @@
 from abc import abstractmethod
 
 from bots.util import *
+from data_access.subgraphs.basin import BasinGraphClient
 from monitors.monitor import Monitor
 from data_access.contracts.util import *
 from data_access.contracts.eth_events import *
@@ -25,6 +26,7 @@ class SeasonsMonitor(Monitor):
         self._eth_event_client = EthEventsClient(EventClientType.SEASON)
         self._eth_all_wells = EthEventsClient(EventClientType.WELL, WHITELISTED_WELLS)
         self.beanstalk_graph_client = BeanstalkGraphClient()
+        self.basin_graph_client = BasinGraphClient()
         self.bean_client = BeanClient()
         self.beanstalk_client = BeanstalkClient()
         # Most recent season processed. Do not initialize.
@@ -35,7 +37,7 @@ class SeasonsMonitor(Monitor):
             # Wait until the eligible for a sunrise.
             self._wait_until_expected_sunrise()
             # Once the sunrise is complete, get the season stats.
-            current_season_stats, last_season_stats = self._block_and_get_seasons_stats()
+            current_season_stats, last_season_stats, well_hourly_stats = self._block_and_get_seasons_stats()
             # A new season has begun.
             if current_season_stats:
                 block = current_season_stats.sunrise_block
@@ -56,7 +58,7 @@ class SeasonsMonitor(Monitor):
                 # Report season summary to users.
                 self.message_function(
                     self.season_summary_string(
-                        last_season_stats, current_season_stats, short_str=self.short_msgs
+                        last_season_stats, current_season_stats, well_hourly_stats, short_str=self.short_msgs
                     )
                 )
 
@@ -88,19 +90,22 @@ class SeasonsMonitor(Monitor):
         Repeatedly makes graph calls to check sunrise status.
         """
         while self._thread_active:
+            mid_season_timestamp = time.time() - SEASON_DURATION / 2
             current_season_stats, last_season_stats = self.beanstalk_graph_client.seasons_stats()
+            well_hourly_stats = self.basin_graph_client.get_well_hourlies(mid_season_timestamp)
             # If a new season is detected and sunrise was sufficiently recent.
             if (
                 self.current_season_id != current_season_stats.season
-                and int(current_season_stats.created_at) > time.time() - SEASON_DURATION / 2
+                and int(current_season_stats.created_at) > mid_season_timestamp
+                and len(well_hourly_stats) == len(WHITELISTED_WELLS)
             ) or self._dry_run:
                 self.current_season_id = current_season_stats.season
                 logging.info(f"New season detected with id {self.current_season_id}")
-                return current_season_stats, last_season_stats
+                return current_season_stats, last_season_stats, well_hourly_stats
             time.sleep(self.query_rate)
-        return None, None
+        return None, None, None
 
-    def season_summary_string(self, last_season_stats, current_season_stats, short_str=False):
+    def season_summary_string(self, last_season_stats, current_season_stats, well_hourly_stats, short_str=False):
         # eth_price = self.beanstalk_client.get_token_usd_twap(WETH, 3600)
         # wsteth_price = self.beanstalk_client.get_token_usd_twap(WSTETH, 3600)
         # wsteth_eth_price = wsteth_price / eth_price
@@ -135,20 +140,11 @@ class SeasonsMonitor(Monitor):
         supply = get_erc20_total_supply(BEAN_ADDR, 6)
         ret_string += f"\n🪙 {round_num(supply, precision=0)} Pinto Supply (${round_num(supply * price, precision=0)})"
 
-        # Well info.
-        wells_info = []
-        for well_addr in WHITELISTED_WELLS:
-            wells_info.append(self.bean_client.get_pool_info(well_addr))
-
-        # Sort highest liquidity wells first
-        wells_info = sorted(wells_info, key=lambda x: x['liquidity'], reverse=True)
-
         ret_string += f'\n⚖️ {"+" if delta_b > 0 else ""}{round_num(delta_b, 0)} TWA deltaP'
-
-        rain_flood_string = ""
 
         season_block = self.beanstalk_client.get_season_block()
         # Flood stats
+        rain_flood_string = ""
         flood_beans = 0
         if hasattr(current_season_stats, 'well_plenty_logs') and len(current_season_stats.well_plenty_logs) > 0:
             pre_flood_price = self.bean_client.block_price(season_block - 1)
@@ -178,6 +174,16 @@ class SeasonsMonitor(Monitor):
             flood_beans += field_beans + well_beans
         elif self.beanstalk_client.is_raining():
             rain_flood_string += f"\n\n☔ **It is Raining!** ☔"
+
+        # Well info.
+        wells_info = []
+        for well_addr in WHITELISTED_WELLS:
+            wells_info.append(self.bean_client.get_pool_info(well_addr))
+
+        # Sort highest liquidity wells first
+        wells_info = sorted(wells_info, key=lambda x: x['liquidity'], reverse=True)
+
+        logging.info(f"Got well hourly information {well_hourly_stats}")
 
         # Full string message.
         if not short_str:
@@ -281,9 +287,13 @@ class SeasonsMonitor(Monitor):
             total_liquidity = 0
             for well_info in wells_info:
                 total_liquidity += token_to_float(well_info['liquidity'], 6)
-            total_liquidity = round_num(total_liquidity, 0)
-            ret_string += f"\n\n🌊 Total Liquidity: ${total_liquidity}"
-            # ret_string += f"Hourly volume: {}" # TODO
+            total_liquidity = round_num(total_liquidity, 0, incl_dollar=True)
+            ret_string += f"\n\n🌊 Total Liquidity: {total_liquidity}"
+
+            hourly_volume = 0
+            hourly_volume += token_to_float(well_info['TODO'], 6)
+            if hourly_volume > 0:
+                ret_string += f"Hourly volume: {round_num(hourly_volume, 0, incl_dollar=True)}"
 
             ret_string += f"\n"
             if reward_beans > 0:

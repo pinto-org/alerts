@@ -57,6 +57,24 @@ class BasinGraphClient(object):
         # Create gql query and execute.
         return execute(self._client, query_str).get("well").get("totalLiquidityUSD")
 
+    def get_well_hourlies(self, timestamp):
+        """
+        Gets info from all whitelisted wells' hourly snapshots.
+        Uses the hour corresponding to the provided timestmap
+        """
+        hour_id = int((timestamp - (timestamp % 3600)) / 3600)
+        query_str = f"""
+            query {{
+                wellHourlySnapshots(where: {{ hour: {hour_id} }}) {{
+                    deltaTradeVolumeUSD
+                    well {{
+                        id
+                    }}
+                }}
+            }}
+        """
+        return execute(self._client, query_str)["wellHourlySnapshots"]
+
     def try_get_well_deposit_info(self, txn_hash, log_index):
         """Get deposit tokens. Retry if data not available. Return {} if it does not become available.
 
