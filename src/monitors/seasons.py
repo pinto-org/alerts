@@ -196,7 +196,7 @@ class SeasonsMonitor(Monitor):
             # Bean Supply stats.
             ret_string += f"\n\n**Supply**"
             ret_string += f"\n🌱 {round_num(reward_beans + flood_beans, 0, avoid_zero=True)} Pinto minted"
-            ret_string += f"\n☀️ {round_num(incentive_beans, 0)} Pinto gm reward"
+            # ret_string += f"\n☀️ {round_num(incentive_beans, 0)} Pinto gm reward"
             ret_string += f"\n🚜 {round_num(sown_beans, 0, avoid_zero=True)} Pinto Sown"
 
             # Liquidity stats.
@@ -293,7 +293,7 @@ class SeasonsMonitor(Monitor):
             ret_string += f"\n\n🌊 Total Liquidity: {total_liquidity}"
 
             if wells_volume > 0:
-                ret_string += f"\n:PINTO: Hourly volume: {round_num(wells_volume, 0, incl_dollar=True)}"
+                ret_string += f"\n📊 Hourly volume: {round_num(wells_volume, 0, incl_dollar=True)}"
 
             ret_string += f"\n"
             if reward_beans > 0:
