@@ -201,7 +201,7 @@ class SeasonsMonitor(Monitor):
 
             # Liquidity stats.
             ret_string += f"\n\n**Liquidity**"
-            ret_string += f"\nHourly volume: {round_num(wells_volume, 0, incl_dollar=True)}"
+            ret_string += f"\n:PINTO: Hourly volume: {round_num(wells_volume, 0, incl_dollar=True)}"
 
             for well_info in wells_info:
                 ret_string += f"\n🌊 {SILO_TOKENS_MAP[well_info['pool'].lower()]}: ${round_num(token_to_float(well_info['liquidity'], 6), 0)} - "
@@ -293,7 +293,7 @@ class SeasonsMonitor(Monitor):
             ret_string += f"\n\n🌊 Total Liquidity: {total_liquidity}"
 
             if wells_volume > 0:
-                ret_string += f"\nHourly volume: {round_num(wells_volume, 0, incl_dollar=True)}"
+                ret_string += f"\n:PINTO: Hourly volume: {round_num(wells_volume, 0, incl_dollar=True)}"
 
             ret_string += f"\n"
             if reward_beans > 0:
