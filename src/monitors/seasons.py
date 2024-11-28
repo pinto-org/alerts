@@ -139,7 +139,7 @@ class SeasonsMonitor(Monitor):
         supply = get_erc20_total_supply(BEAN_ADDR, 6)
         ret_string += f"\n🪙 {round_num(supply, precision=0)} Pinto Supply (${round_num(supply * price, precision=0)})"
 
-        ret_string += f'\n⚖️ {"+" if delta_b > 0 else ""}{round_num(delta_b, 0)} TWA deltaP'
+        ret_string += f'\n⚖️ {"+" if delta_b > 0 else ""}{round_num(delta_b, 0)} TWAΔP'
 
         season_block = self.beanstalk_client.get_season_block()
         # Flood stats
