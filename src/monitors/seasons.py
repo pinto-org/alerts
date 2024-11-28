@@ -299,7 +299,7 @@ class SeasonsMonitor(Monitor):
             if reward_beans > 0:
                 ret_string += f"\n🌱 {round_num(reward_beans + flood_beans, 0, avoid_zero=True)} Pinto Minted"
                 if flood_beans > 0:
-                    ret_string += f"(💧 {round_num(flood_beans, 0)} from Flood)"
+                    ret_string += f" (💧 {round_num(flood_beans, 0)} from Flood)"
             if sown_beans > 0:
                 ret_string += f"\n🚜 {round_num(sown_beans, 0, avoid_zero=True)} Pinto Sown for {round_num(sown_beans * (1 + last_weather/100), 0, avoid_zero=True)} Pods"
 
