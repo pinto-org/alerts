@@ -90,13 +90,12 @@ class SeasonsMonitor(Monitor):
         Repeatedly makes graph calls to check sunrise status.
         """
         while self._thread_active:
-            mid_season_timestamp = time.time() - SEASON_DURATION / 2
             current_season_stats, last_season_stats = self.beanstalk_graph_client.seasons_stats()
-            well_hourly_stats = self.basin_graph_client.get_well_hourlies(mid_season_timestamp)
+            well_hourly_stats = self.basin_graph_client.get_well_hourlies(time.time() - SEASON_DURATION)
             # If a new season is detected and sunrise was sufficiently recent.
             if (
                 self.current_season_id != current_season_stats.season
-                and int(current_season_stats.created_at) > mid_season_timestamp
+                and int(current_season_stats.created_at) > time.time() - SEASON_DURATION / 2
                 and len(well_hourly_stats) == len(WHITELISTED_WELLS)
             ) or self._dry_run:
                 self.current_season_id = current_season_stats.season
@@ -128,7 +127,7 @@ class SeasonsMonitor(Monitor):
         silo_assets_changes = self.beanstalk_graph_client.silo_assets_seasonal_changes(
             current_season_stats.pre_assets, last_season_stats.pre_assets
         )
-        logging.info([a.final_season_asset for a in silo_assets_changes])
+        # logging.info([a.final_season_asset for a in silo_assets_changes])
         silo_assets_changes.sort(
             key=lambda a: int(a.final_season_asset["depositedBDV"]), reverse=True
         )
@@ -183,7 +182,9 @@ class SeasonsMonitor(Monitor):
         # Sort highest liquidity wells first
         wells_info = sorted(wells_info, key=lambda x: x['liquidity'], reverse=True)
 
-        logging.info(f"Got well hourly information {well_hourly_stats}")
+        wells_volume = 0
+        for stats in well_hourly_stats:
+            wells_volume += float(stats.get("deltaTradeVolumeUSD"))
 
         # Full string message.
         if not short_str:
@@ -200,6 +201,7 @@ class SeasonsMonitor(Monitor):
 
             # Liquidity stats.
             ret_string += f"\n\n**Liquidity**"
+            ret_string += f"\nHourly volume: {round_num(wells_volume, 0, incl_dollar=True)}"
 
             for well_info in wells_info:
                 ret_string += f"\n🌊 {SILO_TOKENS_MAP[well_info['pool'].lower()]}: ${round_num(token_to_float(well_info['liquidity'], 6), 0)} - "
@@ -290,10 +292,8 @@ class SeasonsMonitor(Monitor):
             total_liquidity = round_num(total_liquidity, 0, incl_dollar=True)
             ret_string += f"\n\n🌊 Total Liquidity: {total_liquidity}"
 
-            hourly_volume = 0
-            hourly_volume += token_to_float(well_info['TODO'], 6)
-            if hourly_volume > 0:
-                ret_string += f"Hourly volume: {round_num(hourly_volume, 0, incl_dollar=True)}"
+            if wells_volume > 0:
+                ret_string += f"\nHourly volume: {round_num(wells_volume, 0, incl_dollar=True)}"
 
             ret_string += f"\n"
             if reward_beans > 0:
