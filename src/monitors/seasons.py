@@ -134,7 +134,10 @@ class SeasonsMonitor(Monitor):
 
         # Current state.
         ret_string = f"⏱ Season {last_season_stats.season + 1} has started!"
-        ret_string += f"\n💵 Pinto price is ${round_num(price, 4)}"
+        if not short_str:
+            ret_string += f"\n💵 Pinto price is ${round_num(price, 4)}"
+        else:
+            ret_string += f" — Pinto price is ${round_num(price, 4)}"
 
         supply = get_erc20_total_supply(BEAN_ADDR, 6)
         ret_string += f"\n🪙 {round_num(supply, precision=0)} Pinto Supply (${round_num(supply * price, precision=0)})"
@@ -299,12 +302,12 @@ class SeasonsMonitor(Monitor):
             if reward_beans > 0:
                 ret_string += f"\n🌱 {round_num(reward_beans + flood_beans, 0, avoid_zero=True)} Pinto Minted"
                 if flood_beans > 0:
-                    ret_string += f"(💧 {round_num(flood_beans, 0)} from Flood)"
+                    ret_string += f" (💧 {round_num(flood_beans, 0)} from Flood)"
             if sown_beans > 0:
                 ret_string += f"\n🚜 {round_num(sown_beans, 0, avoid_zero=True)} Pinto Sown for {round_num(sown_beans * (1 + last_weather/100), 0, avoid_zero=True)} Pods"
 
             ret_string += f"\n🌡 {round_num(current_season_stats.temperature, 0)}% Temperature"
-            ret_string += f"\n🧮 {round_num(pod_rate, 0)}% Pod Rate"
+            # ret_string += f"\n🧮 {round_num(pod_rate, 0)}% Pod Rate"
         return ret_string
 
     @abstractmethod
