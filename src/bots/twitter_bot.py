@@ -32,28 +32,28 @@ class TwitterBot(object):
         # Remove URL pointy brackets used by md formatting to suppress link previews.
         msg = msg.replace("<", "").replace(">", "")
         msg = msg.replace("**", "")
-        try:
-            self.client.create_tweet(text=msg)
-        except tweepy.errors.BadRequest as e:
-            logging.error(
-                f'HTTP Error 400 (Bad Request) for tweet with body "{msg}" '
-                f"\n{e.api_messages}\n\n{e.response}\n\n{e.api_errors}"
-            )
-            return
-        except tweepy.errors.Forbidden as e:
-            logging.error(
-                f'HTTP Error 403 (Forbidden) for tweet with body "{msg}" '
-                f"Was it a repeat tweet?\n{e.api_messages}\n\n{e.response}\n\n{e.api_errors}"
-            )
-            return
-        except tweepy.errors.TooManyRequests as e:
-            logging.error(
-                f'HTTP Error 429 (Too Many Requests) for tweet with body "{msg}" '
-                f"\n{e.api_messages}\n\n{e.response}\n\n{e.api_errors}"
-                f"\n\nAggressively idling..."
-            )
-            time.sleep(16 * 60)  # Wait 16 minutes to be safe, expect 15 minutes to reset.
-            return
+        for _ in range(3):
+            try:
+                self.client.create_tweet(text=msg)
+                break
+            except tweepy.errors.BadRequest as e:
+                logging.error(
+                    f'HTTP Error 400 (Bad Request) for tweet with body "{msg}" '
+                    f"\n{e.api_messages}\n\n{e.response}\n\n{e.api_errors}"
+                )
+            except tweepy.errors.Forbidden as e:
+                logging.error(
+                    f'HTTP Error 403 (Forbidden) for tweet with body "{msg}" '
+                    f"Was it a repeat tweet?\n{e.api_messages}\n\n{e.response}\n\n{e.api_errors}"
+                )
+                return
+            except tweepy.errors.TooManyRequests as e:
+                logging.error(
+                    f'HTTP Error 429 (Too Many Requests) for tweet with body "{msg}" '
+                    f"\n{e.api_messages}\n\n{e.response}\n\n{e.api_errors}"
+                    f"\n\nAggressively idling...trying again in 16 minutes"
+                )
+            time.sleep(30)
         logging.info(f"Tweeted:\n{msg}\n")
 
 class BeanstalkTwitterBot(TwitterBot):
@@ -124,10 +124,10 @@ if __name__ == "__main__":
         dry_run = dry_run.split(',')
 
     beanstalk_bot = BeanstalkTwitterBot(prod=prod, dry_run=dry_run)
-    basin_bot = BasinTwitterBot(prod=prod, dry_run=dry_run)
+    # basin_bot = BasinTwitterBot(prod=prod, dry_run=dry_run)
     try:
         infinity_polling()
     except (KeyboardInterrupt, SystemExit):
         pass
     beanstalk_bot.stop()
-    basin_bot.stop()
+    # basin_bot.stop()
