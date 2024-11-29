@@ -308,7 +308,8 @@ class EthEventsClient:
         Note that there may be multiple unique entries with the same topic. Though we assume
         each entry indicates one log of interest.
         """
-        if filters is None:
+        self_filters = filters is None
+        if self_filters:
             filters = self._event_filters
         # All decoded logs of interest from each txn.
         txn_hash_set = set()
@@ -316,8 +317,27 @@ class EthEventsClient:
 
         if not dry_run:
             new_entries = []
-            for filter in filters:
-                new_entries.extend(self.safe_get_new_entries(filter, get_all=get_all))
+            # Loop filters to accommodate reset in case of errors
+            for i in range(len(filters)):
+                try_count = 0
+                while try_count < 3:
+                    try_count += 1
+                    try:
+                        new_entries.extend(self.safe_get_new_entries(filters[i], get_all=get_all))
+                    except (
+                        ValueError,
+                        asyncio.TimeoutError,
+                        websockets.exceptions.ConnectionClosedError,
+                        Exception,
+                    ) as e:
+                        logging.warning(e, exc_info=True)
+                        logging.warning(
+                            f"[{self_filters}] filter.safe_get_new_entries() failed or timed out. Retrying..."
+                        )
+                        time.sleep(1)
+                        # Establish new filters and re-loop
+                        self._set_filters()
+                        filters = self._event_filters
         else:
             new_entries = get_test_entries(dry_run)
             time.sleep(3)
@@ -378,54 +398,34 @@ class EthEventsClient:
         Catch any exceptions that may arise when attempting to connect to Infura.
         """
         # logging.info(f"Checking for new {self._event_client_type.name} entries with " f"{filter}.")
-        try_count = 0
-        while try_count < 5:
-            try_count += 1
-            try:
-                if get_all or "DRY_RUN_FROM_BLOCK" in os.environ:
-                    return filter.get_all_entries()
-                # We must verify new_entries because get_new_entries() will occasionally pull
-                # entries that are not actually new. May be a bug with web3 or may just be a relic
-                # of the way block confirmations work.
-                new_entries = filter.get_new_entries()
-                new_unique_entries = []
-                # Remove entries w txn hashes that already processed on past get_new_entries calls.
-                for i in range(len(new_entries)):
-                    entry = new_entries[i]
-                    # If we have not already processed this txn hash.
-                    if entry.transactionHash not in self._recent_processed_txns:
-                        new_unique_entries.append(entry)
-                    else:
-                        pass
-                        # logging.warning(
-                        #     f"Ignoring txn that has already been processed ({entry.transactionHash})"
-                        # )
-                # Add all new txn hashes to recent processed set/dict.
-                for entry in new_unique_entries:
-                    # Arbitrary value. Using this as a set.
-                    self._recent_processed_txns[entry.transactionHash] = True
-                # Keep the recent txn queue size within limit.
-                for _ in range(max(0, len(self._recent_processed_txns) - TXN_MEMORY_SIZE_LIMIT)):
-                    self._recent_processed_txns.popitem(last=False)
-                return new_unique_entries
-                # return filter.get_all_entries() # Use this to search for old events.
-            except (
-                ValueError,
-                asyncio.TimeoutError,
-                websockets.exceptions.ConnectionClosedError,
-                Exception,
-            ) as e:
-                logging.warning(e, exc_info=True)
-                logging.warning(
-                    "filter.get_new_entries() (or .get_all_entries()) failed or timed out. Retrying..."
-                )
-                time.sleep(1)
-                # Filters rely on server state and may be arbitrarily uninstalled by server.
-                # https://github.com/ethereum/web3.py/issues/551
-                # If we are failing too much recreate the filter.
-                self._set_filters()
-        logging.error("Failed to get new event entries. Passing.")
-        return []
+
+        if get_all or "DRY_RUN_FROM_BLOCK" in os.environ:
+            return filter.get_all_entries()
+        # We must verify new_entries because get_new_entries() will occasionally pull
+        # entries that are not actually new. May be a bug with web3 or may just be a relic
+        # of the way block confirmations work.
+        new_entries = filter.get_new_entries()
+        new_unique_entries = []
+        # Remove entries w txn hashes that already processed on past get_new_entries calls.
+        for i in range(len(new_entries)):
+            entry = new_entries[i]
+            # If we have not already processed this txn hash.
+            if entry.transactionHash not in self._recent_processed_txns:
+                new_unique_entries.append(entry)
+            else:
+                pass
+                # logging.warning(
+                #     f"Ignoring txn that has already been processed ({entry.transactionHash})"
+                # )
+        # Add all new txn hashes to recent processed set/dict.
+        for entry in new_unique_entries:
+            # Arbitrary value. Using this as a set.
+            self._recent_processed_txns[entry.transactionHash] = True
+        # Keep the recent txn queue size within limit.
+        for _ in range(max(0, len(self._recent_processed_txns) - TXN_MEMORY_SIZE_LIMIT)):
+            self._recent_processed_txns.popitem(last=False)
+        return new_unique_entries
+        # return filter.get_all_entries() # Use this to search for old events.
 
 def safe_create_filter(web3, address, topics, from_block, to_block):
     """Create a filter but handle connection exceptions that web3 cannot manage."""
