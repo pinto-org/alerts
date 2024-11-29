@@ -168,9 +168,9 @@ class BeanstalkMonitor(Monitor):
 
         # Unknown event type.
         else:
-            logging.warning(
-                f"Unexpected event log from Beanstalk contract ({event_log}). Ignoring."
-            )
+            # logging.warning(
+            #     f"Unexpected event log from Beanstalk contract ({event_log}). Ignoring."
+            # )
             return ""
 
         event_str += f"\n<https://basescan.org/tx/{event_log.transactionHash.hex()}>"

@@ -396,9 +396,10 @@ class EthEventsClient:
                     if entry.transactionHash not in self._recent_processed_txns:
                         new_unique_entries.append(entry)
                     else:
-                        logging.warning(
-                            f"Ignoring txn that has already been processed ({entry.transactionHash})"
-                        )
+                        pass
+                        # logging.warning(
+                        #     f"Ignoring txn that has already been processed ({entry.transactionHash})"
+                        # )
                 # Add all new txn hashes to recent processed set/dict.
                 for entry in new_unique_entries:
                     # Arbitrary value. Using this as a set.

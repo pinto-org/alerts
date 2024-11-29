@@ -229,7 +229,7 @@ def well_event_str(event_log, bean_reporting, basin_graph_client, bean_client, w
         else:  # one sided shift
             event_str += f"🔀 {amount_out_str} {erc20_info_out.symbol} shifted out "
     else:
-        logging.warning(f"Unexpected event log seen in Well ({event_log.event}). Ignoring.")
+        # logging.warning(f"Unexpected event log seen in Well ({event_log.event}). Ignoring.")
         return ""
 
     if bdv is not None:

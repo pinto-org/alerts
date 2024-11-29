@@ -64,7 +64,7 @@ class DiscordSidebarClient(discord.ext.commands.Bot):
             await self.change_presence(
                 activity=discord.Activity(type=discord.ActivityType.watching, name=self.status_text)
             )
-            logging.info(f"Bot status changed to {self.status_text}")
+            # logging.info(f"Bot status changed to {self.status_text}")
             self.status_text = ""
 
     @_update_naming.before_loop
@@ -85,7 +85,7 @@ async def update_discord_bot_name(name, bot):
     for guild in bot.current_guilds:
         # logging.info(f"Attempting to set nickname in guild with id {guild.id}")
         await guild.me.edit(nick=next_name)
-        logging.info(f"Bot nickname changed to {next_name} in guild with id {guild.id}")
+        # logging.info(f"Bot nickname changed to {next_name} in guild with id {guild.id}")
     return next_name
 
 class MsgHandler(logging.Handler):
