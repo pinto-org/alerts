@@ -12,7 +12,7 @@ def get_with_retries(request_url, max_tries=10, timeout=6):
     while True:
         try:
             response = requests.get(request_url, timeout=timeout)
-            logging.info(f"Response: {response.json()}")
+            # logging.info(f"Response: {response.json()}")
             return response.json()
 
         except Exception as e:

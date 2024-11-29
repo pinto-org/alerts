@@ -70,9 +70,8 @@ class TelegramBot(object):
 
             msg = embellish_token_emojis(msg, TG_TOKEN_EMOJIS)
 
-            # Telegram API has rate limit of 30/s. In practice this is expected to almost never be exceeded,
-            # thus a simple sleep is acceptable
-            time.sleep(0.034)
+            # TODO: Implement batching solution s.t. all queued messages within a second get delivered together
+            time.sleep(1)
 
             for chat_id in chat_ids:
                 self.tele_bot.send_message(chat_id=chat_id, text=msg, disable_web_page_preview=True)

@@ -82,7 +82,7 @@ class Monitor:
             # Reset the restart delay after a stretch of successful running.
             if time.time() > retry_time + 3600:
                 self.monitor_reset_delay = RESET_MONITOR_DELAY_INIT
-            else:
-                self.monitor_reset_delay *= 2
+            elif self.monitor_reset_delay < 120:
+                self.monitor_reset_delay += RESET_MONITOR_DELAY_INIT
             retry_time = time.time() + self.monitor_reset_delay
         logging.warning("Thread wrapper returned.")
