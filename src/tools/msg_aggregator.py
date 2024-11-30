@@ -23,8 +23,8 @@ class MsgAggregator:
 
     def _process_buffer(self):
         """Periodically process the buffer."""
-        try:
-            while self.running:
+        while self.running:
+            try:
                 time.sleep(self.send_interval)
                 with self.lock:
                     if self.msg_buffer:
@@ -32,8 +32,8 @@ class MsgAggregator:
                         concatenated_message = "\n".join(self.msg_buffer)
                         self.send_func(concatenated_message)
                         self.msg_buffer.clear()  # Clear the buffer after sending
-        except Exception as e:
-            logging.error("Exception in _process_buffer", exc_info=True)
+            except Exception as e:
+                logging.error("Exception in _process_buffer", exc_info=True)
 
     def stop(self):
         """Stop the background thread."""
