@@ -185,6 +185,11 @@ class SeasonsMonitor(Monitor):
         # Sort highest liquidity wells first
         wells_info = sorted(wells_info, key=lambda x: x['liquidity'], reverse=True)
 
+        total_liquidity = 0
+        for well_info in wells_info:
+            total_liquidity += token_to_float(well_info['liquidity'], 6)
+        total_liquidity = round_num(total_liquidity, 0, incl_dollar=True)
+
         wells_volume = 0
         for stats in well_hourly_stats:
             wells_volume += float(stats.get("deltaTradeVolumeUSD"))
@@ -204,7 +209,7 @@ class SeasonsMonitor(Monitor):
 
             # Liquidity stats.
             ret_string += f"\n\n**Liquidity**"
-            ret_string += f"\n:PINTO: Hourly volume: {round_num(wells_volume, 0, incl_dollar=True)}"
+            ret_string += f"\n🌊 :PINTO: Total Liquidity: {total_liquidity}"
 
             for well_info in wells_info:
                 ret_string += f"\n🌊 {SILO_TOKENS_MAP[well_info['pool'].lower()]}: ${round_num(token_to_float(well_info['liquidity'], 6), 0)} - "
@@ -212,6 +217,7 @@ class SeasonsMonitor(Monitor):
                     f"_deltaP [{round_num(token_to_float(well_info['delta_b'], 6), 0)}], "
                 )
                 ret_string += f"price [${round_num(token_to_float(well_info['price'], 6), 4)}]_"
+            ret_string += f"\n:PINTO: Hourly volume: {round_num(wells_volume, 0, incl_dollar=True)}"
 
             # Silo balance stats.
             ret_string += f"\n\n**Silo**"
@@ -289,10 +295,6 @@ class SeasonsMonitor(Monitor):
         # Short string version (for Twitter).
         else:
             # Display total liquidity only
-            total_liquidity = 0
-            for well_info in wells_info:
-                total_liquidity += token_to_float(well_info['liquidity'], 6)
-            total_liquidity = round_num(total_liquidity, 0, incl_dollar=True)
             ret_string += f"\n\n🌊 Total Liquidity: {total_liquidity}"
 
             if wells_volume > 0:
