@@ -1,6 +1,7 @@
 import logging
 import logging.handlers
 import os
+import threading
 import time
 import signal
 
@@ -19,6 +20,11 @@ from monitors.beanstalk import BeanstalkMonitor
 from monitors.market import MarketMonitor
 from monitors.barn import BarnRaiseMonitor
 from tools.util import embellish_token_emojis
+
+# Global variables for telegram message rate limiting across monitor threads
+send_msg_lock = threading.Lock()
+last_request_time = 0
+RATE_LIMIT = 1  # Seconds between requests
 
 class TelegramBot(object):
     def __init__(self, token, prod=False, dry_run=None):
@@ -70,8 +76,15 @@ class TelegramBot(object):
 
             msg = embellish_token_emojis(msg, TG_TOKEN_EMOJIS)
 
-            # TODO: Implement batching solution s.t. all queued messages within a second get delivered together
-            time.sleep(1)
+            # Enforces 1 msg/second across all sending threads. 
+            # Ideal solution would involve batching incoming/unsent messages together
+            global last_request_time
+            current_time = time.time()
+            with send_msg_lock:
+                if current_time - last_request_time < RATE_LIMIT:
+                    sleep_duration = RATE_LIMIT - (current_time - last_request_time)
+                    time.sleep(sleep_duration)
+                last_request_time = time.time()
 
             for chat_id in chat_ids:
                 self.tele_bot.send_message(chat_id=chat_id, text=msg, disable_web_page_preview=True)
