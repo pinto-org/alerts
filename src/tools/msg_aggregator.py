@@ -28,10 +28,13 @@ class MsgAggregator:
                 time.sleep(self.send_interval)
                 with self.lock:
                     if self.msg_buffer:
-                        # Concatenate and send messages
-                        concatenated_message = "\n".join(self.msg_buffer)
+                        # Process up to 3 messages at a time
+                        chunk_size = 3
+                        chunk = self.msg_buffer[:chunk_size]
+                        concatenated_message = "\n".join(chunk)
                         self.send_func(concatenated_message)
-                        self.msg_buffer.clear()  # Clear the buffer after sending
+                        # Remove only the sent messages
+                        self.msg_buffer = self.msg_buffer[chunk_size:]
             except Exception as e:
                 logging.error("Exception in _process_buffer", exc_info=True)
 
