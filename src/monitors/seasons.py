@@ -124,6 +124,7 @@ class SeasonsMonitor(Monitor):
 
         # Silo asset balances.
         current_silo_bdv = current_season_stats.deposited_bdv
+        prev_silo_bdv = last_season_stats.deposited_bdv
         silo_assets_changes = self.beanstalk_graph_client.silo_assets_seasonal_changes(
             current_season_stats.pre_assets, last_season_stats.pre_assets
         )
@@ -216,16 +217,23 @@ class SeasonsMonitor(Monitor):
             ret_string += f"\n🌊 :PINTO: Total Liquidity: {total_liquidity}"
 
             for well_info in wells_info:
-                ret_string += f"\n🌊 {SILO_TOKENS_MAP[well_info['pool'].lower()]}: ${round_num(token_to_float(well_info['liquidity'], 6), 0)} - "
+                ret_string += f"\n> {SILO_TOKENS_MAP[well_info['pool'].lower()]}: ${round_num(token_to_float(well_info['liquidity'], 6), 0)} - "
                 ret_string += (
                     f"_ΔP [{round_num(token_to_float(well_info['delta_b'], 6), 0)}], "
                 )
                 ret_string += f"price [${round_num(token_to_float(well_info['price'], 6), 4)}]_"
-            ret_string += f"\n:PINTO: Hourly volume: {round_num(wells_volume, 0, incl_dollar=True)}"
+            ret_string += f"\n⚖️ :PINTO: Hourly volume: {round_num(wells_volume, 0, incl_dollar=True)}"
 
             # Silo balance stats.
             ret_string += f"\n\n**Silo**"
             ret_string += f"\n🏦 {round_num(current_silo_bdv, 0)} PDV in Silo"
+            delta_bdv = current_silo_bdv - prev_silo_bdv
+            if delta_bdv < 0:
+                ret_string += f"\n> 📉 {round_num(abs(delta_bdv), 0)} decrease this season"
+            elif prev_silo_bdv == current_silo_bdv:
+                ret_string += f"\n> 📊 No change this season"
+            else:
+                ret_string += f"\n> 📈 {round_num(delta_bdv, 0)} increase this season"
 
             # Gets current and previous season seeds for each asset
             parallelized = []
