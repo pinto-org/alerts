@@ -204,7 +204,7 @@ class SeasonsMonitor(Monitor):
             # Bean Supply stats.
             ret_string += f"\n\n**Supply**"
             ret_string += f"\n🌱 :PINTO: {round_num(reward_beans + flood_beans + incentive_beans, 0, avoid_zero=True)} total Pinto minted"
-            ret_string += f"\n> ⚖️ :PINTO: {round_num(reward_beans, 0, avoid_zero=True)} TWA△P"
+            ret_string += f"\n> ⚖️ :PINTO: {round_num(reward_beans, 0, avoid_zero=True)} TWAΔP"
             if flood_beans > 0:
                 ret_string += f"\n> 🌊 :PINTO: {round_num(flood_field_beans, 0, avoid_zero=True)} minted to Field from Flood"
                 ret_string += f"\n> 🌊 :PINTO: {round_num(flood_well_beans, 0, avoid_zero=True)} minted and sold from Flood"
