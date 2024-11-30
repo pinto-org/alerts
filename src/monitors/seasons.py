@@ -152,12 +152,12 @@ class SeasonsMonitor(Monitor):
             pre_flood_price = self.bean_client.block_price(season_block - 1)
             rain_flood_string += f"\n\n**It is Flooding!**"
             rain_flood_string += f"\nPinto price was {round_num(pre_flood_price, precision=4, incl_dollar=True)}"
-            field_beans = 0
-            well_beans = 0
+            flood_field_beans = 0
+            flood_well_beans = 0
             if len(current_season_stats.field_plenty_logs) > 0:
                 log = current_season_stats.field_plenty_logs[0]
-                field_beans = log.args.get('toField') / 10 ** BEAN_DECIMALS
-                rain_flood_string += f"\n{round_num(field_beans, 0)} Pinto minted to the Field"
+                flood_field_beans = log.args.get('toField') / 10 ** BEAN_DECIMALS
+                rain_flood_string += f"\n{round_num(flood_field_beans, 0)} Pinto minted to the Field"
 
             flood_breakdown = ""
             for i in range(len(current_season_stats.well_plenty_logs)):
@@ -169,11 +169,11 @@ class SeasonsMonitor(Monitor):
                 value = plenty_amount * self.beanstalk_client.get_token_usd_price(token)/ 10 ** erc20_info.decimals
                 flood_breakdown += f"\n> {amount} {erc20_info.symbol} ({round_num(value, precision=0, incl_dollar=True)})"
 
-                well_beans += current_season_stats.flood_swap_logs[i].args.get('amountIn') / 10 ** BEAN_DECIMALS
+                flood_well_beans += current_season_stats.flood_swap_logs[i].args.get('amountIn') / 10 ** BEAN_DECIMALS
 
-            rain_flood_string += f"\n{round_num(well_beans, 0)} Pinto minted and sold for:"
+            rain_flood_string += f"\n{round_num(flood_well_beans, 0)} Pinto minted and sold for:"
             rain_flood_string += flood_breakdown
-            flood_beans += field_beans + well_beans
+            flood_beans += flood_field_beans + flood_well_beans
         elif self.beanstalk_client.is_raining():
             rain_flood_string += f"\n\n☔ **It is Raining!** ☔"
 
@@ -203,8 +203,12 @@ class SeasonsMonitor(Monitor):
             # ret_string += f"\n🪙 TWA wstETH price is ${round_num(wsteth_price, 2)} (1 wstETH = {round_num(wsteth_eth_price, 4)} ETH)"
             # Bean Supply stats.
             ret_string += f"\n\n**Supply**"
-            ret_string += f"\n🌱 {round_num(reward_beans + flood_beans, 0, avoid_zero=True)} Pinto minted"
-            # ret_string += f"\n☀️ {round_num(incentive_beans, 0)} Pinto gm reward"
+            ret_string += f"\n🌱 :PINTO: {round_num(reward_beans + flood_beans + incentive_beans, 0, avoid_zero=True)} total Pinto minted"
+            ret_string += f"\n> ⚖️ :PINTO: {round_num(reward_beans, 0, avoid_zero=True)} TWA△P"
+            if flood_beans > 0:
+                ret_string += f"\n> 🌊 :PINTO: {round_num(flood_field_beans, 0, avoid_zero=True)} minted to Field from Flood"
+                ret_string += f"\n> 🌊 :PINTO: {round_num(flood_well_beans, 0, avoid_zero=True)} minted and sold from Flood"
+            ret_string += f"\n> ☀️ :PINTO: {round_num(incentive_beans, 0)} gm reward"
             ret_string += f"\n🚜 {round_num(sown_beans, 0, avoid_zero=True)} Pinto Sown"
 
             # Liquidity stats.
@@ -214,7 +218,7 @@ class SeasonsMonitor(Monitor):
             for well_info in wells_info:
                 ret_string += f"\n🌊 {SILO_TOKENS_MAP[well_info['pool'].lower()]}: ${round_num(token_to_float(well_info['liquidity'], 6), 0)} - "
                 ret_string += (
-                    f"_deltaP [{round_num(token_to_float(well_info['delta_b'], 6), 0)}], "
+                    f"_ΔP [{round_num(token_to_float(well_info['delta_b'], 6), 0)}], "
                 )
                 ret_string += f"price [${round_num(token_to_float(well_info['price'], 6), 4)}]_"
             ret_string += f"\n:PINTO: Hourly volume: {round_num(wells_volume, 0, incl_dollar=True)}"
