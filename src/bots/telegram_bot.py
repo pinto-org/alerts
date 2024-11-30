@@ -19,6 +19,7 @@ from monitors.well import WellsMonitor
 from monitors.beanstalk import BeanstalkMonitor
 from monitors.market import MarketMonitor
 from monitors.barn import BarnRaiseMonitor
+from tools.msg_aggregator import MsgAggregator
 from tools.util import embellish_token_emojis
 
 # Global variables for telegram message rate limiting across monitor threads
@@ -40,8 +41,18 @@ class TelegramBot(object):
         apihelper.SESSION_TIME_TO_LIVE = 5 * 60
         self.tele_bot = telebot.TeleBot(token, parse_mode="Markdown")
 
-        send_main_chat = self.send_msg_factory([self._main_chat_id])
-        send_both_chats = self.send_msg_factory([self._main_chat_id, self._seasons_chat_id])
+        def send_msg_main(msg):
+            self.tele_bot.send_message(chat_id=self._main_chat_id, text=msg, disable_web_page_preview=True)
+
+        def send_msg_seasons(msg):
+            self.tele_bot.send_message(chat_id=self._seasons_chat_id, text=msg, disable_web_page_preview=True)
+
+        # Wrap send functions in the aggregator to combine burst messages together
+        self.msg_main_agg = MsgAggregator(send_msg_main, RATE_LIMIT)
+        self.msg_seasons_agg = MsgAggregator(send_msg_seasons, RATE_LIMIT)
+
+        send_main_chat = self.send_msg_factory([self.msg_main_agg])
+        send_both_chats = self.send_msg_factory([self.msg_main_agg, self.msg_seasons_agg])
 
         self.peg_cross_monitor = PegCrossMonitor(send_main_chat, prod=prod)
         self.peg_cross_monitor.start()
@@ -63,7 +74,7 @@ class TelegramBot(object):
         # self.barn_raise_monitor = BarnRaiseMonitor(send_all_chat, prod=prod, dry_run=dry_run)
         # self.barn_raise_monitor.start()
 
-    def send_msg_factory(self, chat_ids):
+    def send_msg_factory(self, aggregators):
         def send_msg(msg, to_main=True, to_tg=True):
 
             # Ignore empty/nonprimary messages.
@@ -86,9 +97,9 @@ class TelegramBot(object):
                     time.sleep(sleep_duration)
                 last_request_time = time.time()
 
-            for chat_id in chat_ids:
-                self.tele_bot.send_message(chat_id=chat_id, text=msg, disable_web_page_preview=True)
-                logging.info(f"A message was sent to {chat_id}.")
+            for agg in aggregators:
+                agg.append_message(msg)
+                logging.info(f"A message was queued to be sent.")
             logging.info(f"Message:\n{msg}\n")
 
         return send_msg
@@ -100,6 +111,8 @@ class TelegramBot(object):
         self.beanstalk_monitor.stop()
         self.market_monitor.stop()
         self.barn_raise_monitor.stop()
+        self.msg_main_agg.stop()
+        self.msg_seasons_agg.stop()
 
 
 if __name__ == "__main__":
