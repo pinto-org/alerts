@@ -42,9 +42,11 @@ class TelegramBot(object):
         self.tele_bot = telebot.TeleBot(token, parse_mode="Markdown")
 
         def send_msg_main(msg):
+            logging.info(f"Sending message:\n{msg}\n")
             self.tele_bot.send_message(chat_id=self._main_chat_id, text=msg, disable_web_page_preview=True)
 
         def send_msg_seasons(msg):
+            logging.info(f"Sending message:\n{msg}\n")
             self.tele_bot.send_message(chat_id=self._seasons_chat_id, text=msg, disable_web_page_preview=True)
 
         # Wrap send functions in the aggregator to combine burst messages together
@@ -100,7 +102,6 @@ class TelegramBot(object):
             for agg in aggregators:
                 agg.append_message(msg)
                 logging.info(f"A message was queued to be sent.")
-            logging.info(f"Message:\n{msg}\n")
 
         return send_msg
 
