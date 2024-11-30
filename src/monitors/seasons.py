@@ -214,7 +214,7 @@ class SeasonsMonitor(Monitor):
             for well_info in wells_info:
                 ret_string += f"\n🌊 {SILO_TOKENS_MAP[well_info['pool'].lower()]}: ${round_num(token_to_float(well_info['liquidity'], 6), 0)} - "
                 ret_string += (
-                    f"_deltaP [{round_num(token_to_float(well_info['delta_b'], 6), 0)}], "
+                    f"_ΔP [{round_num(token_to_float(well_info['delta_b'], 6), 0)}], "
                 )
                 ret_string += f"price [${round_num(token_to_float(well_info['price'], 6), 4)}]_"
             ret_string += f"\n:PINTO: Hourly volume: {round_num(wells_volume, 0, incl_dollar=True)}"

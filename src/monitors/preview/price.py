@@ -56,4 +56,4 @@ class PricePreviewMonitor(PreviewMonitor):
                 elif delta_b < 0:
                     status_str += "-"
                 status_str += round_num(abs(delta_b), 0)
-                self.status_function(f"{status_str} deltaP")
+                self.status_function(f"{status_str} ΔP")

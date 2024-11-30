@@ -27,7 +27,7 @@ class MsgAggregator:
             with self.lock:
                 if self.msg_buffer:
                     # Concatenate and send messages
-                    concatenated_message = " ".join(self.msg_buffer)
+                    concatenated_message = "\n".join(self.msg_buffer)
                     self.send_func(concatenated_message)
                     self.msg_buffer.clear()  # Clear the buffer after sending        
 
