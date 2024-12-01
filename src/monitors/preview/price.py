@@ -34,7 +34,7 @@ class PricePreviewMonitor(PreviewMonitor):
 
             # Rotate data and update status.
             if self.display_index in [0, 1, 2]:
-                seasons = self.beanstalk_graph_client.seasons_stats(
+                seasons = self.beanstalk_graph_client.season_stats(
                     self.HOURS, seasons=True, siloHourlySnapshots=False, fieldHourlySnapshots=False
                 )
                 prices = [season.price for season in seasons]

@@ -40,7 +40,8 @@ class PegCrossMonitor(Monitor):
             # Will get index error before there is data in the subgraph.
             except IndexError:
                 continue
-            cross_number_offset = len(crosses) - 1
+            # Cross number in the subgraph is zero-indexed, thus apply an extra -1 offset here.
+            cross_number_offset = len(crosses) - 2
             for cross_type in crosses:
                 output_str = PegCrossMonitor.peg_cross_string(cross_type, int(self.last_known_cross["id"]) - cross_number_offset)
                 cross_number_offset -= 1

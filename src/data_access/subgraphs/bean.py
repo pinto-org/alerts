@@ -75,27 +75,36 @@ class BeanGraphClient(object):
         """
         return execute(self._client, query_str)["beanCrosses"]
     
-    def get_seasonal_stats(self, season_num):
+    def season_stats(self, num_seasons=2):
         query_str = f"""
             query {{
-                beanHourlySnapshot(id: "{BEAN_ADDR.lower()}-{season_num}") {{
+                beanHourlySnapshots(first: {num_seasons} orderBy: season__season orderDirection: desc) {{
                     price
                     supply
                     marketCap
                     supplyInPegLP
+                    crosses
                     deltaCrosses
+                    season {{
+                        season
+                    }}
                 }}
             }}
         """
-        return BeanSeasonStats(execute(self._client, query_str))
+        result = execute(self._client, query_str)
+        # Return list of BeanSeasonStats class instances
+        return [BeanSeasonStats(result, i) for i in range(len(result["beanHourlySnapshots"]))]
 
 class BeanSeasonStats:
-    def __init__(self, graph_response):
-        self.price = float(graph_response["beanHourlySnapshot"]["price"])
-        self.supply = int(graph_response["beanHourlySnapshot"]["supply"]) / 10 ** 6
-        self.marketCap = float(graph_response["beanHourlySnapshot"]["marketCap"])
-        self.supplyInPegLP = float(graph_response["beanHourlySnapshot"]["supplyInPegLP"])
-        self.deltaCrosses = int(graph_response["beanHourlySnapshot"]["deltaCrosses"])
+    def __init__(self, graph_response, result_index):
+        bean_hourly = graph_response["beanHourlySnapshots"][result_index]
+        self.season = int(bean_hourly["season"]["season"])
+        self.price = float(bean_hourly["price"])
+        self.supply = int(bean_hourly["supply"]) / 10 ** 6
+        self.marketCap = float(bean_hourly["marketCap"])
+        self.supplyInPegLP = float(bean_hourly["supplyInPegLP"])
+        self.crosses = int(bean_hourly["crosses"])
+        self.deltaCrosses = int(bean_hourly["deltaCrosses"])
 
 if __name__ == "__main__":
     """Quick test and demonstrate functionality."""
@@ -104,5 +113,5 @@ if __name__ == "__main__":
     bean_sql_client = BeanGraphClient()
     print(f"Last peg cross: {bean_sql_client.last_cross()}")
     print(f"Last peg crosses: {bean_sql_client.get_last_crosses(4)}")
-    print(f"Seasonal stats: {bean_sql_client.get_seasonal_stats(267).__dict__}")
-    print(f"Seasonal crosses: {bean_sql_client.get_seasonal_stats(267).deltaCrosses}")
+    print(f"Seasonal stats: {bean_sql_client.season_stats()[0].__dict__}")
+    print(f"Seasonal crosses: {bean_sql_client.season_stats()[1].deltaCrosses}")

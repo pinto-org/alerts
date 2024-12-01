@@ -115,7 +115,7 @@ class BeanstalkGraphClient(object):
         if current_silo_assets is None or previous_silo_assets is None:
             current_silo_assets, previous_silo_assets = [
                 season_stats.pre_assets
-                for season_stats in self.seasons_stats(
+                for season_stats in self.season_stats(
                     seasons=False, siloHourlySnapshots=True, fieldHourlySnapshots=False
                 )
             ]
@@ -131,7 +131,7 @@ class BeanstalkGraphClient(object):
         # logging.info(f"assets_changes: {assets_changes}")
         return assets_changes
 
-    def seasons_stats(
+    def season_stats(
         self,
         num_seasons=2,
         seasons=True,
@@ -142,7 +142,7 @@ class BeanstalkGraphClient(object):
 
         Returns array of last 2 season in descending order, each value a graphql map structure of all requested data.
         """
-        query_str = "query seasons_stats {"
+        query_str = "query season_stats {"
         if seasons:
             query_str += f"""
                 seasons(first: {num_seasons}, skip: 0, orderBy: season, orderDirection: desc) {{
