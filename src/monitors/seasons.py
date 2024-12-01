@@ -205,7 +205,7 @@ class SeasonsMonitor(Monitor):
             bean_seasonal_stats = self.bean_graph_client.get_seasonal_stats(new_season)
 
             total_crosses = int(self.bean_graph_client.last_cross()["id"])
-            ret_string += f"\n🧮 {total_crosses} Peg crosses ({bean_seasonal_stats.deltaCrosses} this season)"
+            ret_string += f"\n🧮 {total_crosses} Peg crosses ({bean_seasonal_stats.deltaCrosses} this Season)"
 
             # Flood
             ret_string += rain_flood_string
@@ -239,11 +239,11 @@ class SeasonsMonitor(Monitor):
             ret_string += f"\n🏦 {round_num(current_silo_bdv, 0)} PDV in Silo"
             delta_bdv = current_silo_bdv - prev_silo_bdv
             if delta_bdv < 0:
-                ret_string += f"\n> 📉 {round_num(abs(delta_bdv), 0)} decrease this season"
+                ret_string += f"\n> 📉 {round_num(abs(delta_bdv), 0)} decrease this Season"
             elif prev_silo_bdv == current_silo_bdv:
-                ret_string += f"\n> 📊 No change this season"
+                ret_string += f"\n> 📊 No change this Season"
             else:
-                ret_string += f"\n> 📈 {round_num(delta_bdv, 0)} increase this season"
+                ret_string += f"\n> 📈 {round_num(delta_bdv, 0)} increase this Season"
             ret_string += f"\n🧽 {round_num(bean_seasonal_stats.supplyInPegLP * 100, 2)}% Liquidity to Supply Ratio"
             crop_ratio = BeanstalkClient.calc_crop_ratio(current_season_stats.beanToMaxLpGpPerBdvRatio, is_raining)
             ret_string += f"\n🌾 {round_num(crop_ratio * 100, 2)}% Crop Ratio"
