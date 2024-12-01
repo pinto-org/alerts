@@ -244,9 +244,9 @@ class SeasonsMonitor(Monitor):
                 ret_string += f"\n> 📊 No change this season"
             else:
                 ret_string += f"\n> 📈 {round_num(delta_bdv, 0)} increase this season"
-            ret_string += f"\n> 🧽 {round_num(bean_seasonal_stats.supplyInPegLP * 100, 2)}% Liquidity to Supply Ratio"
+            ret_string += f"\n🧽 {round_num(bean_seasonal_stats.supplyInPegLP * 100, 2)}% Liquidity to Supply Ratio"
             crop_ratio = BeanstalkClient.calc_crop_ratio(current_season_stats.beanToMaxLpGpPerBdvRatio, is_raining)
-            ret_string += f"\n> 🌾 {round_num(crop_ratio * 100, 2)}% Crop Ratio"
+            ret_string += f"\n🌾 {round_num(crop_ratio * 100, 2)}% Crop Ratio"
 
             # Gets current and previous season seeds for each asset
             parallelized = []
