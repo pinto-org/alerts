@@ -42,7 +42,7 @@ class PegCrossMonitor(Monitor):
                 continue
             cross_number_offset = len(crosses) - 1
             for cross_type in crosses:
-                output_str = PegCrossMonitor.peg_cross_string(cross_type, self.last_known_cross - cross_number_offset)
+                output_str = PegCrossMonitor.peg_cross_string(cross_type, self.last_known_cross["id"] - cross_number_offset)
                 cross_number_offset -= 1
                 self.message_function(output_str)
 
