@@ -168,6 +168,7 @@ class BeanstalkGraphClient(object):
                     season
                     deltaBeanMints
                     depositedBDV
+                    beanToMaxLpGpPerBdvRatio
                 }}
                 siloAssetHourlySnapshots(
                     orderBy: season
@@ -286,6 +287,7 @@ class SeasonStats:
             self.deposited_bdv = bean_to_float(
                 graph_seasons_response["siloHourlySnapshots"][season_index]["depositedBDV"]
             )
+            self.beanToMaxLpGpPerBdvRatio = int(graph_seasons_response["siloHourlySnapshots"][season_index]["beanToMaxLpGpPerBdvRatio"])
             # List of each asset at the start of the season. Note that this is offset by 1 from subgraph data.
             self.pre_assets = []
             # logging.info(

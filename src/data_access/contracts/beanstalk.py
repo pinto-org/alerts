@@ -72,6 +72,19 @@ class BeanstalkClient(ChainClient):
         response = call_contract_function_with_retry(self.contract.functions.getTokenUsdTwap(token_addr, lookback), block_number=block_number)
         return float(response / 10**6)
 
+    @classmethod
+    def calc_crop_ratio(cls, beanToMaxLpGpPerBdvRatio, is_raining):
+        """
+        Calcualtes the current crop ratio. Result value ranges from 33.33% to 100%.
+        beanToMaxLpGpPerBdvRatio ranges from 0 to 100e18
+        """
+        if is_raining:
+            lower_bound = 0.3333
+        else:
+            lower_bound = 0.50
+
+        return lower_bound + (100 - lower_bound) * (beanToMaxLpGpPerBdvRatio / 100e18)
+
 class BarnRaiseClient(ChainClient):
     """Common functionality related to the Barn Raise Fertilizer contract."""
 
@@ -100,7 +113,9 @@ if __name__ == "__main__":
     # logging.info(f"bean seeds {bs.get_seeds(BEAN_ADDR)}")
     # logging.info(f"season block {bs.get_season_block()}")
     client = EthEventsClient(EventClientType.SEASON)
-    events = client.get_log_range(22722127, 'latest')
+    events = client.get_log_range(22722127, 22722127)
     for i in range(len(events)):
         logging.info(f"found txn: {events[i].txn_hash.hex()}")
     # logging.info(f"lp bdv {bs.get_bdv(get_erc20_info(PINTO_CBETH_ADDR), 20566115)}")
+    logging.info(f"Crop ratio: {BeanstalkClient.calc_crop_ratio(int(50e18), False)}")
+    logging.info(f"Crop ratio: {BeanstalkClient.calc_crop_ratio(int(50e18), True)}")

@@ -2,6 +2,7 @@ from abc import abstractmethod
 
 from bots.util import *
 from data_access.subgraphs.basin import BasinGraphClient
+from data_access.subgraphs.bean import BeanGraphClient
 from monitors.monitor import Monitor
 from data_access.contracts.util import *
 from data_access.contracts.eth_events import *
@@ -26,6 +27,7 @@ class SeasonsMonitor(Monitor):
         self._eth_event_client = EthEventsClient(EventClientType.SEASON)
         self._eth_all_wells = EthEventsClient(EventClientType.WELL, WHITELISTED_WELLS)
         self.beanstalk_graph_client = BeanstalkGraphClient()
+        self.bean_graph_client = BeanGraphClient()
         self.basin_graph_client = BasinGraphClient()
         self.bean_client = BeanClient()
         self.beanstalk_client = BeanstalkClient()
@@ -124,6 +126,7 @@ class SeasonsMonitor(Monitor):
 
         # Silo asset balances.
         current_silo_bdv = current_season_stats.deposited_bdv
+        prev_silo_bdv = last_season_stats.deposited_bdv
         silo_assets_changes = self.beanstalk_graph_client.silo_assets_seasonal_changes(
             current_season_stats.pre_assets, last_season_stats.pre_assets
         )
@@ -133,7 +136,8 @@ class SeasonsMonitor(Monitor):
         )
 
         # Current state.
-        ret_string = f"⏱ Season {last_season_stats.season + 1} has started!"
+        new_season = last_season_stats.season + 1
+        ret_string = f"⏱ Season {new_season} has started!"
         if not short_str:
             ret_string += f"\n💵 Pinto price is ${round_num(price, 4)}"
         else:
@@ -146,6 +150,7 @@ class SeasonsMonitor(Monitor):
 
         season_block = self.beanstalk_client.get_season_block()
         # Flood stats
+        is_raining = self.beanstalk_client.is_raining()
         rain_flood_string = ""
         flood_beans = 0
         if hasattr(current_season_stats, 'well_plenty_logs') and len(current_season_stats.well_plenty_logs) > 0:
@@ -174,7 +179,7 @@ class SeasonsMonitor(Monitor):
             rain_flood_string += f"\n{round_num(flood_well_beans, 0)} Pinto minted and sold for:"
             rain_flood_string += flood_breakdown
             flood_beans += flood_field_beans + flood_well_beans
-        elif self.beanstalk_client.is_raining():
+        elif is_raining:
             rain_flood_string += f"\n\n☔ **It is Raining!** ☔"
 
         # Well info.
@@ -197,6 +202,12 @@ class SeasonsMonitor(Monitor):
         # Full string message.
         if not short_str:
 
+            bean_seasonal_stats = self.bean_graph_client.get_seasonal_stats(new_season)
+
+            total_crosses = int(self.bean_graph_client.last_cross()["id"])
+            ret_string += f"\n🧮 {total_crosses} Peg crosses ({bean_seasonal_stats.deltaCrosses} this season)"
+
+            # Flood
             ret_string += rain_flood_string
 
             # ret_string += f"\n🪙 TWA ETH price is ${round_num(eth_price, 2)}"
@@ -204,7 +215,7 @@ class SeasonsMonitor(Monitor):
             # Bean Supply stats.
             ret_string += f"\n\n**Supply**"
             ret_string += f"\n🌱 :PINTO: {round_num(reward_beans + flood_beans + incentive_beans, 0, avoid_zero=True)} total Pinto minted"
-            ret_string += f"\n> ⚖️ :PINTO: {round_num(reward_beans, 0, avoid_zero=True)} TWA△P"
+            ret_string += f"\n> ⚖️ :PINTO: {round_num(reward_beans, 0, avoid_zero=True)} TWAΔP"
             if flood_beans > 0:
                 ret_string += f"\n> 🌊 :PINTO: {round_num(flood_field_beans, 0, avoid_zero=True)} minted to Field from Flood"
                 ret_string += f"\n> 🌊 :PINTO: {round_num(flood_well_beans, 0, avoid_zero=True)} minted and sold from Flood"
@@ -216,16 +227,26 @@ class SeasonsMonitor(Monitor):
             ret_string += f"\n🌊 :PINTO: Total Liquidity: {total_liquidity}"
 
             for well_info in wells_info:
-                ret_string += f"\n🌊 {SILO_TOKENS_MAP[well_info['pool'].lower()]}: ${round_num(token_to_float(well_info['liquidity'], 6), 0)} - "
+                ret_string += f"\n> {SILO_TOKENS_MAP[well_info['pool'].lower()]}: ${round_num(token_to_float(well_info['liquidity'], 6), 0)} - "
                 ret_string += (
                     f"_ΔP [{round_num(token_to_float(well_info['delta_b'], 6), 0)}], "
                 )
                 ret_string += f"price [${round_num(token_to_float(well_info['price'], 6), 4)}]_"
-            ret_string += f"\n:PINTO: Hourly volume: {round_num(wells_volume, 0, incl_dollar=True)}"
+            ret_string += f"\n⚖️ :PINTO: Hourly volume: {round_num(wells_volume, 0, incl_dollar=True)}"
 
-            # Silo balance stats.
+            # Silo stats.
             ret_string += f"\n\n**Silo**"
             ret_string += f"\n🏦 {round_num(current_silo_bdv, 0)} PDV in Silo"
+            delta_bdv = current_silo_bdv - prev_silo_bdv
+            if delta_bdv < 0:
+                ret_string += f"\n> 📉 {round_num(abs(delta_bdv), 0)} decrease this season"
+            elif prev_silo_bdv == current_silo_bdv:
+                ret_string += f"\n> 📊 No change this season"
+            else:
+                ret_string += f"\n> 📈 {round_num(delta_bdv, 0)} increase this season"
+            ret_string += f"\n🧽 {round_num(bean_seasonal_stats.supplyInPegLP * 100, 2)}% Liquidity to Supply Ratio"
+            crop_ratio = BeanstalkClient.calc_crop_ratio(current_season_stats.beanToMaxLpGpPerBdvRatio, is_raining)
+            ret_string += f"\n🌾 {round_num(crop_ratio * 100, 2)}% Crop Ratio"
 
             # Gets current and previous season seeds for each asset
             parallelized = []

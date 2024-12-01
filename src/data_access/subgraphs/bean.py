@@ -52,7 +52,7 @@ class BeanGraphClient(object):
         return execute(self._client, query_str)["beans"][0]
 
     def last_cross(self):
-        """Returns a dict containing timestamp and direction of most recent peg cross."""
+        """Returns a dict containing the most recent peg cross."""
         return self.get_last_crosses(n=1)[0]
 
     def get_last_crosses(self, n=1):
@@ -64,19 +64,39 @@ class BeanGraphClient(object):
         Returns:
             array of dicts containing timestamp and cross direction for each cross.
         """
-        query_str = (
-            """
-            query get_last_bean_crosses {
-                beanCrosses(first: """
-            + str(n)
-            + """, orderBy:timestamp, orderDirection: desc)
-                {timestamp, above, id}
-            }
-            """
-        )
-        # Create gql query and execute.
+        query_str = f"""
+            query {{
+                beanCrosses(first: {n}, orderBy: timestamp, orderDirection: desc) {{
+                    id
+                    above
+                    timestamp
+                }}
+            }}
+        """
         return execute(self._client, query_str)["beanCrosses"]
     
+    def get_seasonal_stats(self, season_num):
+        query_str = f"""
+            query {{
+                beanHourlySnapshot(id: "{BEAN_ADDR.lower()}-{season_num}") {{
+                    price
+                    supply
+                    marketCap
+                    supplyInPegLP
+                    deltaCrosses
+                }}
+            }}
+        """
+        return BeanSeasonStats(execute(self._client, query_str))
+
+class BeanSeasonStats:
+    def __init__(self, graph_response):
+        self.price = float(graph_response["beanHourlySnapshot"]["price"])
+        self.supply = int(graph_response["beanHourlySnapshot"]["supply"]) / 10 ** 6
+        self.marketCap = float(graph_response["beanHourlySnapshot"]["marketCap"])
+        self.supplyInPegLP = float(graph_response["beanHourlySnapshot"]["supplyInPegLP"])
+        self.deltaCrosses = int(graph_response["beanHourlySnapshot"]["deltaCrosses"])
+
 if __name__ == "__main__":
     """Quick test and demonstrate functionality."""
     logging.basicConfig(level=logging.INFO)
@@ -84,3 +104,5 @@ if __name__ == "__main__":
     bean_sql_client = BeanGraphClient()
     print(f"Last peg cross: {bean_sql_client.last_cross()}")
     print(f"Last peg crosses: {bean_sql_client.get_last_crosses(4)}")
+    print(f"Seasonal stats: {bean_sql_client.get_seasonal_stats(267).__dict__}")
+    print(f"Seasonal crosses: {bean_sql_client.get_seasonal_stats(267).deltaCrosses}")

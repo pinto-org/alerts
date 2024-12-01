@@ -10,9 +10,8 @@ from constants.addresses import *
 from constants.config import *
 
 class PegCrossType(Enum):
-    NO_CROSS = 0
-    CROSS_ABOVE = 1
-    CROSS_BELOW = 2
+    CROSS_ABOVE = 0
+    CROSS_BELOW = 1
 
 class PegCrossMonitor(Monitor):
     """Monitor bean graph for peg crosses and send out messages on detection."""
@@ -37,14 +36,15 @@ class PegCrossMonitor(Monitor):
             min_update_time = time.time() + self.query_rate
 
             try:
-                cross_types = self._check_for_peg_crosses()
+                crosses = self._check_for_peg_crosses()
             # Will get index error before there is data in the subgraph.
             except IndexError:
                 continue
-            for cross_type in cross_types:
-                if cross_type != PegCrossType.NO_CROSS:
-                    output_str = PegCrossMonitor.peg_cross_string(cross_type)
-                    self.message_function(output_str)
+            cross_number_offset = len(crosses) - 1
+            for cross_type in crosses:
+                output_str = PegCrossMonitor.peg_cross_string(cross_type, self.last_known_cross - cross_number_offset)
+                cross_number_offset -= 1
+                self.message_function(output_str)
 
     def _check_for_peg_crosses(self):
         """
@@ -64,10 +64,10 @@ class PegCrossMonitor(Monitor):
                 f"{last_cross['timestamp']}"
             )
             self.last_known_cross = last_cross
-            return [PegCrossType.NO_CROSS]
+            return []
 
         if int(last_cross["id"]) <= int(self.last_known_cross["id"]):
-            return [PegCrossType.NO_CROSS]
+            return []
 
         # If multiple crosses have occurred since last known cross.
         last_cross_id = int(last_cross["id"])
@@ -96,13 +96,13 @@ class PegCrossMonitor(Monitor):
         return cross_types
 
     @abstractmethod
-    def peg_cross_string(cross_type):
+    def peg_cross_string(cross_type, cross_num):
         """Return peg cross string used for bot messages."""
         # NOTE(funderberker): Have to compare enum values here because method of import of caller
         # can change the enum id.
         if cross_type.value == PegCrossType.CROSS_ABOVE.value:
-            return "🟩↗ PINTO crossed above peg!"
+            return f"🟩↗ PINTO crossed above peg! (# {cross_num})"
         elif cross_type.value == PegCrossType.CROSS_BELOW.value:
-            return "🟥↘ PINTO crossed below peg!"
+            return f"🟥↘ PINTO crossed below peg! (# {cross_num})"
         else:
             return "Peg not crossed."
