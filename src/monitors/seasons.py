@@ -2,6 +2,7 @@ from abc import abstractmethod
 
 from bots.util import *
 from data_access.subgraphs.basin import BasinGraphClient
+from data_access.subgraphs.bean import BeanGraphClient
 from monitors.monitor import Monitor
 from data_access.contracts.util import *
 from data_access.contracts.eth_events import *
@@ -26,6 +27,7 @@ class SeasonsMonitor(Monitor):
         self._eth_event_client = EthEventsClient(EventClientType.SEASON)
         self._eth_all_wells = EthEventsClient(EventClientType.WELL, WHITELISTED_WELLS)
         self.beanstalk_graph_client = BeanstalkGraphClient()
+        self.bean_graph_client = BeanGraphClient()
         self.basin_graph_client = BasinGraphClient()
         self.bean_client = BeanClient()
         self.beanstalk_client = BeanstalkClient()
@@ -134,7 +136,8 @@ class SeasonsMonitor(Monitor):
         )
 
         # Current state.
-        ret_string = f"⏱ Season {last_season_stats.season + 1} has started!"
+        new_season = last_season_stats.season + 1
+        ret_string = f"⏱ Season {new_season} has started!"
         if not short_str:
             ret_string += f"\n💵 Pinto price is ${round_num(price, 4)}"
         else:
@@ -198,6 +201,11 @@ class SeasonsMonitor(Monitor):
         # Full string message.
         if not short_str:
 
+            total_crosses = int(self.bean_graph_client.last_cross()["id"])
+            seasonal_crosses = self.bean_graph_client.get_seasonal_crosses(new_season)
+            ret_string += f"\n🧮 {total_crosses} Peg crosses ({seasonal_crosses} this season)"
+
+            # Flood
             ret_string += rain_flood_string
 
             # ret_string += f"\n🪙 TWA ETH price is ${round_num(eth_price, 2)}"
