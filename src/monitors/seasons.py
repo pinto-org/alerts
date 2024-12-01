@@ -150,6 +150,7 @@ class SeasonsMonitor(Monitor):
 
         season_block = self.beanstalk_client.get_season_block()
         # Flood stats
+        is_raining = self.beanstalk_client.is_raining()
         rain_flood_string = ""
         flood_beans = 0
         if hasattr(current_season_stats, 'well_plenty_logs') and len(current_season_stats.well_plenty_logs) > 0:
@@ -178,7 +179,7 @@ class SeasonsMonitor(Monitor):
             rain_flood_string += f"\n{round_num(flood_well_beans, 0)} Pinto minted and sold for:"
             rain_flood_string += flood_breakdown
             flood_beans += flood_field_beans + flood_well_beans
-        elif self.beanstalk_client.is_raining():
+        elif is_raining:
             rain_flood_string += f"\n\n☔ **It is Raining!** ☔"
 
         # Well info.
@@ -201,9 +202,10 @@ class SeasonsMonitor(Monitor):
         # Full string message.
         if not short_str:
 
+            bean_seasonal_stats = self.bean_graph_client.get_seasonal_stats(new_season)
+
             total_crosses = int(self.bean_graph_client.last_cross()["id"])
-            seasonal_crosses = self.bean_graph_client.get_seasonal_crosses(new_season)
-            ret_string += f"\n🧮 {total_crosses} Peg crosses ({seasonal_crosses} this season)"
+            ret_string += f"\n🧮 {total_crosses} Peg crosses ({bean_seasonal_stats.deltaCrosses} this season)"
 
             # Flood
             ret_string += rain_flood_string
@@ -232,7 +234,7 @@ class SeasonsMonitor(Monitor):
                 ret_string += f"price [${round_num(token_to_float(well_info['price'], 6), 4)}]_"
             ret_string += f"\n⚖️ :PINTO: Hourly volume: {round_num(wells_volume, 0, incl_dollar=True)}"
 
-            # Silo balance stats.
+            # Silo stats.
             ret_string += f"\n\n**Silo**"
             ret_string += f"\n🏦 {round_num(current_silo_bdv, 0)} PDV in Silo"
             delta_bdv = current_silo_bdv - prev_silo_bdv
@@ -242,6 +244,9 @@ class SeasonsMonitor(Monitor):
                 ret_string += f"\n> 📊 No change this season"
             else:
                 ret_string += f"\n> 📈 {round_num(delta_bdv, 0)} increase this season"
+            ret_string += f"\n> 🧽 {round_num(bean_seasonal_stats.supplyInPegLP * 100, 2)}% Liquidity to Supply Ratio"
+            crop_ratio = BeanstalkClient.calc_crop_ratio(current_season_stats.beanToMaxLpGpPerBdvRatio, is_raining)
+            ret_string += f"\n> 🌾 {round_num(crop_ratio * 100, 2)}% Crop Ratio"
 
             # Gets current and previous season seeds for each asset
             parallelized = []
