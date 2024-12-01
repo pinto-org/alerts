@@ -83,7 +83,7 @@ class BeanstalkClient(ChainClient):
         else:
             lower_bound = 0.50
 
-        return lower_bound + (100 - lower_bound) * (beanToMaxLpGpPerBdvRatio / 100e18)
+        return lower_bound + (1 - lower_bound) * (beanToMaxLpGpPerBdvRatio / 100e18)
 
 class BarnRaiseClient(ChainClient):
     """Common functionality related to the Barn Raise Fertilizer contract."""
