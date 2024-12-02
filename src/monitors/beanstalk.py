@@ -218,7 +218,7 @@ class BeanstalkMonitor(Monitor):
             f"Converted to {round_token(add_amount, add_decimals, add_token_addr)} {add_token_symbol} "
         )
 
-        event_str += f"({round_num(bdv_float, 0)} BDV)"
+        event_str += f"({round_num(bdv_float, 0)} PDV)"
         event_str += f"\n_{latest_pool_price_str(self.bean_client, pool_token)}_ "
         if not remove_token_addr.startswith(UNRIPE_TOKEN_PREFIX):
             event_str += f"\n{value_to_emojis(value)}"

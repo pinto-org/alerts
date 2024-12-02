@@ -304,8 +304,8 @@ class SeasonsMonitor(Monitor):
             else:
                 ret_string += f"{round_num(issued_soil, 0, avoid_zero=True)}"
             ret_string += f" Soil in Field"
-            ret_string += f"\n🌡 {round_num(sg.current_beanstalk.temperature, 0)}% Temperature"
-            ret_string += f"\n🧮 {round_num(pod_rate, 0)}% Pod Rate"
+            ret_string += f"\n🌡 {round_num(sg.current_beanstalk.temperature, 0)}% Max Temperature"
+            ret_string += f"\n🧮 {round_num(pod_rate, 2)}% Pod Rate"
 
             # Barn.
             # ret_string += f"\n\n**Barn**"
@@ -332,7 +332,7 @@ class SeasonsMonitor(Monitor):
             if sown_beans > 0:
                 ret_string += f"\n🚜 {round_num(sown_beans, 0, avoid_zero=True)} Pinto Sown for {round_num(sown_beans * (1 + last_weather/100), 0, avoid_zero=True)} Pods"
 
-            ret_string += f"\n🌡 {round_num(sg.current_beanstalk.temperature, 0)}% Temperature"
+            ret_string += f"\n🌡 {round_num(sg.current_beanstalk.temperature, 0)}% Max Temperature"
             # ret_string += f"\n🧮 {round_num(pod_rate, 0)}% Pod Rate"
         return ret_string
 
