@@ -153,12 +153,12 @@ class BeanstalkMonitor(Monitor):
                     f"🚜 {round_num(beans_amount, 0, avoid_zero=True)} Pinto Sown for "
                     f"{round_num(pods_amount, 0, avoid_zero=True)} Pods ({round_num(beans_value, 0, avoid_zero=True, incl_dollar=True)})"
                 )
-                effective_temp = round((pods_amount / beans_amount - 1) * 100, 1)
+                effective_temp = (pods_amount / beans_amount - 1) * 100
                 max_temp = self.beanstalk_client.get_max_temp()
                 current_soil = self.beanstalk_client.get_current_soil()
-                if int(effective_temp) == int(max_temp):
-                    effective_temp = int(effective_temp)
-                event_str += f"\n_Sow Temperature: {round_num(effective_temp, precision=0)}% (Max: {round_num(max_temp, precision=0)}%). Remaining Soil: {round_num(current_soil, precision=0)}_"
+                if abs(effective_temp - max_temp) < 0.01:
+                    effective_temp = max_temp
+                event_str += f"\n_Sow Temperature: {round_num(effective_temp, precision=2)}% (Max: {round_num(max_temp, precision=0)}%). Remaining Soil: {round_num(current_soil, precision=0)}_"
                 event_str += f"\n{value_to_emojis(beans_value)}"
             elif event_log.event == "Harvest":
                 harvest_amt_str = round_num(beans_amount, 0, avoid_zero=True)
