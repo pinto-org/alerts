@@ -15,15 +15,13 @@ from constants.config import *
 
 class SeasonsMonitor(Monitor):
     def __init__(
-        self, message_function, short_msgs=False, channel_to_wallets=None, prod=False, dry_run=None
+        self, message_function, short_msgs=False, prod=False, dry_run=None
     ):
         super().__init__(
             "Seasons", message_function, SUNRISE_CHECK_PERIOD, prod=prod, dry_run=dry_run
         )
         # Toggle shorter messages (must fit into <280 character safely).
         self.short_msgs = short_msgs
-        # Read-only access to self.channel_to_wallets, which may be modified by other threads.
-        self.channel_to_wallets = channel_to_wallets
         self._eth_event_client = EthEventsClient(EventClientType.SEASON)
         self._eth_all_wells = EthEventsClient(EventClientType.WELL, WHITELISTED_WELLS)
         self.beanstalk_graph_client = BeanstalkGraphClient()

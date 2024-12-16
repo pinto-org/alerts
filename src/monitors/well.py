@@ -44,8 +44,10 @@ class WellEventData:
 
 # Monitors all wells except those in the ignorelist
 class OtherWellsMonitor(Monitor):
-    def __init__(self, message_function, ignorelist, discord=False, prod=False, dry_run=None):
-        super().__init__("wells", message_function, WELL_CHECK_RATE, prod=prod, dry_run=dry_run)
+    def __init__(self, msg_exchange, msg_arbitrage, ignorelist, discord=False, prod=False, dry_run=None):
+        super().__init__("wells", None, WELL_CHECK_RATE, prod=prod, dry_run=dry_run)
+        self.msg_exchange = msg_exchange
+        self.msg_arbitrage = msg_arbitrage
         self._ignorelist = ignorelist
         self._discord = discord
         self._eth_aquifer = EthEventsClient(EventClientType.AQUIFER, AQUIFER_ADDR)
@@ -66,7 +68,7 @@ class OtherWellsMonitor(Monitor):
                 for event_log in txn_pair.logs:
                     event_str = self.aquifer_event_str(event_log)
                     if event_str:
-                        self.message_function(event_str)
+                        self.msg_exchange(event_str)
             for txn_pair in self._eth_all_wells.get_new_logs(dry_run=self._dry_run):
                 for event_log in txn_pair.logs:
                     # Avoids double-reporting on whitelisted wells having a dedicated channel
@@ -74,7 +76,7 @@ class OtherWellsMonitor(Monitor):
                         event_data = parse_event_data(event_log, self.basin_graph_client, self.bean_client, web3=self._web3)
                         event_str = single_event_str(event_data, txn_pair.txn_hash.hex())
                         if event_str:
-                            self.message_function(event_str)
+                            self.msg_exchange(event_str)
 
     def aquifer_event_str(self, event_log):
         if event_log.event == "BoreWell":
@@ -106,8 +108,10 @@ class WellsMonitor(Monitor):
     ^^ make this assumption less strict, instead only skip valuation if no BDV
     """
 
-    def __init__(self, message_function, addresses, bean_reporting=False, prod=False, dry_run=None):
-        super().__init__(f"specific well", message_function, WELL_CHECK_RATE, prod=prod, dry_run=dry_run)
+    def __init__(self, msg_exchange, msg_arbitrage, addresses, bean_reporting=False, prod=False, dry_run=None):
+        super().__init__(f"specific well", None, WELL_CHECK_RATE, prod=prod, dry_run=dry_run)
+        self.msg_exchange = msg_exchange
+        self.msg_arbitrage = msg_arbitrage
         self.pool_addresses = addresses
         self._eth_event_client = EthEventsClient(EventClientType.WELL, self.pool_addresses)
         self.basin_graph_client = BasinGraphClient()
@@ -149,7 +153,7 @@ class WellsMonitor(Monitor):
                 del individual_evts[i:i + 2]
                 event_str = arbitrage_event_str(evt1, evt2, txn_hash.hex(), self.beanstalk_client)
                 if event_str:
-                    self.message_function(event_str, to_tg=to_tg)
+                    self.msg_arbitrage(event_str, to_tg=to_tg)
             else:
                 i += 1
 
@@ -157,7 +161,7 @@ class WellsMonitor(Monitor):
         for event_data in individual_evts:
             event_str = single_event_str(event_data, txn_hash.hex(), self.bean_reporting, is_convert=is_convert)
             if event_str:
-                self.message_function(event_str, to_tg=to_tg)
+                self.msg_exchange(event_str, to_tg=to_tg)
 
 def parse_event_data(event_log, basin_graph_client, bean_client, web3=None):
     retval = WellEventData()
