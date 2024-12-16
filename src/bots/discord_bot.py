@@ -31,14 +31,15 @@ class Channel(Enum):
     PEG = 0
     SEASONS = 1
     EXCHANGE = 2
-    SILO = 3
-    FIELD = 4
-    MARKET = 5
-    REPORT = 6
-    BARN_RAISE = 7
-    CONTRACT_MIGRATED = 8
-    EVERYTHING = 9
-    TELEGRAM_FWD = 10
+    ARBITRAGE = 3
+    SILO = 4
+    FIELD = 5
+    MARKET = 6
+    REPORT = 7
+    BARN_RAISE = 8
+    CONTRACT_MIGRATED = 9
+    EVERYTHING = 10
+    TELEGRAM_FWD = 11
 
 class DiscordClient(discord.ext.commands.Bot):
     def __init__(self, prod=False, telegram_token=None, dry_run=None):
@@ -53,6 +54,7 @@ class DiscordClient(discord.ext.commands.Bot):
             self._chat_id_peg = BS_DISCORD_CHANNEL_ID_PEG_CROSSES
             self._chat_id_seasons = BS_DISCORD_CHANNEL_ID_SEASONS
             self._chat_id_exchange = BS_DISCORD_CHANNEL_ID_EXCHANGE
+            self._chat_id_arbitrage = BS_DISCORD_CHANNEL_ID_ARBITRAGE
             self._chat_id_silo = BS_DISCORD_CHANNEL_ID_SILO
             self._chat_id_field = BS_DISCORD_CHANNEL_ID_FIELD
             self._chat_id_market = BS_DISCORD_CHANNEL_ID_MARKET
@@ -67,6 +69,7 @@ class DiscordClient(discord.ext.commands.Bot):
             self._chat_id_peg = BS_DISCORD_CHANNEL_ID_TEST_BOT
             self._chat_id_seasons = BS_DISCORD_CHANNEL_ID_TEST_BOT
             self._chat_id_exchange = BS_DISCORD_CHANNEL_ID_TEST_BOT
+            self._chat_id_arbitrage = BS_DISCORD_CHANNEL_ID_TEST_BOT
             self._chat_id_silo = BS_DISCORD_CHANNEL_ID_TEST_BOT
             self._chat_id_field = BS_DISCORD_CHANNEL_ID_TEST_BOT
             self._chat_id_market = BS_DISCORD_CHANNEL_ID_TEST_BOT
@@ -166,8 +169,7 @@ class DiscordClient(discord.ext.commands.Bot):
         self.msg_queue.append((Channel.EXCHANGE if to_main else Channel.EVERYTHING, text))
 
     def send_msg_arbitrage(self, text, to_main=True, to_tg=None):
-        # TODO: add new channel
-        self.msg_queue.append((Channel.EXCHANGE if to_main else Channel.EVERYTHING, text))
+        self.msg_queue.append((Channel.ARBITRAGE if to_main else Channel.EVERYTHING, text))
 
     def send_msg_silo(self, text, to_main=True, to_tg=None):
         self.msg_queue.append((Channel.SILO if to_main else Channel.EVERYTHING, text))
@@ -193,6 +195,7 @@ class DiscordClient(discord.ext.commands.Bot):
         self._channel_peg = self.get_channel(self._chat_id_peg)
         self._channel_seasons = self.get_channel(self._chat_id_seasons)
         self._channel_exchange = self.get_channel(self._chat_id_exchange)
+        self._channel_arbitrage = self.get_channel(self._chat_id_arbitrage)
         self._channel_silo = self.get_channel(self._chat_id_silo)
         self._channel_field = self.get_channel(self._chat_id_field)
         self._channel_market = self.get_channel(self._chat_id_market)
@@ -207,8 +210,8 @@ class DiscordClient(discord.ext.commands.Bot):
 
         logging.info(
             f"Discord channels are {self._channel_report}, {self._channel_peg}, {self._channel_seasons}, "
-            f"{self._channel_exchange}, {self._channel_silo}, {self._channel_field}, {self._channel_market}, "
-            f"{self._channel_barn_raise}, {self._chat_id_contract_migrated}"
+            f"{self._channel_exchange}, {self._channel_arbitrage}, {self._channel_silo}, {self._channel_field}, "
+            f"{self._channel_market}, {self._channel_barn_raise}, {self._chat_id_contract_migrated}"
         )
 
         # Guild IDs for all servers this bot is in.
@@ -274,6 +277,8 @@ class DiscordClient(discord.ext.commands.Bot):
                     await self._channel_seasons.send(msg)
                 elif channel is Channel.EXCHANGE:
                     await self._channel_exchange.send(msg)
+                elif channel is Channel.ARBITRAGE:
+                    await self._channel_arbitrage.send(msg)
                 elif channel is Channel.SILO:
                     await self._channel_silo.send(msg)
                 elif channel is Channel.FIELD:
