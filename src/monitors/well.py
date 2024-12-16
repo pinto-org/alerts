@@ -70,7 +70,7 @@ class OtherWellsMonitor(Monitor):
                     # Avoids double-reporting on whitelisted wells having a dedicated channel
                     if event_log.get("address") not in self._ignorelist:
                         event_data = parse_event_data(event_log, self.basin_graph_client, self.bean_client, web3=self._web3)
-                        event_str = well_event_str(event_data, txn_pair.txn_hash.hex())
+                        event_str = single_event_str(event_data, txn_pair.txn_hash.hex())
                         if event_str:
                             self.message_function(event_str)
 
@@ -131,12 +131,32 @@ class WellsMonitor(Monitor):
         is_convert = event_sig_in_txn(BEANSTALK_EVENT_MAP["Convert"], txn_hash)
         to_tg = self.bean_reporting is False or not is_convert 
 
+        individual_evts: List[WellEventData] = []
         for event_log in event_logs:
             if event_log.get("address") in self.pool_addresses:
-                event_data = parse_event_data(event_log, self.basin_graph_client, self.bean_client, web3=self._web3)
-                event_str = well_event_str(event_data, txn_hash.hex(), self.bean_reporting, is_convert=is_convert)
+                individual_evts.append(parse_event_data(event_log, self.basin_graph_client, self.bean_client, web3=self._web3))
+
+        # Identify arbitrage trades
+        i = 0
+        while i < len(individual_evts) - 1:
+            evt1 = individual_evts[i]
+            evt2 = individual_evts[i + 1]
+            if (
+                evt1.event_type in ["SWAP", "SHIFT"] and evt2.event_type in ["SWAP", "SHIFT"]
+                and evt1.token_out == evt2.token_in and evt1.amount_out == evt2.amount_in
+            ):
+                del individual_evts[i:i + 2]
+                event_str = arbitrage_event_str(evt1, evt2, txn_hash.hex())
                 if event_str:
                     self.message_function(event_str, to_tg=to_tg)
+            else:
+                i += 1
+
+        # Normal case
+        for event_data in individual_evts:
+            event_str = single_event_str(event_data, txn_hash.hex(), self.bean_reporting, is_convert=is_convert)
+            if event_str:
+                self.message_function(event_str, to_tg=to_tg)
 
 def parse_event_data(event_log, basin_graph_client, bean_client, web3=None):
     retval = WellEventData()
@@ -233,10 +253,8 @@ def parse_event_data(event_log, basin_graph_client, bean_client, web3=None):
     retval.well_price_str = latest_pool_price_str(bean_client, retval.well_address)
     retval.well_liquidity_str = latest_well_lp_str(basin_graph_client, retval.well_address)
     return retval
-
     
-def well_event_str(event_data: WellEventData, txn_hash, bean_reporting=False, is_convert=False):
-
+def single_event_str(event_data: WellEventData, txn_hash, bean_reporting=False, is_convert=False):
     event_str = ""
 
     is_lpish = False
@@ -294,6 +312,33 @@ def well_event_str(event_data: WellEventData, txn_hash, bean_reporting=False, is
             event_str += f"\n_{event_data.well_liquidity_str}_ "
         event_str += f"\n{value_to_emojis(event_data.value)}"
 
+    event_str += f"\n<https://basescan.org/tx/{txn_hash}>"
+    # Empty line that does not get stripped.
+    event_str += "\n_ _"
+    return event_str
+
+def arbitrage_event_str(evt1: WellEventData, evt2: WellEventData, txn_hash):
+    event_str = ""
+
+    erc20_info_in = get_erc20_info(evt1.token_in)
+    erc20_info_out = get_erc20_info(evt2.token_out)
+    erc20_info_arb = get_erc20_info(evt1.token_out)
+    amount_in_str = round_token(evt1.amount_in, erc20_info_in.decimals, erc20_info_in.addr)
+    amount_out_str = round_token(evt2.amount_out, erc20_info_out.decimals, erc20_info_out.addr)
+    amount_arb_str = round_token(evt1.amount_out, erc20_info_arb.decimals, erc20_info_arb.addr)
+
+    event_str += (
+        f"{amount_in_str} {erc20_info_in.symbol} exhanged for {amount_out_str} {erc20_info_out.symbol}, "
+        f"using {amount_arb_str} {erc20_info_arb.symbol} "
+    )
+    well1 = SILO_TOKENS_MAP.get(evt1.well_address.lower())
+    well2 = SILO_TOKENS_MAP.get(evt2.well_address.lower())
+    if well1 is not None:
+        event_str += f"\n> :{well1.upper()}:📈 _{evt1.well_price_str.replace('Well: ', '')}_"
+    if well2 is not None:
+        event_str += f"\n> :{well2.upper()}:📉 _{evt2.well_price_str.replace('Well: ', '')}_"
+
+    event_str += f"\n{value_to_emojis(evt1.value)}"
     event_str += f"\n<https://basescan.org/tx/{txn_hash}>"
     # Empty line that does not get stripped.
     event_str += "\n_ _"
