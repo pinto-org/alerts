@@ -70,7 +70,7 @@ class OtherWellsMonitor(Monitor):
                     # Avoids double-reporting on whitelisted wells having a dedicated channel
                     if event_log.get("address") not in self._ignorelist:
                         event_data = parse_event_data(event_log, self.basin_graph_client, self.bean_client, web3=self._web3)
-                        event_str = well_event_str(event_data, txn_pair.txn_hash)
+                        event_str = well_event_str(event_data, txn_pair.txn_hash.hex())
                         if event_str:
                             self.message_function(event_str)
 
@@ -134,7 +134,7 @@ class WellsMonitor(Monitor):
         for event_log in event_logs:
             if event_log.get("address") in self.pool_addresses:
                 event_data = parse_event_data(event_log, self.basin_graph_client, self.bean_client, web3=self._web3)
-                event_str = well_event_str(event_data, txn_hash, self.bean_reporting, is_convert=is_convert)
+                event_str = well_event_str(event_data, txn_hash.hex(), self.bean_reporting, is_convert=is_convert)
                 if event_str:
                     self.message_function(event_str, to_tg=to_tg)
 
@@ -200,9 +200,9 @@ def parse_event_data(event_log, basin_graph_client, bean_client, web3=None):
     elif event_log.event == "Swap":
         retval.event_type = "SWAP"
         if retval.token_in == BEAN_ADDR:
-            bdv = bean_to_float(retval.amount_in)
+            retval.bdv = bean_to_float(retval.amount_in)
         elif retval.token_out == BEAN_ADDR:
-            bdv = bean_to_float(retval.amount_out)
+            retval.bdv = bean_to_float(retval.amount_out)
     elif event_log.event == "Shift":
         shift_from_token = retval.well_tokens[0] if retval.well_tokens[1] == retval.token_out else retval.well_tokens[1]
 
@@ -212,9 +212,9 @@ def parse_event_data(event_log, basin_graph_client, bean_client, web3=None):
             retval.amount_in = get_tokens_sent(shift_from_token, event_log.transactionHash, retval.well_address, event_log.logIndex)
 
         if retval.token_out == BEAN_ADDR:
-            bdv = bean_to_float(retval.amount_out)
+            retval.bdv = bean_to_float(retval.amount_out)
         elif shift_from_token == BEAN_ADDR:
-            bdv = bean_to_float(retval.amount_in)
+            retval.bdv = bean_to_float(retval.amount_in)
 
         if retval.amount_in is not None and retval.amount_in > 0:
             # not None and not 0, then it is a pseudo swap
@@ -224,11 +224,10 @@ def parse_event_data(event_log, basin_graph_client, bean_client, web3=None):
             # one sided shift
             retval.event_type = "SHIFT"
 
-    if bdv is not None:
+    if retval.bdv is not None:
         try:
             retval.value = retval.bdv * bean_client.avg_bean_price()
         except Exception as e:
-            # TODO: why is this erroring
             logging.warning(f"Price contract failed to return a value. No value is assigned to this event")
 
     retval.well_price_str = latest_pool_price_str(bean_client, retval.well_address)
