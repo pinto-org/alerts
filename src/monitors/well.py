@@ -1,4 +1,5 @@
 from bots.util import *
+from data_access.contracts.beanstalk import BeanstalkClient
 from monitors.monitor import Monitor
 from data_access.contracts.util import *
 from data_access.contracts.eth_events import *
@@ -51,6 +52,7 @@ class OtherWellsMonitor(Monitor):
         # All addresses
         self._eth_all_wells = EthEventsClient(EventClientType.WELL)
         self.basin_graph_client = BasinGraphClient()
+        self.beanstalk_client = BeanstalkClient()
         self.bean_client = BeanClient()
     
     def _monitor_method(self):
@@ -110,6 +112,7 @@ class WellsMonitor(Monitor):
         self._eth_event_client = EthEventsClient(EventClientType.WELL, self.pool_addresses)
         self.basin_graph_client = BasinGraphClient()
         self.bean_client = BeanClient()
+        self.beanstalk_client = BeanstalkClient()
         self.bean_reporting = bean_reporting
 
     def _monitor_method(self):
@@ -124,8 +127,6 @@ class WellsMonitor(Monitor):
 
     def _handle_txn_logs(self, txn_hash, event_logs):
         """Process the well event logs for a single txn."""
-
-        logging.info(f"Handling txn logs for hash {event_logs}")
 
         # Convert alerts should appear in both exchange + silo event channels, but don't doublepost in telegram
         is_convert = event_sig_in_txn(BEANSTALK_EVENT_MAP["Convert"], txn_hash)
@@ -146,7 +147,7 @@ class WellsMonitor(Monitor):
                 and evt1.token_out == evt2.token_in and evt1.amount_out == evt2.amount_in
             ):
                 del individual_evts[i:i + 2]
-                event_str = arbitrage_event_str(evt1, evt2, txn_hash.hex())
+                event_str = arbitrage_event_str(evt1, evt2, txn_hash.hex(), self.beanstalk_client)
                 if event_str:
                     self.message_function(event_str, to_tg=to_tg)
             else:
@@ -317,7 +318,7 @@ def single_event_str(event_data: WellEventData, txn_hash, bean_reporting=False, 
     event_str += "\n_ _"
     return event_str
 
-def arbitrage_event_str(evt1: WellEventData, evt2: WellEventData, txn_hash):
+def arbitrage_event_str(evt1: WellEventData, evt2: WellEventData, txn_hash, beanstalk_client: BeanstalkClient):
     event_str = ""
 
     erc20_info_in = get_erc20_info(evt1.token_in)
@@ -327,9 +328,14 @@ def arbitrage_event_str(evt1: WellEventData, evt2: WellEventData, txn_hash):
     amount_out_str = round_token(evt2.amount_out, erc20_info_out.decimals, erc20_info_out.addr)
     amount_arb_str = round_token(evt1.amount_out, erc20_info_arb.decimals, erc20_info_arb.addr)
 
+    spend_amount = evt1.amount_in * beanstalk_client.get_token_usd_price(evt1.token_in) / 10 ** erc20_info_in.decimals
+    receive_amount = evt2.amount_out * beanstalk_client.get_token_usd_price(evt2.token_out) / 10 ** erc20_info_out.decimals
+    profit = receive_amount - spend_amount
+    profit_str = f"{'+' if profit >= 0 else '-'}{round_num(abs(profit), 0, avoid_zero=False, incl_dollar=True)}"
+
     event_str += (
         f"{amount_in_str} {erc20_info_in.symbol} exhanged for {amount_out_str} {erc20_info_out.symbol}, "
-        f"using {amount_arb_str} {erc20_info_arb.symbol} "
+        f"using {amount_arb_str} {erc20_info_arb.symbol} ({profit_str})"
     )
     well1 = SILO_TOKENS_MAP.get(evt1.well_address.lower())
     well2 = SILO_TOKENS_MAP.get(evt2.well_address.lower())

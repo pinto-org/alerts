@@ -173,7 +173,7 @@ class SeasonsMonitor(Monitor):
                 plenty_amount = log.args.get('amount')
                 erc20_info = get_erc20_info(token)
                 amount = round_token(plenty_amount, erc20_info.decimals, token)
-                value = plenty_amount * self.beanstalk_client.get_token_usd_price(token)/ 10 ** erc20_info.decimals
+                value = plenty_amount * self.beanstalk_client.get_token_usd_price(token) / 10 ** erc20_info.decimals
                 flood_breakdown += f"\n> {amount} {erc20_info.symbol} ({round_num(value, precision=0, incl_dollar=True)})"
 
                 flood_well_beans += sg.current_beanstalk.flood_swap_logs[i].args.get('amountIn') / 10 ** BEAN_DECIMALS
