@@ -1,8 +1,6 @@
 import logging
 import logging.handlers
 import os
-import threading
-import time
 import signal
 
 import telebot
@@ -61,7 +59,7 @@ class TelegramBot(object):
         self.sunrise_monitor.start()
 
         self.wells_monitor = WellsMonitor(
-            send_main_chat, WHITELISTED_WELLS, bean_reporting=True, prod=prod, dry_run=dry_run
+            send_main_chat, send_main_chat, WHITELISTED_WELLS, bean_reporting=True, prod=prod, dry_run=dry_run
         )
         self.wells_monitor.start()
 

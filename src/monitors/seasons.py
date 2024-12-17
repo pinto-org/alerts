@@ -15,15 +15,13 @@ from constants.config import *
 
 class SeasonsMonitor(Monitor):
     def __init__(
-        self, message_function, short_msgs=False, channel_to_wallets=None, prod=False, dry_run=None
+        self, message_function, short_msgs=False, prod=False, dry_run=None
     ):
         super().__init__(
             "Seasons", message_function, SUNRISE_CHECK_PERIOD, prod=prod, dry_run=dry_run
         )
         # Toggle shorter messages (must fit into <280 character safely).
         self.short_msgs = short_msgs
-        # Read-only access to self.channel_to_wallets, which may be modified by other threads.
-        self.channel_to_wallets = channel_to_wallets
         self._eth_event_client = EthEventsClient(EventClientType.SEASON)
         self._eth_all_wells = EthEventsClient(EventClientType.WELL, WHITELISTED_WELLS)
         self.beanstalk_graph_client = BeanstalkGraphClient()
@@ -173,7 +171,7 @@ class SeasonsMonitor(Monitor):
                 plenty_amount = log.args.get('amount')
                 erc20_info = get_erc20_info(token)
                 amount = round_token(plenty_amount, erc20_info.decimals, token)
-                value = plenty_amount * self.beanstalk_client.get_token_usd_price(token)/ 10 ** erc20_info.decimals
+                value = plenty_amount * self.beanstalk_client.get_token_usd_price(token) / 10 ** erc20_info.decimals
                 flood_breakdown += f"\n> {amount} {erc20_info.symbol} ({round_num(value, precision=0, incl_dollar=True)})"
 
                 flood_well_beans += sg.current_beanstalk.flood_swap_logs[i].args.get('amountIn') / 10 ** BEAN_DECIMALS
