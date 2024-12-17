@@ -339,7 +339,7 @@ def arbitrage_event_str(evt1: WellEventData, evt2: WellEventData, txn_hash, bean
     profit_str = f"{'+' if profit >= 0 else '-'}{round_num(abs(profit), 2, avoid_zero=False, incl_dollar=True)}"
 
     event_str += (
-        f"{amount_in_str} {erc20_info_in.symbol} exhanged for {amount_out_str} {erc20_info_out.symbol}, "
+        f"{amount_in_str} {erc20_info_in.symbol} exchanged for {amount_out_str} {erc20_info_out.symbol}, "
         f"using {amount_arb_str} {erc20_info_arb.symbol} ({profit_str})"
     )
     well1 = SILO_TOKENS_MAP.get(evt1.well_address.lower())
