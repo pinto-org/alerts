@@ -335,7 +335,7 @@ def arbitrage_event_str(evt1: WellEventData, evt2: WellEventData, txn_hash, bean
     spend_amount = evt1.amount_in * beanstalk_client.get_token_usd_price(evt1.token_in) / 10 ** erc20_info_in.decimals
     receive_amount = evt2.amount_out * beanstalk_client.get_token_usd_price(evt2.token_out) / 10 ** erc20_info_out.decimals
     profit = receive_amount - spend_amount
-    profit_str = f"{'+' if profit >= 0 else '-'}{round_num(abs(profit), 0, avoid_zero=False, incl_dollar=True)}"
+    profit_str = f"{'+' if profit >= 0 else '-'}{round_num(abs(profit), 2, avoid_zero=False, incl_dollar=True)}"
 
     event_str += (
         f"{amount_in_str} {erc20_info_in.symbol} exhanged for {amount_out_str} {erc20_info_out.symbol}, "
