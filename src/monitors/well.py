@@ -211,6 +211,7 @@ def parse_event_data(event_log, basin_graph_client, bean_client, web3=None):
     elif event_log.event == "RemoveLiquidity" or event_log.event == "RemoveLiquidityOneToken":
         retval.event_type = "LP"
         if event_log.event == "RemoveLiquidityOneToken":
+            retval.token_amounts_out = []
             for i in range(len(retval.well_tokens)):
                 if tokenOut == retval.well_tokens[i]:
                     retval.token_amounts_out.append(tokenAmountOut)
