@@ -14,7 +14,7 @@ class BasinStatusPreviewMonitor(PreviewMonitor):
     """
 
     def __init__(self, name_function, status_function):
-        super().__init__("BasinStatus", name_function, status_function, 2)
+        super().__init__("BasinStatus", name_function, status_function, 1)
         self.last_name = ""
         self.basin_graph_client = BasinGraphClient()
 
