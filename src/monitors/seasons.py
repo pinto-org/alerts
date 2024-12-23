@@ -118,7 +118,7 @@ class SeasonsMonitor(Monitor):
         price = sg.current_beanstalk.price
         delta_b = sg.current_beanstalk.delta_b
         issued_soil = sg.current_beanstalk.issued_soil
-        last_weather = sg.prev_beanstalk.temperature
+        new_pods = sg.prev_beanstalk.new_pods
         sown_beans = sg.prev_beanstalk.sown_beans
 
         # fertilizer_bought = self.beanstalk_graph_client.get_fertilizer_bought()
@@ -295,7 +295,7 @@ class SeasonsMonitor(Monitor):
 
             # Field.
             ret_string += f"\n\n**Field**"
-            ret_string += f"\n🌾 {round_num(sown_beans * (1 + last_weather/100), 0, avoid_zero=True)} Pods minted"
+            ret_string += f"\n🌾 {round_num(new_pods, 0, avoid_zero=True)} Pods minted"
             ret_string += f"\n🏞 "
             if issued_soil == 0:
                 ret_string += f"No"
@@ -328,7 +328,7 @@ class SeasonsMonitor(Monitor):
                 if flood_beans > 0:
                     ret_string += f" (💧 {round_num(flood_beans, 0)} from Flood)"
             if sown_beans > 0:
-                ret_string += f"\n🚜 {round_num(sown_beans, 0, avoid_zero=True)} Pinto Sown for {round_num(sown_beans * (1 + last_weather/100), 0, avoid_zero=True)} Pods"
+                ret_string += f"\n🚜 {round_num(sown_beans, 0, avoid_zero=True)} Pinto Sown for {round_num(new_pods, 0, avoid_zero=True)} Pods"
 
             ret_string += f"\n🌡 {round_num(sg.current_beanstalk.temperature, 0)}% Max Temperature"
             # ret_string += f"\n🧮 {round_num(pod_rate, 0)}% Pod Rate"
