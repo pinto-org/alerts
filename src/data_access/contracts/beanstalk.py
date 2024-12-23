@@ -12,9 +12,9 @@ class BeanstalkClient(ChainClient):
         """Get current season."""
         return call_contract_function_with_retry(self.contract.functions.season())
     
-    def is_raining(self):
+    def is_raining(self, block_number='latest'):
         """Returns true if the system is currently Raining."""
-        season_struct = call_contract_function_with_retry(self.contract.functions.getSeasonStruct())
+        season_struct = call_contract_function_with_retry(self.contract.functions.getSeasonStruct(), block_number=block_number)
         return season_struct[4]
 
     def get_max_temp(self):
