@@ -72,6 +72,11 @@ class BeanstalkClient(ChainClient):
         response = call_contract_function_with_retry(self.contract.functions.getTokenUsdTwap(token_addr, lookback), block_number=block_number)
         return float(response / 10**6)
 
+    def get_podline_length(self, field_id=0, block_number='latest'):
+        pod_index = call_contract_function_with_retry(self.contract.functions.podIndex(field_id), block_number=block_number)
+        harvestable_index = call_contract_function_with_retry(self.contract.functions.harvestableIndex(field_id), block_number=block_number)
+        return bean_to_float(pod_index - harvestable_index)
+
     @classmethod
     def calc_crop_ratio(cls, beanToMaxLpGpPerBdvRatio, is_raining):
         """

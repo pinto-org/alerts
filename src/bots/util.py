@@ -175,17 +175,23 @@ def round_num(number, precision=2, avoid_zero=False, incl_dollar=False):
     return ret_string
 
 
-def round_num_abbreviated(number):
+def round_num_abbreviated(number, precision=2, capitalize=True):
     if number > 1:
         number = float(number)
-        if number > 1e9:
-            return round_num(number / 1e9, 2) + "B"
+        if number > 1e12:
+            suffix = "T" if capitalize else "t"
+            return round_num(number / 1e12, precision) + suffix
+        elif number > 1e9:
+            suffix = "B" if capitalize else "b"
+            return round_num(number / 1e9, precision) + suffix
         elif number > 1e6:
-            return round_num(number / 1e6, 2) + "M"
+            suffix = "M" if capitalize else "m"
+            return round_num(number / 1e6, precision) + suffix
         elif number > 1e3:
-            return round_num(number / 1e3, 2) + "K"
-        return round_num(number, 2)
-    return "%s" % float("%.2g" % float(number))
+            suffix = "K" if capitalize else "k"
+            return round_num(number / 1e3, precision) + suffix
+        return round_num(number, precision)
+    return "%s" % float(f"%.{precision}g" % float(number))
 
 
 def round_token(number, decimals, addr=''):

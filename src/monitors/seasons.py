@@ -120,6 +120,7 @@ class SeasonsMonitor(Monitor):
         issued_soil = sg.current_beanstalk.issued_soil
         new_pods = sg.prev_beanstalk.new_pods
         sown_beans = sg.prev_beanstalk.sown_beans
+        delta_temp = sg.current_beanstalk.temperature - sg.prev_beanstalk.temperature
 
         # Silo asset balances.
         current_silo_bdv = sg.current_beanstalk.deposited_bdv
@@ -302,7 +303,9 @@ class SeasonsMonitor(Monitor):
             else:
                 ret_string += f"{round_num(issued_soil, 0, avoid_zero=True)}"
             ret_string += f" Soil in Field"
-            delta_temp = sg.current_beanstalk.temperature - sg.prev_beanstalk.temperature
+
+            line_length = self.beanstalk_client.get_podline_length()
+            ret_string += f"\n {round_num_abbreviated(line_length, precision=3)} Pods in Line"
             ret_string += f"\n🌡 {round_num(sg.current_beanstalk.temperature, 0)}% ({'+' if delta_temp >= 0 else ''}{round_num(delta_temp, 0)}%) Max Temperature"
             ret_string += f"\n🧮 {round_num(pod_rate, 2)}% Pod Rate"
 
@@ -331,7 +334,7 @@ class SeasonsMonitor(Monitor):
             if sown_beans > 0:
                 ret_string += f"\n🚜 {round_num(sown_beans, 0, avoid_zero=True)} Pinto Sown for {round_num(new_pods, 0, avoid_zero=True)} Pods"
 
-            ret_string += f"\n🌡 {round_num(sg.current_beanstalk.temperature, 0)}% Max Temperature"
+            ret_string += f"\n🌡 {round_num(sg.current_beanstalk.temperature, 0)}% ({'+' if delta_temp >= 0 else ''}{round_num(delta_temp, 0)}%) Max Temperature"
             # ret_string += f"\n🧮 {round_num(pod_rate, 0)}% Pod Rate"
         return ret_string
 
