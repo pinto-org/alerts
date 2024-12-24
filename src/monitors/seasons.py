@@ -296,16 +296,16 @@ class SeasonsMonitor(Monitor):
 
             # Field.
             ret_string += f"\n\n**Field**"
-            ret_string += f"\n🌾 {round_num(new_pods, 0, avoid_zero=True)} Pods minted"
+            ret_string += (
+                f"\n🌾 {round_num(new_pods, 0, avoid_zero=True)} Pods minted "
+                f"({round_num_abbreviated(self.beanstalk_client.get_podline_length(), precision=3)} in Line)"
+            )
             ret_string += f"\n🏞 "
             if issued_soil == 0:
                 ret_string += f"No"
             else:
                 ret_string += f"{round_num(issued_soil, 0, avoid_zero=True)}"
             ret_string += f" Soil in Field"
-
-            line_length = self.beanstalk_client.get_podline_length()
-            ret_string += f"\n {round_num_abbreviated(line_length, precision=3)} Pods in Line"
             ret_string += f"\n🌡 {round_num(sg.current_beanstalk.temperature, 0)}% ({'+' if delta_temp >= 0 else ''}{round_num(delta_temp, 0)}%) Max Temperature"
             ret_string += f"\n🧮 {round_num(pod_rate, 2)}% Pod Rate"
 
