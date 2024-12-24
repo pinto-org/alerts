@@ -118,11 +118,9 @@ class SeasonsMonitor(Monitor):
         price = sg.current_beanstalk.price
         delta_b = sg.current_beanstalk.delta_b
         issued_soil = sg.current_beanstalk.issued_soil
-        last_weather = sg.prev_beanstalk.temperature
+        new_pods = sg.prev_beanstalk.new_pods
         sown_beans = sg.prev_beanstalk.sown_beans
-
-        # fertilizer_bought = self.beanstalk_graph_client.get_fertilizer_bought()
-        # percent_recap = self.beanstalk_client.get_recap_funded_percent()
+        delta_temp = sg.current_beanstalk.temperature - sg.prev_beanstalk.temperature
 
         # Silo asset balances.
         current_silo_bdv = sg.current_beanstalk.deposited_bdv
@@ -130,7 +128,6 @@ class SeasonsMonitor(Monitor):
         silo_assets_changes = self.beanstalk_graph_client.silo_assets_seasonal_changes(
             sg.current_beanstalk.pre_assets, sg.prev_beanstalk.pre_assets
         )
-        # logging.info([a.final_season_asset for a in silo_assets_changes])
         silo_assets_changes.sort(
             key=lambda a: int(a.final_season_asset["depositedBDV"]), reverse=True
         )
@@ -143,10 +140,10 @@ class SeasonsMonitor(Monitor):
         else:
             ret_string += f" — Pinto price is ${round_num(price, 4)}"
 
+        ret_string += f'\n⚖️ {"+" if delta_b >= 0 else ""}{round_num(delta_b, 0)} TWAΔP'
+
         supply = get_erc20_total_supply(BEAN_ADDR, 6)
         ret_string += f"\n🪙 {round_num(supply, precision=0)} Pinto Supply (${round_num(supply * price, precision=0)})"
-
-        ret_string += f'\n⚖️ {"+" if delta_b > 0 else ""}{round_num(delta_b, 0)} TWAΔP'
 
         season_block = self.beanstalk_client.get_season_block()
         # Flood stats
@@ -202,7 +199,7 @@ class SeasonsMonitor(Monitor):
         # Full string message.
         if not short_str:
 
-            ret_string += f"\n🧮 {sg.prev_bean.crosses} Peg crosses ({sg.prev_bean.deltaCrosses} this Season)"
+            ret_string += f"\n🧮 {sg.prev_bean.crosses} (+{sg.prev_bean.deltaCrosses}) Peg crosses"
 
             # Flood
             ret_string += rain_flood_string
@@ -232,6 +229,11 @@ class SeasonsMonitor(Monitor):
             ret_string += f"\n⚖️ :PINTO: Hourly volume: {round_num(wells_volume, 0, incl_dollar=True)}"
 
             # Silo stats.
+            was_raining = self.beanstalk_client.is_raining(sg.prev_beanstalk.sunrise_block)
+            crop_ratio = BeanstalkClient.calc_crop_ratio(sg.current_beanstalk.beanToMaxLpGpPerBdvRatio, is_raining)
+            prev_crop_ratio = BeanstalkClient.calc_crop_ratio(sg.prev_beanstalk.beanToMaxLpGpPerBdvRatio, was_raining)
+            crop_ratio_delta = crop_ratio - prev_crop_ratio
+
             ret_string += f"\n\n**Silo**"
             ret_string += f"\n🏦 {round_num(current_silo_bdv, 0)} PDV in Silo"
             delta_bdv = current_silo_bdv - prev_silo_bdv
@@ -242,8 +244,7 @@ class SeasonsMonitor(Monitor):
             else:
                 ret_string += f"\n> 📈 {round_num(delta_bdv, 0)} increase this Season"
             ret_string += f"\n🧽 {round_num(sg.current_bean.supplyInPegLP * 100, 2)}% Liquidity to Supply Ratio"
-            crop_ratio = BeanstalkClient.calc_crop_ratio(sg.current_beanstalk.beanToMaxLpGpPerBdvRatio, is_raining)
-            ret_string += f"\n🌾 {round_num(crop_ratio * 100, 2)}% Crop Ratio"
+            ret_string += f"\n🌾 {round_num(crop_ratio * 100, 2)}% ({'+' if crop_ratio_delta >= 0 else ''}{round_num(crop_ratio_delta * 100, 2)}%) Crop Ratio"
 
             # Gets current and previous season seeds for each asset
             parallelized = []
@@ -295,14 +296,17 @@ class SeasonsMonitor(Monitor):
 
             # Field.
             ret_string += f"\n\n**Field**"
-            ret_string += f"\n🌾 {round_num(sown_beans * (1 + last_weather/100), 0, avoid_zero=True)} Pods minted"
+            ret_string += (
+                f"\n🌾 {round_num(new_pods, 0, avoid_zero=True)} Pods minted "
+                f"({round_num_abbreviated(self.beanstalk_client.get_podline_length(), precision=3)} in Line)"
+            )
             ret_string += f"\n🏞 "
             if issued_soil == 0:
                 ret_string += f"No"
             else:
                 ret_string += f"{round_num(issued_soil, 0, avoid_zero=True)}"
             ret_string += f" Soil in Field"
-            ret_string += f"\n🌡 {round_num(sg.current_beanstalk.temperature, 0)}% Max Temperature"
+            ret_string += f"\n🌡 {round_num(sg.current_beanstalk.temperature, 0)}% ({'+' if delta_temp >= 0 else ''}{round_num(delta_temp, 0)}%) Max Temperature"
             ret_string += f"\n🧮 {round_num(pod_rate, 2)}% Pod Rate"
 
             # Barn.
@@ -328,9 +332,9 @@ class SeasonsMonitor(Monitor):
                 if flood_beans > 0:
                     ret_string += f" (💧 {round_num(flood_beans, 0)} from Flood)"
             if sown_beans > 0:
-                ret_string += f"\n🚜 {round_num(sown_beans, 0, avoid_zero=True)} Pinto Sown for {round_num(sown_beans * (1 + last_weather/100), 0, avoid_zero=True)} Pods"
+                ret_string += f"\n🚜 {round_num(sown_beans, 0, avoid_zero=True)} Pinto Sown for {round_num(new_pods, 0, avoid_zero=True)} Pods"
 
-            ret_string += f"\n🌡 {round_num(sg.current_beanstalk.temperature, 0)}% Max Temperature"
+            ret_string += f"\n🌡 {round_num(sg.current_beanstalk.temperature, 0)}% ({'+' if delta_temp >= 0 else ''}{round_num(delta_temp, 0)}%) Max Temperature"
             # ret_string += f"\n🧮 {round_num(pod_rate, 0)}% Pod Rate"
         return ret_string
 

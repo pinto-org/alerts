@@ -200,6 +200,7 @@ class BeanstalkGraphClient(object):
                     podRate
                     issuedSoil
                     deltaSownBeans
+                    deltaPodIndex
                 }}
             """
 
@@ -310,6 +311,9 @@ class SeasonStats:
             )
             self.sown_beans = bean_to_float(
                 graph_seasons_response["fieldHourlySnapshots"][season_index]["deltaSownBeans"]
+            )
+            self.new_pods = bean_to_float(
+                graph_seasons_response["fieldHourlySnapshots"][season_index]["deltaPodIndex"]
             )
 
 class AssetChanges:

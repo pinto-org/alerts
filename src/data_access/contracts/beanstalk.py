@@ -12,9 +12,9 @@ class BeanstalkClient(ChainClient):
         """Get current season."""
         return call_contract_function_with_retry(self.contract.functions.season())
     
-    def is_raining(self):
+    def is_raining(self, block_number='latest'):
         """Returns true if the system is currently Raining."""
-        season_struct = call_contract_function_with_retry(self.contract.functions.getSeasonStruct())
+        season_struct = call_contract_function_with_retry(self.contract.functions.getSeasonStruct(), block_number=block_number)
         return season_struct[4]
 
     def get_max_temp(self):
@@ -71,6 +71,11 @@ class BeanstalkClient(ChainClient):
     def get_token_usd_twap(self, token_addr, lookback, block_number='latest'):
         response = call_contract_function_with_retry(self.contract.functions.getTokenUsdTwap(token_addr, lookback), block_number=block_number)
         return float(response / 10**6)
+
+    def get_podline_length(self, field_id=0, block_number='latest'):
+        pod_index = call_contract_function_with_retry(self.contract.functions.podIndex(field_id), block_number=block_number)
+        harvestable_index = call_contract_function_with_retry(self.contract.functions.harvestableIndex(field_id), block_number=block_number)
+        return bean_to_float(pod_index - harvestable_index)
 
     @classmethod
     def calc_crop_ratio(cls, beanToMaxLpGpPerBdvRatio, is_raining):

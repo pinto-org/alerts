@@ -14,7 +14,7 @@ class BasinStatusPreviewMonitor(PreviewMonitor):
     """
 
     def __init__(self, name_function, status_function):
-        super().__init__("BasinStatus", name_function, status_function, 2)
+        super().__init__("BasinStatus", name_function, status_function, 1)
         self.last_name = ""
         self.basin_graph_client = BasinGraphClient()
 
@@ -41,6 +41,6 @@ class BasinStatusPreviewMonitor(PreviewMonitor):
 
             # Rotate data and update status.
             if self.display_index == 0:
-                self.status_function(f"Cumul Vol: ${round_num(volume/1000000, 2)}m")
+                self.status_function(f"Cumul Vol: ${round_num_abbreviated(volume, capitalize=False)}")
             else:
                 self.status_function(f"{well_count} Wells")

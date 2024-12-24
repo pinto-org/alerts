@@ -151,7 +151,9 @@ class BeanstalkMonitor(Monitor):
             if event_log.event == "Sow":
                 event_str += (
                     f"🚜 {round_num(beans_amount, 0, avoid_zero=True)} Pinto Sown for "
-                    f"{round_num(pods_amount, 0, avoid_zero=True)} Pods ({round_num(beans_value, 0, avoid_zero=True, incl_dollar=True)})"
+                    f"{round_num(pods_amount, 0, avoid_zero=True)} Pods "
+                    f"at {round_num_abbreviated(self.beanstalk_client.get_podline_length(), precision=3)} in Line "
+                    f"({round_num(beans_value, 0, avoid_zero=True, incl_dollar=True)})"
                 )
                 effective_temp = (pods_amount / beans_amount - 1) * 100
                 max_temp = self.beanstalk_client.get_max_temp()

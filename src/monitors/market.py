@@ -168,7 +168,7 @@ class MarketMonitor(Monitor):
             expiration = pods_to_float(event_log.args.get("maxHarvestableIndex")) - pods_harvested
             expiration_str = round_num(expiration, 0, avoid_zero=True)
             event_str += f" - {round_num(pod_amount, 0)} Pods Listed at {start_place_in_line_str} @ {round_num(price_per_pod, 3)} Pinto/Pod ({round_num(pod_amount * bean_price * price_per_pod, avoid_zero=True, incl_dollar=True)})"
-            event_str += f"\n_Expires once the pod line moves by {expiration_str} Pod{'s' if expiration_str != '1' else ''}_"
+            event_str += f"\n_Expires once the Pod Line moves by {expiration_str} Pod{'s' if expiration_str != '1' else ''}_"
             event_str += f"\n<https://pinto.money/market/pods/buy/{event_log.args.get('index')}>"
         # If a new order or reorder.
         elif event_log.event == "PodOrderCreated":
