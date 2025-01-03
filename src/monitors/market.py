@@ -105,13 +105,16 @@ class MarketMonitor(Monitor):
         start_place_in_line_str = round_num(start_place_in_line, 0)
         order_max_place_in_line_str = round_num(order_max_place_in_line, 0)
 
-        # If this was a pure cancel (not relist or reorder).
+        # If this was a pure cancel (not relist, reorder, or harvest).
         if (
             event_log.event == "PodListingCancelled"
             and not self.beanstalk_contract.events["PodListingCreated"]().processReceipt(
                 transaction_receipt, errors=DISCARD
             )
             and not self.beanstalk_contract.events["PodOrderFilled"]().processReceipt(
+                transaction_receipt, errors=DISCARD
+            )
+            and not self.beanstalk_contract.events["Harvest"]().processReceipt(
                 transaction_receipt, errors=DISCARD
             )
         ) or (
