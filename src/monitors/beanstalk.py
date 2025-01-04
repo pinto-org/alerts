@@ -160,7 +160,11 @@ class BeanstalkMonitor(Monitor):
                 current_soil = self.beanstalk_client.get_current_soil()
                 if abs(effective_temp - max_temp) < 0.01:
                     effective_temp = max_temp
-                event_str += f"\n_Sow Temperature: {round_num(effective_temp, precision=2)}% (Max: {round_num(max_temp, precision=0)}%). Remaining Soil: {round_num(current_soil, precision=0)}_"
+                event_str += (
+                    f"\n_Sow Temperature: {round_num(effective_temp, precision=2)}% "
+                    f"(Max: {round_num(max_temp, precision=2)}%). "
+                    f"Remaining Soil: {round_num(current_soil, precision=(0 if current_soil > 2 else 2))}_"
+                )
                 event_str += f"\n{value_to_emojis(beans_value)}"
             elif event_log.event == "Harvest":
                 harvest_amt_str = round_num(beans_amount, 0, avoid_zero=True)
