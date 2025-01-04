@@ -57,7 +57,7 @@ class BarnRaiseMonitor(Monitor):
             self.last_total_bought += amount
 
             wsteth_amount = token_to_float(
-                get_tokens_sent(WSTETH, event_log.transactionHash, event_log.address, event_log.logIndex), 18
+                get_tokens_sent(WSTETH, event_log.transactionHash, event_log.address, (0, event_log.logIndex)), 18
             )
 
             event_str = f"🚛 Fertilizer Purchased - {round_num(amount, 0)} Fert for {round_num(wsteth_amount, 3)} wstETH @ 20% Humidity"
@@ -67,7 +67,8 @@ class BarnRaiseMonitor(Monitor):
             # Transfer or some other uninteresting transaction.
             return
 
-        event_str += f"\n<https://basescan.org/tx/{event_log.transactionHash.hex()}>"
+        txn_hash = event_log.transactionHash.hex()
+        event_str += f"\n[basescan.org/tx/{shorten_hash(txn_hash)}](<https://basescan.org/tx/{txn_hash}>)"
         # Empty line that does not get stripped.
         event_str += "\n_ _"
         self.message_function(event_str)

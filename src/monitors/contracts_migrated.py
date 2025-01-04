@@ -57,7 +57,7 @@ class ContractsMigrated(Monitor):
                 amounts = event_log.args.get("amounts")
                 breakdown_str += f"\n- Received {sum(amounts)} fertilizer units across {len(amounts)} unique id(s)"
             elif event_log.event == "ReceiverApproved":
-                breakdown_str += f"\n- Approved L2 receiver: {shorten_eth_address(receiver)}"
+                breakdown_str += f"\n- Approved L2 receiver: {shorten_hash(receiver)}"
             else:
                 continue
 
@@ -65,15 +65,12 @@ class ContractsMigrated(Monitor):
             return
         
         if owner:
-            event_str += f"L1 Owner: {shorten_eth_address(owner)}"
+            event_str += f"L1 Owner: {shorten_hash(owner)}"
 
-        event_str += f"\nL2 Receiver: {shorten_eth_address(receiver)}"
+        event_str += f"\nL2 Receiver: {shorten_hash(receiver)}"
         event_str += breakdown_str
-        event_str += f"\n<https://basescan.org/tx/{event_logs[0].transactionHash.hex()}>"
+
+        txn_hash = event_logs[0].transactionHash.hex()
+        event_str += f"\n[basescan.org/tx/{shorten_hash(txn_hash)}](<https://basescan.org/tx/{txn_hash}>)"
         event_str += "\n_ _"
         self.message_function(event_str)
-
-def shorten_eth_address(address: str) -> str:
-    if len(address) > 10 and address.startswith("0x"):
-        return f"{address[:6]}...{address[-4:]}"
-    return address

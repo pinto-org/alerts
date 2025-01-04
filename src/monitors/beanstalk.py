@@ -122,7 +122,7 @@ class BeanstalkMonitor(Monitor):
             event_str += f" ({round_num(value, 0, avoid_zero=True, incl_dollar=True)})"
             event_str += f"\n{value_to_emojis(value)}"
 
-        event_str += f"\n<https://basescan.org/tx/{txn_hash.hex()}>"
+        event_str += f"\n[basescan.org/tx/{shorten_hash(txn_hash.hex())}](<https://basescan.org/tx/{txn_hash.hex()}>)"
         # Empty line that does not get stripped.
         event_str += "\n_ _"
         return event_str
@@ -160,7 +160,11 @@ class BeanstalkMonitor(Monitor):
                 current_soil = self.beanstalk_client.get_current_soil()
                 if abs(effective_temp - max_temp) < 0.01:
                     effective_temp = max_temp
-                event_str += f"\n_Sow Temperature: {round_num(effective_temp, precision=2)}% (Max: {round_num(max_temp, precision=0)}%). Remaining Soil: {round_num(current_soil, precision=0)}_"
+                event_str += (
+                    f"\n_Sow Temperature: {round_num(effective_temp, precision=2)}% "
+                    f"(Max: {round_num(max_temp, precision=2)}%). "
+                    f"Remaining Soil: {round_num(current_soil, precision=(0 if current_soil > 2 else 2))}_"
+                )
                 event_str += f"\n{value_to_emojis(beans_value)}"
             elif event_log.event == "Harvest":
                 harvest_amt_str = round_num(beans_amount, 0, avoid_zero=True)
@@ -175,7 +179,9 @@ class BeanstalkMonitor(Monitor):
             # )
             return ""
 
-        event_str += f"\n<https://basescan.org/tx/{event_log.transactionHash.hex()}>"
+
+        txn_hash = event_log.transactionHash.hex()
+        event_str += f"\n[basescan.org/tx/{shorten_hash(txn_hash)}](<https://basescan.org/tx/{txn_hash}>)"
         # Empty line that does not get stripped.
         event_str += "\n_ _"
         return event_str
@@ -224,7 +230,9 @@ class BeanstalkMonitor(Monitor):
         event_str += f"\n_{latest_pool_price_str(self.bean_client, pool_token)}_ "
         if not remove_token_addr.startswith(UNRIPE_TOKEN_PREFIX):
             event_str += f"\n{value_to_emojis(value)}"
-        event_str += f"\n<https://basescan.org/tx/{event_logs[0].transactionHash.hex()}>"
+
+        txn_hash = event_logs[0].transactionHash.hex()
+        event_str += f"\n[basescan.org/tx/{shorten_hash(txn_hash)}](<https://basescan.org/tx/{txn_hash}>)"
         # Empty line that does not get stripped.
         event_str += "\n_ _"
         # Indicate whether this is lambda convert
@@ -241,5 +249,7 @@ class BeanstalkMonitor(Monitor):
         bean_price = self.bean_client.avg_bean_price()
         event_str = f"💦 Sprouts Rinsed - {round_num(bean_amount,0)} Sprouts ({round_num(bean_amount * bean_price, 0, avoid_zero=True, incl_dollar=True)})"
         event_str += f"\n{value_to_emojis(bean_amount * bean_price)}"
-        event_str += f"\n<https://basescan.org/tx/{event_logs[0].transactionHash.hex()}>"
+
+        txn_hash = event_logs[0].transactionHash.hex()
+        event_str += f"\n[basescan.org/tx/{shorten_hash(txn_hash)}](<https://basescan.org/tx/{txn_hash}>)"
         return event_str

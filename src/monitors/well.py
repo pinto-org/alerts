@@ -70,13 +70,18 @@ class OtherWellsMonitor(Monitor):
                     if event_str:
                         self.msg_exchange(event_str)
             for txn_pair in self._eth_all_wells.get_new_logs(dry_run=self._dry_run):
+                prev_log_index = {}
                 for event_log in txn_pair.logs:
                     # Avoids double-reporting on whitelisted wells having a dedicated channel
-                    if event_log.get("address") not in self._ignorelist:
-                        event_data = parse_event_data(event_log, self.basin_graph_client, self.bean_client, web3=self._web3)
+                    address = event_log.get("address")
+                    if address not in self._ignorelist:
+                        if address not in prev_log_index:
+                            prev_log_index[address] = 0
+                        event_data = parse_event_data(event_log, prev_log_index[address], self.basin_graph_client, self.bean_client, web3=self._web3)
                         event_str = single_event_str(event_data, txn_pair.txn_hash.hex())
                         if event_str:
                             self.msg_exchange(event_str)
+                        prev_log_index[address] = event_log.logIndex
 
     def aquifer_event_str(self, event_log):
         if event_log.event == "BoreWell":
@@ -137,9 +142,22 @@ class WellsMonitor(Monitor):
         to_tg = self.bean_reporting is False or not is_convert 
 
         individual_evts: List[WellEventData] = []
+        prev_log_index = {}
         for event_log in event_logs:
-            if event_log.get("address") in self.pool_addresses:
-                individual_evts.append(parse_event_data(event_log, self.basin_graph_client, self.bean_client, web3=self._web3))
+            address = event_log.get("address")
+            if address in self.pool_addresses:
+                if address not in prev_log_index:
+                    prev_log_index[address] = 0
+                individual_evts.append(
+                    parse_event_data(
+                        event_log,
+                        prev_log_index[address],
+                        self.basin_graph_client,
+                        self.bean_client,
+                        web3=self._web3
+                    )
+                )
+                prev_log_index[address] = event_log.logIndex
 
         # Identify arbitrage trades
         i = 0
@@ -163,7 +181,7 @@ class WellsMonitor(Monitor):
             if event_str:
                 self.msg_exchange(event_str, to_tg=to_tg)
 
-def parse_event_data(event_log, basin_graph_client, bean_client, web3=None):
+def parse_event_data(event_log, prev_log_index, basin_graph_client, bean_client, web3=None):
     retval = WellEventData()
     retval.well_address = event_log.get("address")
 
@@ -232,10 +250,11 @@ def parse_event_data(event_log, basin_graph_client, bean_client, web3=None):
     elif event_log.event == "Shift":
         shift_from_token = retval.well_tokens[0] if retval.well_tokens[1] == retval.token_out else retval.well_tokens[1]
 
+        # Finds amount of tokens transferred to/from the well since any prior trades in this well
         if shift_from_token == WETH:
-            retval.amount_in = get_eth_sent(event_log.transactionHash, retval.well_address, web3, event_log.logIndex)
+            retval.amount_in = get_eth_sent(event_log.transactionHash, retval.well_address, web3, (prev_log_index + 1, event_log.logIndex))
         else:
-            retval.amount_in = get_tokens_sent(shift_from_token, event_log.transactionHash, retval.well_address, event_log.logIndex)
+            retval.amount_in = get_tokens_sent(shift_from_token, event_log.transactionHash, retval.well_address, (prev_log_index + 1, event_log.logIndex))
 
         if retval.token_out == BEAN_ADDR:
             retval.bdv = bean_to_float(retval.amount_out)
@@ -318,7 +337,7 @@ def single_event_str(event_data: WellEventData, txn_hash, bean_reporting=False, 
             event_str += f"\n_{event_data.well_liquidity_str}_ "
         event_str += f"\n{value_to_emojis(event_data.value)}"
 
-    event_str += f"\n<https://basescan.org/tx/{txn_hash}>"
+    event_str += f"\n[basescan.org/tx/{shorten_hash(txn_hash)}](<https://basescan.org/tx/{txn_hash}>)"
     # Empty line that does not get stripped.
     event_str += "\n_ _"
     return event_str
@@ -350,7 +369,8 @@ def arbitrage_event_str(evt1: WellEventData, evt2: WellEventData, txn_hash, bean
         event_str += f"\n> :{well2.upper()}:📉 _{evt2.well_price_str.replace('Well: ', '')}_"
 
     event_str += f"\n{value_to_emojis(evt1.value)}"
-    event_str += f"\n<https://basescan.org/tx/{txn_hash}>"
+
+    event_str += f"\n[basescan.org/tx/{shorten_hash(txn_hash)}](<https://basescan.org/tx/{txn_hash}>)"
     # Empty line that does not get stripped.
     event_str += "\n_ _"
     return event_str

@@ -306,7 +306,7 @@ class SeasonsMonitor(Monitor):
             else:
                 ret_string += f"{round_num(issued_soil, 0, avoid_zero=True)}"
             ret_string += f" Soil in Field"
-            ret_string += f"\n🌡 {round_num(sg.current_beanstalk.temperature, 0)}% ({'+' if delta_temp >= 0 else ''}{round_num(delta_temp, 0)}%) Max Temperature"
+            ret_string += f"\n🌡 {round_num(sg.current_beanstalk.temperature, 2)}% ({'+' if delta_temp >= 0 else ''}{round_num(delta_temp, 2)}%) Max Temperature"
             ret_string += f"\n🧮 {round_num(pod_rate, 2)}% Pod Rate"
 
             # Barn.
@@ -315,7 +315,8 @@ class SeasonsMonitor(Monitor):
 
             # Txn hash of sunrise/gm call.
             if hasattr(sg.current_beanstalk, 'sunrise_hash'):
-                ret_string += f"\n\n<https://basescan.org/tx/{sg.current_beanstalk.sunrise_hash}>"
+                txn_hash = sg.current_beanstalk.sunrise_hash
+                ret_string += f"\n\n[basescan.org/tx/{shorten_hash(txn_hash)}](<https://basescan.org/tx/{txn_hash}>)"
                 ret_string += "\n_ _"  # Empty line that does not get stripped.
 
         # Short string version (for Twitter).
