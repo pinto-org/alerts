@@ -91,23 +91,23 @@ def get_erc20_contract(web3, address):
     return web3.eth.contract(address=address, abi=erc20_abi)
 
 
-def get_tokens_sent(token, txn_hash, recipient, log_end_index):
-    """Return the amount (as a float) of token sent in a transaction to the given recipient, prior to the provided log index"""
-    logs = get_erc20_transfer_logs_in_txn(token, txn_hash, recipient, log_end_index)
+def get_tokens_sent(token, txn_hash, recipient, log_index_bounds):
+    """Return the amount (as a float) of token sent in a transaction to the given recipient, within the log index bounds"""
+    logs = get_erc20_transfer_logs_in_txn(token, txn_hash, recipient, log_index_bounds)
     total_sum = 0
     for entry in logs:
         total_sum += int(entry.data, 16)
     return total_sum
 
 
-def get_eth_sent(txn_hash, recipient, web3, log_end_index):
+def get_eth_sent(txn_hash, recipient, web3, log_index_bounds):
     """
-    Return the amount (as a float) of ETH or WETH sent in a transaction to the given recipient, prior to the provided log index.
+    Return the amount (as a float) of ETH or WETH sent in a transaction to the given recipient, within the log index bounds.
     If an aggregate value (ETH + WETH) is required, a specialized approach should be taken for the particular use case.
     This is because it is unclear who is the recipient of the ETH based on the .value property.
     """
     # Assumption is if WETH was sent, that any ETH from transaction.value would have already been wrapped and included
-    logs = get_erc20_transfer_logs_in_txn(WETH, txn_hash, recipient, log_end_index)
+    logs = get_erc20_transfer_logs_in_txn(WETH, txn_hash, recipient, log_index_bounds)
     total_sum = 0
     for entry in logs:
         total_sum += int(entry.data, 16)
@@ -214,21 +214,21 @@ def call_contract_function_with_retry(function, max_tries=10, block_number='late
                 raise (e)
 
 
-def get_erc20_transfer_logs_in_txn(token, txn_hash, recipient, log_end_index, web3=None):
+def get_erc20_transfer_logs_in_txn(token, txn_hash, recipient, log_index_bounds, web3=None):
     """Return all logs matching transfer signature to the recipient before the end index."""
     if not web3:
         web3 = get_web3_instance()
+    lower_idx, upper_idx = log_index_bounds
     receipt = tools.util.get_txn_receipt_or_wait(web3, txn_hash)
     retval = []
     for log in receipt.logs:
-        if log.logIndex >= log_end_index:
-            break
-        try:
-            if log.address == token and log.topics[0].hex() == ERC20_TRANSFER_EVENT_SIG and topic_is_address(log.topics[2], recipient):
-                retval.append(log)
-        # Ignore anonymous events (logs without topics).
-        except IndexError:
-            pass
+        if log.logIndex >= lower_idx and log.logIndex <= upper_idx:
+            try:
+                if log.address == token and log.topics[0].hex() == ERC20_TRANSFER_EVENT_SIG and topic_is_address(log.topics[2], recipient):
+                    retval.append(log)
+            # Ignore anonymous events (logs without topics).
+            except IndexError:
+                pass
     return retval
 
 

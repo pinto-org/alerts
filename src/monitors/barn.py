@@ -57,7 +57,7 @@ class BarnRaiseMonitor(Monitor):
             self.last_total_bought += amount
 
             wsteth_amount = token_to_float(
-                get_tokens_sent(WSTETH, event_log.transactionHash, event_log.address, event_log.logIndex), 18
+                get_tokens_sent(WSTETH, event_log.transactionHash, event_log.address, (0, event_log.logIndex)), 18
             )
 
             event_str = f"🚛 Fertilizer Purchased - {round_num(amount, 0)} Fert for {round_num(wsteth_amount, 3)} wstETH @ 20% Humidity"
