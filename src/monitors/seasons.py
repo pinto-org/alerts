@@ -315,7 +315,8 @@ class SeasonsMonitor(Monitor):
 
             # Txn hash of sunrise/gm call.
             if hasattr(sg.current_beanstalk, 'sunrise_hash'):
-                ret_string += f"\n\n<https://basescan.org/tx/{sg.current_beanstalk.sunrise_hash}>"
+                txn_hash = sg.current_beanstalk.sunrise_hash
+                ret_string += f"\n\n[basescan.org/tx/{shorten_hash(txn_hash)}](<https://basescan.org/tx/{txn_hash}>)"
                 ret_string += "\n_ _"  # Empty line that does not get stripped.
 
         # Short string version (for Twitter).

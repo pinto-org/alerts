@@ -337,7 +337,7 @@ def single_event_str(event_data: WellEventData, txn_hash, bean_reporting=False, 
             event_str += f"\n_{event_data.well_liquidity_str}_ "
         event_str += f"\n{value_to_emojis(event_data.value)}"
 
-    event_str += f"\n<https://basescan.org/tx/{txn_hash}>"
+    event_str += f"\n[basescan.org/tx/{shorten_hash(txn_hash)}](<https://basescan.org/tx/{txn_hash}>)"
     # Empty line that does not get stripped.
     event_str += "\n_ _"
     return event_str
@@ -369,7 +369,8 @@ def arbitrage_event_str(evt1: WellEventData, evt2: WellEventData, txn_hash, bean
         event_str += f"\n> :{well2.upper()}:📉 _{evt2.well_price_str.replace('Well: ', '')}_"
 
     event_str += f"\n{value_to_emojis(evt1.value)}"
-    event_str += f"\n<https://basescan.org/tx/{txn_hash}>"
+
+    event_str += f"\n[basescan.org/tx/{shorten_hash(txn_hash)}](<https://basescan.org/tx/{txn_hash}>)"
     # Empty line that does not get stripped.
     event_str += "\n_ _"
     return event_str

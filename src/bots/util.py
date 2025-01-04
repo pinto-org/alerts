@@ -292,6 +292,10 @@ def holiday_emoji():
             return emoji
     return ""
 
+def shorten_hash(address: str) -> str:
+    if len(address) > 10 and address.startswith("0x"):
+        return f"{address[:6]}...{address[-4:]}"
+    return address
 
 def strip_custom_discord_emojis(text):
     """Remove custom discord emojis using regex."""

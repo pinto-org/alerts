@@ -67,7 +67,8 @@ class BarnRaiseMonitor(Monitor):
             # Transfer or some other uninteresting transaction.
             return
 
-        event_str += f"\n<https://basescan.org/tx/{event_log.transactionHash.hex()}>"
+        txn_hash = event_log.transactionHash.hex()
+        event_str += f"\n[basescan.org/tx/{shorten_hash(txn_hash)}](<https://basescan.org/tx/{txn_hash}>)"
         # Empty line that does not get stripped.
         event_str += "\n_ _"
         self.message_function(event_str)
