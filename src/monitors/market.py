@@ -128,9 +128,7 @@ class MarketMonitor(Monitor):
             )
         ):
             if event_log.event == "PodListingCancelled":
-                listing_graph_id = (
-                    event_log.args.get("lister").lower() + "-" + str(event_log.args.get("index"))
-                )
+                listing_graph_id = event_log.args.get("lister").lower() + "-" + str(event_log.args.get("index"))
                 pod_listing = self.beanstalk_graph_client.get_pod_listing(listing_graph_id)
                 # If this listing did not exist, or was inactive, ignore cancellation.
                 if pod_listing is None or pod_listing["status"] != "ACTIVE":
@@ -166,7 +164,13 @@ class MarketMonitor(Monitor):
             if self.beanstalk_contract.events["PodListingCancelled"]().processReceipt(
                 transaction_receipt, errors=DISCARD
             ):
-                event_str += f"♻ Pods re-Listed"
+                # Check if this plot was already listed before this transaction
+                listing_graph_id = event_log.args.get("lister").lower() + "-" + str(event_log.args.get("index"))
+                pod_listing = self.beanstalk_graph_client.get_pod_listing(listing_graph_id, block_number=event_log['blockNumber'] - 1)
+                if pod_listing is not None and pod_listing["status"] == "ACTIVE":
+                    event_str += f"♻ Pods re-Listed"
+                else:
+                    event_str += f"✏ Pods Listed"
             else:
                 event_str += f"✏ Pods Listed"
             expiration = pods_to_float(event_log.args.get("maxHarvestableIndex")) - pods_harvested

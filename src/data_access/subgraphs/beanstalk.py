@@ -25,14 +25,19 @@ class BeanstalkGraphClient(object):
             transport=transport, fetch_schema_from_transport=False, execute_timeout=7
         )
 
-    def get_pod_listing(self, id):
+    def get_pod_listing(self, id, block_number=-1):
         """Get a single pod listing based on id.
 
         id is "{lister_address}-{listing_index}"
         """
+        block_query_str = f"block: {{number: {block_number}}}" if block_number != -1 else ""
+
         query_str = f"""
             query {{
-                podListing(id: "{id}") {{
+                podListing(
+                    id: "{id}"
+                    {block_query_str}
+                ) {{
                     id
                     status
                     pricePerPod
