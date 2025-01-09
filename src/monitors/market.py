@@ -132,10 +132,10 @@ class MarketMonitor(Monitor):
                     event_log.args.get("lister").lower() + "-" + str(event_log.args.get("index"))
                 )
                 pod_listing = self.beanstalk_graph_client.get_pod_listing(listing_graph_id)
-                # If this listing did not exist, ignore cancellation.
-                if pod_listing is None:
+                # If this listing did not exist, or was inactive, ignore cancellation.
+                if pod_listing is None or pod_listing["status"] != "ACTIVE":
                     logging.info(
-                        f"Ignoring null listing cancel with graph id {listing_graph_id} and txn hash {event_log.transactionHash.hex()}"
+                        f"Ignoring listing cancel with graph id {listing_graph_id} and txn hash {event_log.transactionHash.hex()}"
                     )
                     return ""
                 pod_amount_str = round_num(pods_to_float(int(pod_listing["amount"])), 0)
