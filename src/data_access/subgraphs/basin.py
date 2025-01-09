@@ -21,9 +21,9 @@ class BasinGraphClient(object):
                     id
                     name
                     symbol
-                        dailySnapshots(first: {num_snapshots}, orderBy: day, orderDirection: desc) {{
-                            totalLiquidityUSD
-                            deltaTradeVolumeUSD
+                    dailySnapshots(first: {num_snapshots}, orderBy: day, orderDirection: desc) {{
+                        totalLiquidityUSD
+                        deltaTradeVolumeUSD
                     }}
                 }}
             }}

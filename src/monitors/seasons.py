@@ -90,19 +90,22 @@ class SeasonsMonitor(Monitor):
         Repeatedly makes graph calls to check sunrise status.
         """
         while self._thread_active:
+            # Proceed once a new season is processed in each subgraph
             current_beanstalk_stats, prev_beanstalk_stats = self.beanstalk_graph_client.season_stats()
             current_bean_stats, prev_bean_stats = self.bean_graph_client.season_stats()
             well_hourly_stats = self.basin_graph_client.get_well_hourlies(time.time() - SEASON_DURATION)
-            # If a new season is detected and sunrise was sufficiently recent.
+
+            beanstalk_ready = int(current_beanstalk_stats.created_at) > time.time() - SEASON_DURATION / 2
+            bean_ready = current_beanstalk_stats.season == current_bean_stats.season
+            basin_ready = len(well_hourly_stats) == len(WHITELISTED_WELLS)
             if (
                 self.current_season_id != current_beanstalk_stats.season
-                and int(current_beanstalk_stats.created_at) > time.time() - SEASON_DURATION / 2
-                and current_beanstalk_stats.season == current_bean_stats.season
-                and len(well_hourly_stats) == len(WHITELISTED_WELLS)
+                and beanstalk_ready and bean_ready and basin_ready
             ) or self._dry_run:
                 self.current_season_id = current_beanstalk_stats.season
                 logging.info(f"New season detected with id {self.current_season_id}")
                 return SeasonalData(prev_beanstalk_stats, current_beanstalk_stats, prev_bean_stats, current_bean_stats, well_hourly_stats)
+            logging.info(f"Sunrise blocking, waiting for subgraphs:\nbeanstalk: {beanstalk_ready}, bean: {bean_ready}, basin: {basin_ready}\n")
             time.sleep(self.query_rate)
         return None
 
@@ -132,7 +135,6 @@ class SeasonsMonitor(Monitor):
             key=lambda a: int(a.final_season_asset["depositedBDV"]), reverse=True
         )
 
-        # Current state.
         new_season = sg.prev_beanstalk.season + 1
         ret_string = f"⏱ Season {new_season} has started!"
         if not short_str:
