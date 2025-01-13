@@ -180,7 +180,7 @@ class WellsMonitor(Monitor):
         for event_data in individual_evts:
             event_str = single_event_str(event_data, txn_hash.hex(), self.bean_reporting, is_convert=is_convert)
             if event_str:
-                if event_log.receipt["from"] not in self.arbitrage_senders:
+                if event_log.receipt["from"] not in self.arbitrage_senders or event_data.bdv > 2000:
                     self.msg_exchange(event_str, to_tg=to_tg)
                 else:
                     self.msg_arbitrage(event_str, to_tg=to_tg)
