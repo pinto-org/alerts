@@ -6,6 +6,7 @@ from enum import IntEnum
 from web3 import Web3
 from web3 import exceptions as web3_exceptions
 from web3.logs import DISCARD
+from web3.datastructures import AttributeDict
 
 from data_access.contracts.util import *
 
@@ -378,7 +379,10 @@ class EthEventsClient:
                         ]().processReceipt(receipt, errors=DISCARD)
                     except web3_exceptions.ABIEventFunctionNotFound:
                         continue
-                    decoded_logs.extend(decoded_type_logs)
+                    for log in decoded_type_logs:
+                        # Attach the full receipt
+                        updated_log = AttributeDict({**dict(log), "receipt": receipt})
+                        decoded_logs.append(updated_log)
 
             # Add all remaining txn logs to log map.
             txn_hash_set.add(txn_hash)

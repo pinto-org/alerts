@@ -12,7 +12,7 @@ from constants.channels import *
 from constants.addresses import *
 
 from monitors.basin_periodic import BasinPeriodicMonitor
-from monitors.well import WellsMonitor, OtherWellsMonitor
+from monitors.well import WellsMonitor
 
 class TelegramBasinBot(object):
     def __init__(self, token, prod=False, dry_run=None):
@@ -34,11 +34,6 @@ class TelegramBasinBot(object):
         )
         self.wells_monitor.start()
 
-        self.wells_monitor_all = OtherWellsMonitor(
-            self.send_msg, WHITELISTED_WELLS, discord=False, prod=prod, dry_run=dry_run
-        )
-        self.wells_monitor_all.start()
-
     def send_msg(self, msg, to_main=True, to_tg=True):
         # Ignore empty/nonprimary messages.
         if not msg or not to_main or not to_tg:
@@ -52,7 +47,6 @@ class TelegramBasinBot(object):
     def stop(self):
         self.period_monitor.stop()
         self.wells_monitor.stop()
-        self.wells_monitor_all.stop()
 
 
 if __name__ == "__main__":

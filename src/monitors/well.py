@@ -113,11 +113,12 @@ class WellsMonitor(Monitor):
     ^^ make this assumption less strict, instead only skip valuation if no BDV
     """
 
-    def __init__(self, msg_exchange, msg_arbitrage, addresses, bean_reporting=False, prod=False, dry_run=None):
+    def __init__(self, msg_exchange, msg_arbitrage, addresses, arbitrage_senders=[], bean_reporting=False, prod=False, dry_run=None):
         super().__init__(f"specific well", None, WELL_CHECK_RATE, prod=prod, dry_run=dry_run)
         self.msg_exchange = msg_exchange
         self.msg_arbitrage = msg_arbitrage
         self.pool_addresses = addresses
+        self.arbitrage_senders = arbitrage_senders
         self._eth_event_client = EthEventsClient(EventClientType.WELL, self.pool_addresses)
         self.basin_graph_client = BasinGraphClient()
         self.bean_client = BeanClient()
@@ -179,7 +180,10 @@ class WellsMonitor(Monitor):
         for event_data in individual_evts:
             event_str = single_event_str(event_data, txn_hash.hex(), self.bean_reporting, is_convert=is_convert)
             if event_str:
-                self.msg_exchange(event_str, to_tg=to_tg)
+                if event_log.receipt["from"] not in self.arbitrage_senders or event_data.bdv > 2000:
+                    self.msg_exchange(event_str, to_tg=to_tg)
+                else:
+                    self.msg_arbitrage(event_str, to_tg=to_tg)
 
 def parse_event_data(event_log, prev_log_index, basin_graph_client, bean_client, web3=None):
     retval = WellEventData()

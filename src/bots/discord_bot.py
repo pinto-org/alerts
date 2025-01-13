@@ -112,7 +112,9 @@ class DiscordClient(discord.ext.commands.Bot):
         self.sunrise_monitor.start()
 
         self.well_monitor_whitelisted = WellsMonitor(
-            self.send_msg_exchange, self.send_msg_arbitrage, WHITELISTED_WELLS, bean_reporting=True, prod=prod, dry_run=dry_run
+            self.send_msg_exchange, self.send_msg_arbitrage, WHITELISTED_WELLS,
+            arbitrage_senders=['0x711AD32A36f8EbF621fD3bB602Bd3B13724e2AC5'],
+            bean_reporting=True, prod=prod, dry_run=dry_run
         )
         self.well_monitor_whitelisted.start()
 

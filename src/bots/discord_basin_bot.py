@@ -15,7 +15,7 @@ from constants.channels import *
 from constants.config import *
 
 from monitors.basin_periodic import BasinPeriodicMonitor
-from monitors.well import WellsMonitor, OtherWellsMonitor
+from monitors.well import WellsMonitor
 
 class Channel(Enum):
     REPORT = 0
@@ -59,11 +59,6 @@ class DiscordClient(discord.ext.commands.Bot):
             self.send_msg_whitelisted, WHITELISTED_WELLS, prod=prod, dry_run=dry_run
         )
         self.well_monitor_whitelisted.start()
-
-        self.well_monitor_other = OtherWellsMonitor(
-            self.send_msg_wells_other, WHITELISTED_WELLS, discord=True, prod=prod, dry_run=dry_run
-        )
-        self.well_monitor_other.start()
 
         # Ignore exceptions of this type and retry. Note that no logs will be generated.
         # Ignore base class, because we always want to reconnect.
