@@ -303,7 +303,10 @@ def single_event_str(event_data: WellEventData, txn_hash, bean_reporting=False, 
 
         for i in range(len(event_data.well_tokens)):
             erc20_info = get_erc20_info(event_data.well_tokens[i])
-            event_str += f"{round_token(token_amounts[i], erc20_info.decimals, erc20_info.addr)} {erc20_info.symbol}"
+            # token_amounts can be unavailable if subgraphs are unresponsive
+            if token_amounts:
+                event_str += f"{round_token(token_amounts[i], erc20_info.decimals, erc20_info.addr)} "
+            event_str += f"{erc20_info.symbol}"
             if i < len(event_data.well_tokens) - 1:
                 event_str += f" and"
             event_str += f" "
