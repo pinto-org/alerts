@@ -83,10 +83,13 @@ class BasinGraphClient(object):
         """
         query_str = f"""
             query {{
-                deposit(id: "{txn_hash.hex()}-{str(log_index)}") {{
+                deposits(where: {{
+                    logIndex: {log_index}
+                    hash: "{txn_hash.hex()}"
+                }}) {{
                     reserves
                     amountUSD
                 }}
             }}
         """
-        return try_execute_with_wait("deposit", self._client, query_str)
+        return try_execute_with_wait("deposits", self._client, query_str)[0]
