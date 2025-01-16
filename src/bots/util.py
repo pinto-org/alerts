@@ -238,11 +238,6 @@ def latest_well_lp_str(basin_client, addr):
     return f"Well liquidity: ${round_num(liquidity, 0)}"
 
 
-def value_to_emojis_root(value):
-    """Convert a rounded dollar value to a string of emojis."""
-    return value_to_emojis(value * 10)
-
-
 def number_to_emoji(n):
     """Take an int as a string or int and return the corresponding # emoji. Above 10 returns '#'."""
     n = int(n)
