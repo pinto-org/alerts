@@ -92,4 +92,5 @@ class BasinGraphClient(object):
                 }}
             }}
         """
-        return try_execute_with_wait("deposits", self._client, query_str)[0]
+        result = try_execute_with_wait("deposits", self._client, query_str, check_len=True)
+        return result[0] if result else None
