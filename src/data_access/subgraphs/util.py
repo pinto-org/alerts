@@ -62,7 +62,7 @@ def execute(client, query_str, max_tries=10):
     raise GraphAccessException
 
 
-def try_execute_with_wait(check_key, client, query_str, max_tries=2, max_wait_blocks=5):
+def try_execute_with_wait(check_key, client, query_str, check_len=False, max_tries=1, max_wait_blocks=5):
     """Perform execute. Wait a 5s and try again if return data is empty. Eventually return None if no data.
 
     Also do not raise exception on failure, log warning and proceed.
@@ -71,6 +71,8 @@ def try_execute_with_wait(check_key, client, query_str, max_tries=2, max_wait_bl
     for _ in range(max_wait_blocks):
         try:
             result = execute(client, query_str, max_tries=max_tries)[check_key]
+            if check_len and len(result) == 0:
+                result = None
         except GraphAccessException:
             pass
         if result is not None:  # null
