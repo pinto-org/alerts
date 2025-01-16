@@ -245,7 +245,7 @@ class SeasonsMonitor(Monitor):
                 ret_string += f"\n> 📊 No change this Season"
             else:
                 ret_string += f"\n> 📈 {round_num(delta_bdv, 0)} increase this Season"
-            ret_string += f"\n🧽 {round_num(sg.current_bean.supplyInPegLP * 100, 2)}% Liquidity to Supply Ratio"
+            ret_string += f"\n🧽 {round_num(sg.current_bean.l2sr * 100, 2)}% Liquidity to Supply Ratio"
             ret_string += f"\n🌾 {round_num(crop_ratio * 100, 2)}% ({'+' if crop_ratio_delta >= 0 else ''}{round_num(crop_ratio_delta * 100, 2)}%) Crop Ratio"
 
             # Gets current and previous season seeds for each asset
