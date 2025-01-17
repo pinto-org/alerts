@@ -160,11 +160,12 @@ class WellsMonitor(Monitor):
                 )
                 prev_log_index[address] = event_log.logIndex
 
-        # Identify arbitrage trades
+        # Identify arbitrage trades or LP converts
         i = 0
         while i < len(individual_evts) - 1:
             evt1 = individual_evts[i]
             evt2 = individual_evts[i + 1]
+            # Arbitrage trade: Swap/Shift where the subsequent trade is selling tokens bought in the first
             if (
                 evt1.event_type in ["SWAP", "SHIFT"] and evt2.event_type in ["SWAP", "SHIFT"]
                 and evt1.token_out == evt2.token_in and evt1.amount_out == evt2.amount_in
@@ -173,6 +174,17 @@ class WellsMonitor(Monitor):
                 event_str = arbitrage_event_str(evt1, evt2, txn_hash.hex(), self.beanstalk_client)
                 if event_str:
                     self.msg_arbitrage(event_str, to_tg=to_tg)
+            # Moving LP (LP convert): LP removal that is followed by LP addition
+            elif (
+                # TODO: they might not occur back to back, a swap could be in the middle.
+                # I suppose the same could be true of arbitrage? Consider restructuring this method.
+                evt1.event_type == "LP" and evt1.token_amounts_in is None
+                and evt2.event_type == "LP" and evt2.token_amounts_in is not None
+            ):
+                del individual_evts[i:i + 2]
+                event_str = move_lp_event_str(evt1, evt2, txn_hash.hex(), is_convert=is_convert)
+                if event_str:
+                    self.msg_exchange(event_str, to_tg=to_tg)
             else:
                 i += 1
 
@@ -240,7 +252,7 @@ def parse_event_data(event_log, prev_log_index, basin_graph_client, bean_client,
                 else:
                     retval.token_amounts_out.append(0)
         else:
-            retval.token_amounts_out = tokenAmountsOut[i]
+            retval.token_amounts_out = tokenAmountsOut
 
         retval.bdv = token_to_float(lpAmountIn, WELL_LP_DECIMALS) * get_constant_product_well_lp_bdv(
             retval.well_address, web3=web3
@@ -376,6 +388,43 @@ def arbitrage_event_str(evt1: WellEventData, evt2: WellEventData, txn_hash, bean
         event_str += f"\n> :{well2.upper()}:📉 _{evt2.well_price_str.replace('Well: ', '')}_"
 
     event_str += f"\n{value_to_emojis(evt1.value)}"
+
+    event_str += f"\n[basescan.org/tx/{shorten_hash(txn_hash)}](<https://basescan.org/tx/{txn_hash}>)"
+    # Empty line that does not get stripped.
+    event_str += "\n_ _"
+    return event_str
+
+def move_lp_event_str(evt1: WellEventData, evt2: WellEventData, txn_hash, is_convert=True):
+    event_str = ""
+
+    lead_icon = "🔄" if is_convert else "⚖️"
+
+    well1 = SILO_TOKENS_MAP.get(evt1.well_address.lower())
+    well2 = SILO_TOKENS_MAP.get(evt2.well_address.lower())
+    if well1 is None:
+        well1 = get_erc20_info(evt1.well_address).symbol
+    if well2 is None:
+        well2 = get_erc20_info(evt2.well_address).symbol
+
+    erc20_tokens_removed = [get_erc20_info(evt1.well_tokens[0]), get_erc20_info(evt1.well_tokens[1])]
+    erc20_tokens_added = [get_erc20_info(evt2.well_tokens[0]), get_erc20_info(evt2.well_tokens[1])]
+    amounts_out_str = [
+        round_token(evt1.token_amounts_out[0], erc20_tokens_removed[0].decimals, erc20_tokens_removed[0].addr),
+        round_token(evt1.token_amounts_out[1], erc20_tokens_removed[1].decimals, erc20_tokens_removed[1].addr)
+    ]
+    amounts_in_str = [
+        round_token(evt2.token_amounts_in[0], erc20_tokens_added[0].decimals, erc20_tokens_added[0].addr),
+        round_token(evt2.token_amounts_in[1], erc20_tokens_added[1].decimals, erc20_tokens_added[1].addr) 
+    ]
+
+    event_str += (
+        f"{lead_icon} LP moved from {well1} to {well2} ({round_num(evt2.value, 0, avoid_zero=True, incl_dollar=True)})"
+        f"\n📤 {amounts_out_str[0]} {erc20_tokens_removed[0].symbol} and {amounts_out_str[1]} {erc20_tokens_removed[1].symbol}"
+        f"\n📥 {amounts_in_str[0]} {erc20_tokens_added[0].symbol} and {amounts_in_str[1]} {erc20_tokens_added[1].symbol}"
+        f"\n> :{well1.upper()}:📊 _{evt1.well_price_str}_"
+        f"\n> :{well2.upper()}:📊 _{evt2.well_price_str}_"
+        f"\n{value_to_emojis(evt2.value)}"
+    )
 
     event_str += f"\n[basescan.org/tx/{shorten_hash(txn_hash)}](<https://basescan.org/tx/{txn_hash}>)"
     # Empty line that does not get stripped.

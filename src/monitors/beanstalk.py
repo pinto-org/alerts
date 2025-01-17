@@ -226,6 +226,7 @@ class BeanstalkMonitor(Monitor):
             f"Converted to {round_token(add_amount, add_decimals, add_token_addr)} {add_token_symbol} "
         )
 
+        # TODO: For LP converts, show both wells
         event_str += f"({round_num(bdv_float, 0)} PDV)"
         event_str += f"\n_{latest_pool_price_str(self.bean_client, pool_token)}_ "
         if not remove_token_addr.startswith(UNRIPE_TOKEN_PREFIX):
