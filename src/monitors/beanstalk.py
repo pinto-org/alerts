@@ -213,20 +213,27 @@ class BeanstalkMonitor(Monitor):
                 remove_amount = event_log.args.get("fromAmount")
                 add_amount = event_log.args.get("toAmount")
 
+        if remove_token_addr == BEAN_ADDR:
+            direction_emojis = ["⬇️", "📉"]
+        elif add_token_addr == BEAN_ADDR:
+            direction_emojis = ["⬆️", "📈"]
+        else:
+            # LP convert is harder to identify direction, requires future subgraph work.
+            direction_emojis = ["", ""]
+
         event_str = (
-            f"🔄 {round_token(remove_amount, remove_decimals, remove_token_addr)} {remove_token_symbol} "
+            f"🔄 {direction_emojis[0]} {round_token(remove_amount, remove_decimals, remove_token_addr)} {remove_token_symbol} "
             f"Converted to {round_token(add_amount, add_decimals, add_token_addr)} {add_token_symbol} "
             f"({round_num(bdv_float, 0)} PDV)"
         )
 
-        # TODO: Add convert direction chart indicators 📈 📉
-        event_str += f"\n> :PINTO:📊 _{latest_pool_price_str(self.bean_client, BEAN_ADDR)}_"
+        event_str += f"\n> :PINTO:{direction_emojis[1]} _{latest_pool_price_str(self.bean_client, BEAN_ADDR)}_"
         # If regular convert, identifies the non-bean address
         # If LP convert, both are added with the removed token coming first
         if remove_token_addr in WHITELISTED_WELLS:
-            event_str += f"\n> :{remove_token_symbol.upper()}:📊 _{latest_pool_price_str(self.bean_client, remove_token_addr)}_"
+            event_str += f"\n> :{remove_token_symbol.upper()}:{direction_emojis[1]} _{latest_pool_price_str(self.bean_client, remove_token_addr)}_"
         if add_token_addr in WHITELISTED_WELLS:
-            event_str += f"\n> :{add_token_symbol.upper()}:📊 _{latest_pool_price_str(self.bean_client, add_token_addr)}_"
+            event_str += f"\n> :{add_token_symbol.upper()}:{direction_emojis[1]} _{latest_pool_price_str(self.bean_client, add_token_addr)}_"
 
         if not remove_token_addr.startswith(UNRIPE_TOKEN_PREFIX):
             event_str += f"\n{value_to_emojis(value)}"
