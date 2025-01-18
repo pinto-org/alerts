@@ -172,8 +172,8 @@ class WellsMonitor(Monitor):
                     evt1.event_type in ["SWAP", "SHIFT"] and evt2.event_type in ["SWAP", "SHIFT"]
                     and evt1.token_out == evt2.token_in and evt1.amount_out == evt2.amount_in
                 ):
-                    del individual_evts[i]
                     del individual_evts[j]
+                    del individual_evts[i]
                     event_str = arbitrage_event_str(evt1, evt2, txn_hash.hex(), self.beanstalk_client)
                     self.msg_arbitrage(event_str, to_tg=to_tg)
                     break
@@ -182,8 +182,8 @@ class WellsMonitor(Monitor):
                     evt1.event_type == "LP" and evt1.token_amounts_in is None
                     and evt2.event_type == "LP" and evt2.token_amounts_in is not None
                 ):
-                    del individual_evts[i]
                     del individual_evts[j]
+                    del individual_evts[i]
                     event_str = move_lp_event_str(evt1, evt2, txn_hash.hex(), is_convert=is_convert)
                     self.msg_exchange(event_str, to_tg=to_tg)
                     break
