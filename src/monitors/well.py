@@ -164,27 +164,31 @@ class WellsMonitor(Monitor):
         i = 0
         while i < len(individual_evts) - 1:
             evt1 = individual_evts[i]
-            evt2 = individual_evts[i + 1]
-            # Arbitrage trade: Swap/Shift where the subsequent trade is selling tokens bought in the first
-            if (
-                evt1.event_type in ["SWAP", "SHIFT"] and evt2.event_type in ["SWAP", "SHIFT"]
-                and evt1.token_out == evt2.token_in and evt1.amount_out == evt2.amount_in
-            ):
-                del individual_evts[i:i + 2]
-                event_str = arbitrage_event_str(evt1, evt2, txn_hash.hex(), self.beanstalk_client)
-                if event_str:
+            j = i + 1
+            while j < len(individual_evts):
+                evt2 = individual_evts[j]
+                # Arbitrage trade: Swap/Shift where the subsequent trade is selling tokens bought in the first
+                if (
+                    evt1.event_type in ["SWAP", "SHIFT"] and evt2.event_type in ["SWAP", "SHIFT"]
+                    and evt1.token_out == evt2.token_in and evt1.amount_out == evt2.amount_in
+                ):
+                    del individual_evts[i]
+                    del individual_evts[j]
+                    event_str = arbitrage_event_str(evt1, evt2, txn_hash.hex(), self.beanstalk_client)
                     self.msg_arbitrage(event_str, to_tg=to_tg)
-            # Moving LP (LP convert): LP removal that is followed by LP addition
-            elif (
-                # TODO: they might not occur back to back, a swap could be in the middle.
-                # I suppose the same could be true of arbitrage? Consider restructuring this method.
-                evt1.event_type == "LP" and evt1.token_amounts_in is None
-                and evt2.event_type == "LP" and evt2.token_amounts_in is not None
-            ):
-                del individual_evts[i:i + 2]
-                event_str = move_lp_event_str(evt1, evt2, txn_hash.hex(), is_convert=is_convert)
-                if event_str:
+                    break
+                # Moving LP (LP convert): LP removal that is followed by LP addition
+                elif (
+                    evt1.event_type == "LP" and evt1.token_amounts_in is None
+                    and evt2.event_type == "LP" and evt2.token_amounts_in is not None
+                ):
+                    del individual_evts[i]
+                    del individual_evts[j]
+                    event_str = move_lp_event_str(evt1, evt2, txn_hash.hex(), is_convert=is_convert)
                     self.msg_exchange(event_str, to_tg=to_tg)
+                    break
+                else:
+                    j += 1
             else:
                 i += 1
 
