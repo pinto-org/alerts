@@ -160,19 +160,35 @@ class WellsMonitor(Monitor):
                 )
                 prev_log_index[address] = event_log.logIndex
 
-        # Identify arbitrage trades
+        # Identify arbitrage trades or LP converts
         i = 0
         while i < len(individual_evts) - 1:
             evt1 = individual_evts[i]
-            evt2 = individual_evts[i + 1]
-            if (
-                evt1.event_type in ["SWAP", "SHIFT"] and evt2.event_type in ["SWAP", "SHIFT"]
-                and evt1.token_out == evt2.token_in and evt1.amount_out == evt2.amount_in
-            ):
-                del individual_evts[i:i + 2]
-                event_str = arbitrage_event_str(evt1, evt2, txn_hash.hex(), self.beanstalk_client)
-                if event_str:
+            j = i + 1
+            while j < len(individual_evts):
+                evt2 = individual_evts[j]
+                # Arbitrage trade: Swap/Shift where the subsequent trade is selling tokens bought in the first
+                if (
+                    evt1.event_type in ["SWAP", "SHIFT"] and evt2.event_type in ["SWAP", "SHIFT"]
+                    and evt1.token_out == evt2.token_in and evt1.amount_out == evt2.amount_in
+                ):
+                    del individual_evts[j]
+                    del individual_evts[i]
+                    event_str = arbitrage_event_str(evt1, evt2, txn_hash.hex(), self.beanstalk_client)
                     self.msg_arbitrage(event_str, to_tg=to_tg)
+                    break
+                # Moving LP (LP convert): LP removal that is followed by LP addition
+                elif (
+                    evt1.event_type == "LP" and evt1.token_amounts_in is None
+                    and evt2.event_type == "LP" and evt2.token_amounts_in is not None
+                ):
+                    del individual_evts[j]
+                    del individual_evts[i]
+                    event_str = move_lp_event_str(evt1, evt2, txn_hash.hex(), is_convert=is_convert)
+                    self.msg_exchange(event_str, to_tg=to_tg)
+                    break
+                else:
+                    j += 1
             else:
                 i += 1
 
@@ -240,7 +256,7 @@ def parse_event_data(event_log, prev_log_index, basin_graph_client, bean_client,
                 else:
                     retval.token_amounts_out.append(0)
         else:
-            retval.token_amounts_out = tokenAmountsOut[i]
+            retval.token_amounts_out = tokenAmountsOut
 
         retval.bdv = token_to_float(lpAmountIn, WELL_LP_DECIMALS) * get_constant_product_well_lp_bdv(
             retval.well_address, web3=web3
@@ -279,6 +295,7 @@ def parse_event_data(event_log, prev_log_index, basin_graph_client, bean_client,
         except Exception as e:
             logging.warning(f"Price contract failed to return a value. No value is assigned to this event")
 
+    retval.bean_price_str = latest_pool_price_str(bean_client, BEAN_ADDR)
     retval.well_price_str = latest_pool_price_str(bean_client, retval.well_address)
     retval.well_liquidity_str = latest_well_lp_str(basin_graph_client, retval.well_address)
     return retval
@@ -289,17 +306,20 @@ def single_event_str(event_data: WellEventData, txn_hash, bean_reporting=False, 
     is_lpish = False
     is_swapish = False
 
-    remove_lp_icon = "🔄" if is_convert else "📤"
-    add_lp_icon = "🔄" if is_convert else "📥"
+    direction = ""
 
     if event_data.event_type == "LP":
         is_lpish = True
+        remove_lp_icon = "🔄 ⬆️" if is_convert else "📤"
+        add_lp_icon = "🔄 ⬇️" if is_convert else "📥"
         if event_data.token_amounts_in is not None:
             event_str += f"{add_lp_icon} LP added - "
             token_amounts = event_data.token_amounts_in
+            direction = "📉"
         else:
             event_str += f"{remove_lp_icon} LP removed - "
             token_amounts = event_data.token_amounts_out
+            direction = "📈"
 
         for i in range(len(event_data.well_tokens)):
             erc20_info = get_erc20_info(event_data.well_tokens[i])
@@ -328,8 +348,10 @@ def single_event_str(event_data: WellEventData, txn_hash, bean_reporting=False, 
     if is_swapish:
         if bean_reporting and erc20_info_out.symbol == "PINTO":
             event_str += f"📗 {amount_out_str} {erc20_info_out.symbol} bought for {amount_in_str} {erc20_info_in.symbol} @ ${round_num(event_data.value/bean_to_float(event_data.amount_out), 4)} "
+            direction = "📈"
         elif bean_reporting and erc20_info_in.symbol == "PINTO":
             event_str += f"📕 {amount_in_str} {erc20_info_in.symbol} sold for {amount_out_str} {erc20_info_out.symbol} @ ${round_num(event_data.value/bean_to_float(event_data.amount_in), 4)} "
+            direction = "📉"
         else:
             event_str += (
                 f"🔁 {amount_in_str} {erc20_info_in.symbol} swapped "
@@ -339,7 +361,10 @@ def single_event_str(event_data: WellEventData, txn_hash, bean_reporting=False, 
     if event_data.value is not None and event_data.value != 0:
         event_str += f"({round_num(event_data.value, 0, avoid_zero=True, incl_dollar=True)})"
         if (is_swapish or is_lpish) and bean_reporting:
-            event_str += f"\n_{event_data.well_price_str}_ "
+            event_str += (
+                f"\n> :PINTO:{direction} _{event_data.bean_price_str}_"
+                f"\n> :{SILO_TOKENS_MAP.get(event_data.well_address.lower()).upper()}:{direction} _{event_data.well_price_str}_"
+            )
         if is_lpish and not bean_reporting:
             event_str += f"\n_{event_data.well_liquidity_str}_ "
         event_str += f"\n{value_to_emojis(event_data.value)}"
@@ -367,15 +392,54 @@ def arbitrage_event_str(evt1: WellEventData, evt2: WellEventData, txn_hash, bean
     event_str += (
         f"{amount_in_str} {erc20_info_in.symbol} exchanged for {amount_out_str} {erc20_info_out.symbol}, "
         f"using {amount_arb_str} {erc20_info_arb.symbol} ({profit_str})"
+        f"\n> :PINTO:📊 _{evt1.bean_price_str}_"
     )
     well1 = SILO_TOKENS_MAP.get(evt1.well_address.lower())
     well2 = SILO_TOKENS_MAP.get(evt2.well_address.lower())
     if well1 is not None:
-        event_str += f"\n> :{well1.upper()}:📈 _{evt1.well_price_str.replace('Well: ', '')}_"
+        event_str += f"\n> :{well1.upper()}:📈 _{evt1.well_price_str}_"
     if well2 is not None:
-        event_str += f"\n> :{well2.upper()}:📉 _{evt2.well_price_str.replace('Well: ', '')}_"
+        event_str += f"\n> :{well2.upper()}:📉 _{evt2.well_price_str}_"
 
     event_str += f"\n{value_to_emojis(evt1.value)}"
+
+    event_str += f"\n[basescan.org/tx/{shorten_hash(txn_hash)}](<https://basescan.org/tx/{txn_hash}>)"
+    # Empty line that does not get stripped.
+    event_str += "\n_ _"
+    return event_str
+
+def move_lp_event_str(evt1: WellEventData, evt2: WellEventData, txn_hash, is_convert=True):
+    event_str = ""
+
+    lead_icon = "🔄" if is_convert else "⚖️"
+
+    well1 = SILO_TOKENS_MAP.get(evt1.well_address.lower())
+    well2 = SILO_TOKENS_MAP.get(evt2.well_address.lower())
+    if well1 is None:
+        well1 = get_erc20_info(evt1.well_address).symbol
+    if well2 is None:
+        well2 = get_erc20_info(evt2.well_address).symbol
+
+    erc20_tokens_removed = [get_erc20_info(evt1.well_tokens[0]), get_erc20_info(evt1.well_tokens[1])]
+    erc20_tokens_added = [get_erc20_info(evt2.well_tokens[0]), get_erc20_info(evt2.well_tokens[1])]
+    amounts_out_str = [
+        round_token(evt1.token_amounts_out[0], erc20_tokens_removed[0].decimals, erc20_tokens_removed[0].addr),
+        round_token(evt1.token_amounts_out[1], erc20_tokens_removed[1].decimals, erc20_tokens_removed[1].addr)
+    ]
+    amounts_in_str = [
+        round_token(evt2.token_amounts_in[0], erc20_tokens_added[0].decimals, erc20_tokens_added[0].addr),
+        round_token(evt2.token_amounts_in[1], erc20_tokens_added[1].decimals, erc20_tokens_added[1].addr) 
+    ]
+
+    event_str += (
+        f"{lead_icon} LP moved from {well1} to {well2} ({round_num(evt2.value, 0, avoid_zero=True, incl_dollar=True)})"
+        f"\n📤 {amounts_out_str[0]} {erc20_tokens_removed[0].symbol} and {amounts_out_str[1]} {erc20_tokens_removed[1].symbol}"
+        f"\n📥 {amounts_in_str[0]} {erc20_tokens_added[0].symbol} and {amounts_in_str[1]} {erc20_tokens_added[1].symbol}"
+        f"\n> :PINTO: _{evt1.bean_price_str}_"
+        f"\n> :{well1.upper()}: _{evt1.well_price_str}_"
+        f"\n> :{well2.upper()}: _{evt2.well_price_str}_"
+        f"\n{value_to_emojis(evt2.value)}"
+    )
 
     event_str += f"\n[basescan.org/tx/{shorten_hash(txn_hash)}](<https://basescan.org/tx/{txn_hash}>)"
     # Empty line that does not get stripped.
