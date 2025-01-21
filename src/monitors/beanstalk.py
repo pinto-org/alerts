@@ -58,7 +58,7 @@ class BeanstalkMonitor(Monitor):
                     event_logs.remove(deposit_event_log)
                     # At most allow 1 match.
                     logging.info(
-                        f"Ignoring a {earn_event_log.event} AddDeposit event {earn_event_log.receipt.transactionHash.hex()}"
+                        f"Ignoring a {earn_event_log.event} AddDeposit event {receipt.transactionHash.hex()}"
                     )
                     break
 
