@@ -47,10 +47,7 @@ class MarketMonitor(Monitor):
             # Ignore second+ events for a single multi-event transaction.
             if not event_str:
                 continue
-            txn_hash = event_logs[0].transactionHash.hex()
-            event_str += f"\n[basescan.org/tx/{shorten_hash(txn_hash)}](<https://basescan.org/tx/{txn_hash}>)"
-            # Empty line that does not get stripped.
-            event_str += "\n_ _"
+            event_str += links_footer(event_logs[0].receipt)
             self.message_function(event_str)
 
     def farmers_market_str(self, event_log, transaction_receipt):

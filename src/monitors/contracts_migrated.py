@@ -70,7 +70,5 @@ class ContractsMigrated(Monitor):
         event_str += f"\nL2 Receiver: {shorten_hash(receiver)}"
         event_str += breakdown_str
 
-        txn_hash = event_logs[0].transactionHash.hex()
-        event_str += f"\n[basescan.org/tx/{shorten_hash(txn_hash)}](<https://basescan.org/tx/{txn_hash}>)"
-        event_str += "\n_ _"
+        event_str += links_footer(event_logs[0].receipt)
         self.message_function(event_str)
