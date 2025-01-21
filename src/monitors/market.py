@@ -47,10 +47,7 @@ class MarketMonitor(Monitor):
             # Ignore second+ events for a single multi-event transaction.
             if not event_str:
                 continue
-            txn_hash = event_logs[0].transactionHash.hex()
-            event_str += f"\n[basescan.org/tx/{shorten_hash(txn_hash)}](<https://basescan.org/tx/{txn_hash}>)"
-            # Empty line that does not get stripped.
-            event_str += "\n_ _"
+            event_str += links_footer(event_logs[0].receipt)
             self.message_function(event_str)
 
     def farmers_market_str(self, event_log, transaction_receipt):
@@ -177,7 +174,7 @@ class MarketMonitor(Monitor):
             expiration_str = round_num(expiration, 0, avoid_zero=True)
             event_str += f" - {round_num(pod_amount, 0)} Pods Listed at {start_place_in_line_str} @ {round_num(price_per_pod, 3)} Pinto/Pod ({round_num(pod_amount * bean_price * price_per_pod, avoid_zero=True, incl_dollar=True)})"
             event_str += f"\n_Expires once the Pod Line moves by {expiration_str} Pod{'s' if expiration_str != '1' else ''}_"
-            event_str += f"\n<https://pinto.money/market/pods/buy/{event_log.args.get('index')}>"
+            event_str += f"\n⚖️ <https://pinto.money/market/pods/buy/{event_log.args.get('index')}>"
         # If a new order or reorder.
         elif event_log.event == "PodOrderCreated":
             # Check if this was a relist.

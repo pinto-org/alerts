@@ -31,13 +31,16 @@ class BeanstalkMonitor(Monitor):
                 continue
             last_check_time = time.time()
             for txn_pair in self._eth_event_client.get_new_logs(dry_run=self._dry_run):
-                self._handle_txn_logs(txn_pair.txn_hash, txn_pair.logs)
+                if len(txn_pair.logs):
+                    self._handle_txn_logs(txn_pair.logs)
 
-    def _handle_txn_logs(self, txn_hash, event_logs):
+    def _handle_txn_logs(self, event_logs):
         """Process the beanstalk event logs for a single txn.
 
         Note that Event Log Object is not the same as Event object.
         """
+
+        receipt = event_logs[0].receipt
 
         if event_in_logs("L1DepositsMigrated", event_logs):
             # Ignore AddDeposit as a result of contract migrating silo
@@ -55,7 +58,7 @@ class BeanstalkMonitor(Monitor):
                     event_logs.remove(deposit_event_log)
                     # At most allow 1 match.
                     logging.info(
-                        f"Ignoring a {earn_event_log.event} AddDeposit event {txn_hash.hex()}"
+                        f"Ignoring a {earn_event_log.event} AddDeposit event {receipt.transactionHash.hex()}"
                     )
                     break
 
@@ -84,7 +87,7 @@ class BeanstalkMonitor(Monitor):
         
         # logging.info(f"net token amounts {net_deposits}")
         for token in net_deposits:
-            event_str = self.silo_event_str(token, net_deposits[token], txn_hash)
+            event_str = self.silo_event_str(token, net_deposits[token], receipt)
             if event_str:
                 self.msg_silo(event_str)
 
@@ -93,7 +96,7 @@ class BeanstalkMonitor(Monitor):
             if event_str:
                 self.msg_field(event_str)
     
-    def silo_event_str(self, token_addr, net_amount, txn_hash):
+    def silo_event_str(self, token_addr, net_amount, receipt):
         """Logs a Silo Deposit/Withdraw"""
 
         event_str = ""
@@ -122,9 +125,7 @@ class BeanstalkMonitor(Monitor):
             event_str += f" ({round_num(value, 0, avoid_zero=True, incl_dollar=True)})"
             event_str += f"\n{value_to_emojis(value)}"
 
-        event_str += f"\n[basescan.org/tx/{shorten_hash(txn_hash.hex())}](<https://basescan.org/tx/{txn_hash.hex()}>)"
-        # Empty line that does not get stripped.
-        event_str += "\n_ _"
+        event_str += links_footer(receipt)
         return event_str
 
 
@@ -171,7 +172,6 @@ class BeanstalkMonitor(Monitor):
                 harvest_amt_str = f"{harvest_amt_str} Pods" if harvest_amt_str != "1" else f"{harvest_amt_str} Pod"
                 event_str += f"👩‍🌾 {harvest_amt_str} Harvested for Pinto ({round_num(beans_value, 0, avoid_zero=True, incl_dollar=True)})"
                 event_str += f"\n{value_to_emojis(beans_value)}"
-
         # Unknown event type.
         else:
             # logging.warning(
@@ -179,11 +179,7 @@ class BeanstalkMonitor(Monitor):
             # )
             return ""
 
-
-        txn_hash = event_log.transactionHash.hex()
-        event_str += f"\n[basescan.org/tx/{shorten_hash(txn_hash)}](<https://basescan.org/tx/{txn_hash}>)"
-        # Empty line that does not get stripped.
-        event_str += "\n_ _"
+        event_str += links_footer(event_log.receipt)
         return event_str
 
     def silo_conversion_str(self, event_logs):
@@ -238,10 +234,7 @@ class BeanstalkMonitor(Monitor):
         if not remove_token_addr.startswith(UNRIPE_TOKEN_PREFIX):
             event_str += f"\n{value_to_emojis(value)}"
 
-        txn_hash = event_logs[0].transactionHash.hex()
-        event_str += f"\n[basescan.org/tx/{shorten_hash(txn_hash)}](<https://basescan.org/tx/{txn_hash}>)"
-        # Empty line that does not get stripped.
-        event_str += "\n_ _"
+        event_str += links_footer(event_logs[0].receipt)
         # Indicate whether this is lambda convert
         return event_str, add_token_addr == remove_token_addr
 
@@ -257,6 +250,5 @@ class BeanstalkMonitor(Monitor):
         event_str = f"💦 Sprouts Rinsed - {round_num(bean_amount,0)} Sprouts ({round_num(bean_amount * bean_price, 0, avoid_zero=True, incl_dollar=True)})"
         event_str += f"\n{value_to_emojis(bean_amount * bean_price)}"
 
-        txn_hash = event_logs[0].transactionHash.hex()
-        event_str += f"\n[basescan.org/tx/{shorten_hash(txn_hash)}](<https://basescan.org/tx/{txn_hash}>)"
+        event_str += links_footer(event_logs[0].receipt)
         return event_str

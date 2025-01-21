@@ -14,6 +14,7 @@ from typing import List, Optional
 class WellEventData:
     def __init__(
         self,
+        receipt = None,
         event_type: Optional[str] = None,
         well_address: Optional[str] = None,
         well_tokens: Optional[List[str]] = None,
@@ -26,8 +27,9 @@ class WellEventData:
         bdv: Optional[float] = None,
         value: Optional[float] = None,
         well_price_str: Optional[str] = None,
-        well_liquidity_str: Optional[str] = None,
+        well_liquidity_str: Optional[str] = None
     ):
+        self.receipt = receipt
         self.event_type = event_type
         self.well_address = well_address
         self.well_tokens = well_tokens
@@ -78,7 +80,7 @@ class OtherWellsMonitor(Monitor):
                         if address not in prev_log_index:
                             prev_log_index[address] = 0
                         event_data = parse_event_data(event_log, prev_log_index[address], self.basin_graph_client, self.bean_client, web3=self._web3)
-                        event_str = single_event_str(event_data, txn_pair.txn_hash.hex())
+                        event_str = single_event_str(event_data)
                         if event_str:
                             self.msg_exchange(event_str)
                         prev_log_index[address] = event_log.logIndex
@@ -174,7 +176,7 @@ class WellsMonitor(Monitor):
                 ):
                     del individual_evts[j]
                     del individual_evts[i]
-                    event_str = arbitrage_event_str(evt1, evt2, txn_hash.hex(), self.beanstalk_client)
+                    event_str = arbitrage_event_str(evt1, evt2, self.beanstalk_client)
                     self.msg_arbitrage(event_str, to_tg=to_tg)
                     break
                 # Moving LP (LP convert): LP removal that is followed by LP addition
@@ -184,7 +186,7 @@ class WellsMonitor(Monitor):
                 ):
                     del individual_evts[j]
                     del individual_evts[i]
-                    event_str = move_lp_event_str(evt1, evt2, txn_hash.hex(), is_convert=is_convert)
+                    event_str = move_lp_event_str(evt1, evt2, is_convert=is_convert)
                     self.msg_exchange(event_str, to_tg=to_tg)
                     break
                 else:
@@ -194,7 +196,7 @@ class WellsMonitor(Monitor):
 
         # Normal case
         for event_data in individual_evts:
-            event_str = single_event_str(event_data, txn_hash.hex(), self.bean_reporting, is_convert=is_convert)
+            event_str = single_event_str(event_data, self.bean_reporting, is_convert=is_convert)
             if event_str:
                 if event_log.receipt["from"] not in self.arbitrage_senders or event_data.bdv > 2000:
                     self.msg_exchange(event_str, to_tg=to_tg)
@@ -203,6 +205,7 @@ class WellsMonitor(Monitor):
 
 def parse_event_data(event_log, prev_log_index, basin_graph_client, bean_client, web3=None):
     retval = WellEventData()
+    retval.receipt = event_log.receipt
     retval.well_address = event_log.get("address")
 
     # Parse possible values of interest from the event log. Not all will be populated.
@@ -300,7 +303,7 @@ def parse_event_data(event_log, prev_log_index, basin_graph_client, bean_client,
     retval.well_liquidity_str = latest_well_lp_str(basin_graph_client, retval.well_address)
     return retval
     
-def single_event_str(event_data: WellEventData, txn_hash, bean_reporting=False, is_convert=False):
+def single_event_str(event_data: WellEventData, bean_reporting=False, is_convert=False):
     event_str = ""
 
     is_lpish = False
@@ -369,12 +372,10 @@ def single_event_str(event_data: WellEventData, txn_hash, bean_reporting=False, 
             event_str += f"\n_{event_data.well_liquidity_str}_ "
         event_str += f"\n{value_to_emojis(event_data.value)}"
 
-    event_str += f"\n[basescan.org/tx/{shorten_hash(txn_hash)}](<https://basescan.org/tx/{txn_hash}>)"
-    # Empty line that does not get stripped.
-    event_str += "\n_ _"
+    event_str += links_footer(event_data.receipt)
     return event_str
 
-def arbitrage_event_str(evt1: WellEventData, evt2: WellEventData, txn_hash, beanstalk_client: BeanstalkClient):
+def arbitrage_event_str(evt1: WellEventData, evt2: WellEventData, beanstalk_client: BeanstalkClient):
     event_str = ""
 
     erc20_info_in = get_erc20_info(evt1.token_in)
@@ -403,12 +404,10 @@ def arbitrage_event_str(evt1: WellEventData, evt2: WellEventData, txn_hash, bean
 
     event_str += f"\n{value_to_emojis(evt1.value)}"
 
-    event_str += f"\n[basescan.org/tx/{shorten_hash(txn_hash)}](<https://basescan.org/tx/{txn_hash}>)"
-    # Empty line that does not get stripped.
-    event_str += "\n_ _"
+    event_str += links_footer(evt1.receipt)
     return event_str
 
-def move_lp_event_str(evt1: WellEventData, evt2: WellEventData, txn_hash, is_convert=True):
+def move_lp_event_str(evt1: WellEventData, evt2: WellEventData, is_convert=True):
     event_str = ""
 
     lead_icon = "🔄" if is_convert else "⚖️"
@@ -441,7 +440,5 @@ def move_lp_event_str(evt1: WellEventData, evt2: WellEventData, txn_hash, is_con
         f"\n{value_to_emojis(evt2.value)}"
     )
 
-    event_str += f"\n[basescan.org/tx/{shorten_hash(txn_hash)}](<https://basescan.org/tx/{txn_hash}>)"
-    # Empty line that does not get stripped.
-    event_str += "\n_ _"
+    event_str += links_footer(evt1.receipt)
     return event_str

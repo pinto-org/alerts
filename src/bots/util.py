@@ -301,6 +301,14 @@ def strip_custom_discord_emojis(text):
     # stripped_type_1 = re.sub(r":[0-z]+:", " ", text)
     return stripped_type_0
 
+def links_footer(txn_receipt):
+    sender = txn_receipt["from"]
+    txn_hash = txn_receipt.transactionHash.hex()
+    return (
+        f"\n🧑‍🌾 [{shorten_hash(sender)}](<https://basescan.org/address/{sender}>) "
+        f"🔗 [basescan.org/tx/{shorten_hash(txn_hash)}](<https://basescan.org/tx/{txn_hash}>)"
+        f"\n_ _"
+    )
 
 def handle_sigterm(signal_number, stack_frame):
     """Process a sigterm with a python exception for clean exiting."""
