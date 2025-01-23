@@ -75,22 +75,23 @@ class BasinGraphClient(object):
         """
         return execute(self._client, query_str)["wellHourlySnapshots"]
 
-    def try_get_well_deposit_info(self, txn_hash, log_index):
-        """Get deposit tokens. Retry if data not available. Return {} if it does not become available.
+    def get_add_liquidity_info(self, txn_hash, log_index):
+        """Get deposit tokens. Retry if data not available. Return None if it does not become available.
 
         This is expected to be used for realtime data retrieval, which means the subgraph may not yet have populated
         the data. Repeated queries give the subgraph a chance to catch up.
         """
         query_str = f"""
             query {{
-                deposits(where: {{
-                    logIndex: {log_index}
+                trades(where: {{
+                    tradeType: "ADD_LIQUIDITY"
                     hash: "{txn_hash.hex()}"
+                    logIndex: {log_index}
                 }}) {{
                     reserves
-                    amountUSD
+                    transferVolumeUSD
                 }}
             }}
         """
-        result = try_execute_with_wait("deposits", self._client, query_str, check_len=True)
+        result = try_execute_with_wait("trades", self._client, query_str, check_len=True)
         return result[0] if result else None
