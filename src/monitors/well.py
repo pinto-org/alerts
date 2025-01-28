@@ -318,11 +318,17 @@ def single_event_str(event_data: WellEventData, bean_reporting=False, is_convert
         if event_data.token_amounts_in is not None:
             event_str += f"{add_lp_icon} LP added - "
             token_amounts = event_data.token_amounts_in
-            direction = "📉"
+            if token_amounts[0] > 0 and token_amounts[1] == 0:
+                direction = "📉"
+            elif token_amounts[0] == 0 and token_amounts[1] > 0:
+                direction = "📈"
         else:
             event_str += f"{remove_lp_icon} LP removed - "
             token_amounts = event_data.token_amounts_out
-            direction = "📈"
+            if token_amounts[0] > 0 and token_amounts[1] == 0:
+                direction = "📈"
+            elif token_amounts[0] == 0 and token_amounts[1] > 0:
+                direction = "📉"
 
         for i in range(len(event_data.well_tokens)):
             erc20_info = get_erc20_info(event_data.well_tokens[i])
