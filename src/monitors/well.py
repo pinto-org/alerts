@@ -238,12 +238,12 @@ def parse_event_data(event_log, prev_log_index, basin_graph_client, bean_client,
         )
     elif event_log.event == "Sync":
         retval.event_type = "LP"
-        deposit = basin_graph_client.try_get_well_deposit_info(
+        deposit = basin_graph_client.get_add_liquidity_info(
             event_log.transactionHash, event_log.logIndex
         )
         if deposit:
-            retval.value = float(deposit["amountUSD"])
             retval.token_amounts_in = list(map(int, deposit["reserves"]))
+            retval.value = float(deposit["transferVolumeUSD"])
         else:
             # Redundancy in case subgraph is not available
             retval.bdv = token_to_float(
