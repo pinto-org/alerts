@@ -243,7 +243,7 @@ def parse_event_data(event_log, prev_log_index, basin_graph_client, bean_client,
         )
         if deposit:
             retval.value = float(deposit["amountUSD"])
-            retval.token_amounts_in = deposit["reserves"]
+            retval.token_amounts_in = list(map(int, deposit["reserves"]))
         else:
             # Redundancy in case subgraph is not available
             retval.bdv = token_to_float(
