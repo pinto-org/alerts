@@ -49,7 +49,9 @@ def execute(client, query_str, max_tries=10):
             logging.error("Main thread no longer running. Exiting.")
             exit(1)
         except Exception as e:
-            logging.warning(e, exc_info=True)
+            if try_count == 0:
+                logging.warning(e, exc_info=True)
+                logging.info(f"Failing GraphQL query: {query_str}")
             logging.warning(
                 f"Unexpected error on {client_subgraph_name(client)} subgraph access."
                 f"\nRetrying..."
@@ -87,7 +89,9 @@ def client_subgraph_name(client):
     url = client.transport.url
     if url == BEAN_GRAPH_ENDPOINT:
         return "Bean"
-    if url == BEANSTALK_GRAPH_ENDPOINT:
+    elif url == BEANSTALK_GRAPH_ENDPOINT:
         return "Beanstalk"
+    elif url == BASIN_GRAPH_ENDPOINT:
+        return "Basin"
     else:
         return "unknown"

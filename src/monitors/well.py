@@ -135,7 +135,11 @@ class WellsMonitor(Monitor):
                 continue
             last_check_time = time.time()
             for txn_pair in self._eth_event_client.get_new_logs(dry_run=self._dry_run):
-                self._handle_txn_logs(txn_pair.txn_hash, txn_pair.logs)
+                try:
+                    self._handle_txn_logs(txn_pair.txn_hash, txn_pair.logs)
+                except Exception as e:
+                    logging.info(f"\n\n=> Exception during processing of txnHash {txn_pair.txn_hash.hex()}\n")
+                    raise
 
     def _handle_txn_logs(self, txn_hash, event_logs):
         """Process the well event logs for a single txn."""
@@ -322,13 +326,15 @@ def single_event_str(event_data: WellEventData, bean_reporting=False, is_convert
                 direction = "📉"
             elif token_amounts[0] == 0 and token_amounts[1] > 0:
                 direction = "📈"
-        else:
+        elif event_data.token_amounts_out is not None:
             event_str += f"{remove_lp_icon} LP removed - "
             token_amounts = event_data.token_amounts_out
             if token_amounts[0] > 0 and token_amounts[1] == 0:
                 direction = "📈"
             elif token_amounts[0] == 0 and token_amounts[1] > 0:
                 direction = "📉"
+        else:
+            raise ValueError("LP event was missing token amounts")
 
         for i in range(len(event_data.well_tokens)):
             erc20_info = get_erc20_info(event_data.well_tokens[i])

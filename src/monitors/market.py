@@ -31,7 +31,11 @@ class MarketMonitor(Monitor):
                 continue
             last_check_time = time.time()
             for txn_pair in self._eth_event_client.get_new_logs(dry_run=self._dry_run):
-                self._handle_txn_logs(txn_pair.txn_hash, txn_pair.logs)
+                try:
+                    self._handle_txn_logs(txn_pair.txn_hash, txn_pair.logs)
+                except Exception as e:
+                    logging.info(f"\n\n=> Exception during processing of txnHash {txn_pair.txn_hash.hex()}\n")
+                    raise
 
     def _handle_txn_logs(self, txn_hash, event_logs):
         """Process the beanstalk event logs for a single txn.
