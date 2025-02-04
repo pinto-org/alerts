@@ -88,7 +88,7 @@ class BasinGraphClient(object):
                     hash: "{txn_hash.hex()}"
                     logIndex: {log_index}
                 }}) {{
-                    reserves
+                    liqReservesAmount
                     transferVolumeUSD
                 }}
             }}
