@@ -16,6 +16,7 @@ from constants.config import *
 
 from monitors.basin_periodic import BasinPeriodicMonitor
 from monitors.well import WellsMonitor
+from tools.webhook_alerts import send_webhook_alert
 
 class Channel(Enum):
     REPORT = 0
@@ -79,6 +80,7 @@ class DiscordClient(discord.ext.commands.Bot):
     def send_msg_report(self, text):
         """Send a message through the Discord bot in the report/test channel."""
         self.msg_queue.append((Channel.REPORT, text))
+        send_webhook_alert(text)
 
     def send_msg_daily(self, text):
         """Send a message through the Discord bot in the daily update channel."""

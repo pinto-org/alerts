@@ -26,6 +26,7 @@ from monitors.seasons import SeasonsMonitor
 from monitors.well import WellsMonitor
 from monitors.contracts_migrated import ContractsMigrated
 from tools.util import embellish_token_emojis
+from tools.webhook_alerts import send_webhook_alert
 
 class Channel(Enum):
     PEG = 0
@@ -160,6 +161,7 @@ class DiscordClient(discord.ext.commands.Bot):
     def send_msg_report(self, text):
         """Send a message through the Discord bot in the error reporting channel."""
         self.msg_queue.append((Channel.REPORT, text))
+        send_webhook_alert(text)
 
     def send_msg_peg(self, text, to_main=True, to_tg=None):
         self.msg_queue.append((Channel.PEG if to_main else Channel.EVERYTHING, text))
