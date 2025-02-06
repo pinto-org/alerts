@@ -10,6 +10,7 @@ import discord
 from discord.ext import tasks, commands
 
 from data_access.contracts.util import *
+from data_access.addresses import format_address_ens, shorten_hash
 
 class DiscordSidebarClient(discord.ext.commands.Bot):
     def __init__(self, monitor, prod=False):
@@ -287,11 +288,6 @@ def holiday_emoji():
             return emoji
     return ""
 
-def shorten_hash(address: str) -> str:
-    if len(address) > 10 and address.startswith("0x"):
-        return f"{address[:6]}...{address[-4:]}"
-    return address
-
 def strip_custom_discord_emojis(text):
     """Remove custom discord emojis using regex."""
     # <:beanstalker:1004908839394615347>
@@ -305,7 +301,7 @@ def links_footer(txn_receipt):
     sender = txn_receipt["from"]
     txn_hash = txn_receipt.transactionHash.hex()
     return (
-        f"\n🧑‍🌾 [{shorten_hash(sender)}](<https://basescan.org/address/{sender}>) "
+        f"\n🧑‍🌾 [{format_address_ens(sender)}](<https://basescan.org/address/{sender}>) "
         f"🔗 [basescan.org/tx/{shorten_hash(txn_hash)}](<https://basescan.org/tx/{txn_hash}>)"
         f"\n_ _"
     )
