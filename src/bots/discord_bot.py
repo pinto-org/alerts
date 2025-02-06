@@ -26,7 +26,7 @@ from monitors.seasons import SeasonsMonitor
 from monitors.well import WellsMonitor
 from monitors.contracts_migrated import ContractsMigrated
 from tools.util import embellish_token_emojis
-from tools.webhook_alerts import send_webhook_alert
+from tools.webhook_alerts import activate_webhook_on_error_logs
 
 class Channel(Enum):
     PEG = 0
@@ -96,6 +96,8 @@ class DiscordClient(discord.ext.commands.Bot):
         if telegram_token is not None:
             self.tele_bot = telebot.TeleBot(telegram_token, parse_mode="Markdown")
 
+        activate_webhook_on_error_logs()
+
         # Update root logger to send logging Errors in a Discord channel.
         discord_report_handler = util.MsgHandler(self.send_msg_report)
         discord_report_handler.setLevel(logging.ERROR)
@@ -161,7 +163,6 @@ class DiscordClient(discord.ext.commands.Bot):
     def send_msg_report(self, text):
         """Send a message through the Discord bot in the error reporting channel."""
         self.msg_queue.append((Channel.REPORT, text))
-        send_webhook_alert(text)
 
     def send_msg_peg(self, text, to_main=True, to_tg=None):
         self.msg_queue.append((Channel.PEG if to_main else Channel.EVERYTHING, text))

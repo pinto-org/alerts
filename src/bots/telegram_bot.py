@@ -19,6 +19,7 @@ from monitors.market import MarketMonitor
 from monitors.barn import BarnRaiseMonitor
 from tools.msg_aggregator import MsgAggregator
 from tools.util import embellish_token_emojis
+from tools.webhook_alerts import activate_webhook_on_error_logs
 
 # Telegram rate limit is 1 msg/s per channel.
 RATE_LIMIT = 1.5
@@ -33,6 +34,8 @@ class TelegramBot(object):
             self._main_chat_id = BS_TELE_CHAT_ID_STAGING
             self._seasons_chat_id = BS_TELE_CHAT_ID_STAGING
             logging.info("Configured as a staging instance.")
+
+        activate_webhook_on_error_logs()
 
         apihelper.SESSION_TIME_TO_LIVE = 5 * 60
         self.tele_bot = telebot.TeleBot(token, parse_mode="Markdown")
