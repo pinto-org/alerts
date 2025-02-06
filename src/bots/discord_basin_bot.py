@@ -16,6 +16,7 @@ from constants.config import *
 
 from monitors.basin_periodic import BasinPeriodicMonitor
 from monitors.well import WellsMonitor
+from tools.webhook_alerts import activate_webhook_on_error_logs
 
 class Channel(Enum):
     REPORT = 0
@@ -43,6 +44,8 @@ class DiscordClient(discord.ext.commands.Bot):
             logging.info("Configured as a staging instance.")
 
         self.msg_queue = []
+
+        activate_webhook_on_error_logs()
 
         # Update root logger to send logging Errors in a Discord channel.
         discord_report_handler = util.MsgHandler(self.send_msg_report)

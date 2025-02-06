@@ -13,6 +13,7 @@ from constants.addresses import *
 
 from monitors.basin_periodic import BasinPeriodicMonitor
 from monitors.well import WellsMonitor
+from tools.webhook_alerts import activate_webhook_on_error_logs
 
 class TelegramBasinBot(object):
     def __init__(self, token, prod=False, dry_run=None):
@@ -22,6 +23,8 @@ class TelegramBasinBot(object):
         else:
             self._chat_id = DEX_TELE_CHAT_ID_STAGING
             logging.info("Configured as a staging instance.")
+
+        activate_webhook_on_error_logs()
 
         apihelper.SESSION_TIME_TO_LIVE = 5 * 60
         self.tele_bot = telebot.TeleBot(token, parse_mode="Markdown")

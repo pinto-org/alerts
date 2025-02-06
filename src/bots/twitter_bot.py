@@ -3,6 +3,7 @@ import logging.handlers
 import os
 import signal
 import time
+from tools.webhook_alerts import activate_webhook_on_error_logs
 import tweepy
 
 from bots import util
@@ -68,6 +69,8 @@ class BeanstalkTwitterBot(TwitterBot):
             self.set_keys_staging()
             logging.info("BeanstalkTwitterBot configured as a staging instance.")
         self.set_client()
+
+        activate_webhook_on_error_logs()
 
         self.sunrise_monitor = SeasonsMonitor(
             self.send_msg, short_msgs=True, prod=prod, dry_run=dry_run
