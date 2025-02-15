@@ -362,10 +362,14 @@ def single_event_str(event_data: WellEventData, bean_reporting=False, is_convert
         
     if is_swapish:
         if bean_reporting and erc20_info_out.symbol == "PINTO":
-            event_str += f"📗 {amount_out_str} {erc20_info_out.symbol} bought for {amount_in_str} {erc20_info_in.symbol} @ ${round_num(event_data.value/bean_to_float(event_data.amount_out), 4)} "
+            event_str += f"📗 {amount_out_str} {erc20_info_out.symbol} bought for {amount_in_str} {erc20_info_in.symbol}"
+            if event_data.amount_out != 0:
+                event_str += f" @ ${round_num(event_data.value/bean_to_float(event_data.amount_out), 4)} "
             direction = "📈"
         elif bean_reporting and erc20_info_in.symbol == "PINTO":
-            event_str += f"📕 {amount_in_str} {erc20_info_in.symbol} sold for {amount_out_str} {erc20_info_out.symbol} @ ${round_num(event_data.value/bean_to_float(event_data.amount_in), 4)} "
+            event_str += f"📕 {amount_in_str} {erc20_info_in.symbol} sold for {amount_out_str} {erc20_info_out.symbol}"
+            if event_data.amount_in != 0:
+                event_str += f" @ ${round_num(event_data.value/bean_to_float(event_data.amount_in), 4)} "
             direction = "📉"
         else:
             event_str += (
