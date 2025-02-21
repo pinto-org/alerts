@@ -166,6 +166,25 @@ class WellsMonitor(Monitor):
                 )
                 prev_log_index[address] = event_log.logIndex
 
+        # Identify a fully arbitrage trade: all are swaps and sum of all bought/sold pinto are equal
+        sum_pinto = 0
+        trades = 0
+        for i in range(len(individual_evts)):
+            evt = individual_evts[i]
+            if evt.event_type not in ["SWAP", "SHIFT"]:
+                break
+            if evt.token_out == BEAN_ADDR:
+                sum_pinto += evt.amount_out
+            elif evt.token_in == BEAN_ADDR:
+                sum_pinto -= evt.amount_in
+            trades += 1
+
+        if trades > 1 and sum_pinto == 0:
+            # This trade is pure arbitrage and can be consolidated into a single message
+            event_str = pure_arbitrage_event_str(individual_evts, self.beanstalk_client)
+            self.msg_arbitrage(event_str, to_tg=to_tg)
+            return
+
         # Identify arbitrage trades or LP converts
         i = 0
         while i < len(individual_evts) - 1:
@@ -173,7 +192,8 @@ class WellsMonitor(Monitor):
             j = i + 1
             while j < len(individual_evts):
                 evt2 = individual_evts[j]
-                # Arbitrage trade: Swap/Shift where the subsequent trade is selling tokens bought in the first
+                # 2 well arbitrage trade: Swap/Shift where subsequent trades are selling tokens bought in earlier ones
+                # This is still identified in addition to the previous arbitrage case to account for more complex interactions
                 if (
                     evt1.event_type in ["SWAP", "SHIFT"] and evt2.event_type in ["SWAP", "SHIFT"]
                     and evt1.token_out == evt2.token_in and evt1.amount_out == evt2.amount_in
@@ -390,6 +410,48 @@ def single_event_str(event_data: WellEventData, bean_reporting=False, is_convert
 
     event_str += links_footer(event_data.receipt)
     return event_str
+
+def pure_arbitrage_event_str(all_events: List[WellEventData], beanstalk_client: BeanstalkClient):
+    event_str = ""
+    from_strs = []
+    to_strs = []
+    sum_bean = 0
+    dollars_in = 0
+    dollars_out = 0
+    deltas_str = ""
+
+    for i in range(len(all_events)):
+        evt = all_events[i]
+        # Identify from/to tokens (non-bean) and profits
+        if evt.token_out == BEAN_ADDR:
+            erc20_info = get_erc20_info(evt.token_in)
+            from_strs.append(f"{round_token(evt.amount_in, erc20_info.decimals, erc20_info.addr)} {erc20_info.symbol}")
+            dollars_in += evt.amount_in * beanstalk_client.get_token_usd_price(evt.token_in) / 10 ** erc20_info.decimals
+        elif evt.token_in == BEAN_ADDR:
+            erc20_info = get_erc20_info(evt.token_out)
+            to_strs.append(f"{round_token(evt.amount_out, erc20_info.decimals, erc20_info.addr)} {erc20_info.symbol}")
+            sum_bean += evt.amount_in
+            dollars_out += evt.amount_out * beanstalk_client.get_token_usd_price(evt.token_out) / 10 ** erc20_info.decimals
+
+        # Wells delta strings
+        if i == 0:
+            deltas_str += f"> :PINTO:📊 _{evt.bean_price_str}_"
+        well = SILO_TOKENS_MAP.get(evt.well_address.lower())
+        if well is not None:
+            direction = "📈" if evt.token_out == BEAN_ADDR else "📉"
+            deltas_str += f"\n> :{well.upper()}:{direction} _{evt.well_price_str}_"
+
+    bean_amount = round_token(sum_bean, 6, BEAN_ADDR)
+    profit = dollars_out - dollars_in
+    profit_str = f"{'+' if profit >= 0 else '-'}{round_num(abs(profit), 2, avoid_zero=False, incl_dollar=True)}"
+    event_str += (
+        f"{', '.join(from_strs)} exchanged for {', '.join(to_strs)}, using {bean_amount} PINTO ({profit_str})"
+        f"\n{deltas_str}"
+        f"\n{value_to_emojis(bean_amount)}"
+    )
+    event_str += links_footer(all_events[0].receipt)
+    return event_str
+
 
 def arbitrage_event_str(evt1: WellEventData, evt2: WellEventData, beanstalk_client: BeanstalkClient):
     event_str = ""
