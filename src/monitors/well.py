@@ -452,7 +452,7 @@ def pure_arbitrage_event_str(all_events: List[WellEventData], beanstalk_client: 
     event_str += (
         f"{', '.join(from_strs)} exchanged for {', '.join(to_strs)}, using {bean_amount} PINTO ({profit_str})"
         f"\n{deltas_str}"
-        f"\n{value_to_emojis(bean_amount)}"
+        f"\n{value_to_emojis(dollars_in + dollars_out)}"
     )
     event_str += links_footer(all_events[0].receipt)
     return event_str
