@@ -168,6 +168,7 @@ class WellsMonitor(Monitor):
 
         # Identify a fully arbitrage trade: all are swaps and sum of all bought/sold pinto are equal
         sum_pinto = 0
+        abs_sum_pinto = 0
         trades = 0
         for i in range(len(individual_evts)):
             evt = individual_evts[i]
@@ -175,11 +176,15 @@ class WellsMonitor(Monitor):
                 break
             if evt.token_out == BEAN_ADDR:
                 sum_pinto += evt.amount_out
+                abs_sum_pinto += evt.amount_out
             elif evt.token_in == BEAN_ADDR:
                 sum_pinto -= evt.amount_in
+                abs_sum_pinto += evt.amount_in
             trades += 1
 
-        if trades > 1 and sum_pinto == 0:
+        # Is considered full arbitrage even if the pinto amount mismatches by less than .1%. Some traders move
+        # light pinto profits into their trading contract.
+        if trades >= 2 and sum_pinto / abs_sum_pinto < 0.001:
             # This trade is pure arbitrage and can be consolidated into a single message
             event_str = pure_arbitrage_event_str(individual_evts, self.beanstalk_client)
             self.msg_arbitrage(event_str, to_tg=to_tg)
