@@ -148,6 +148,8 @@ class DiscordClient(discord.ext.commands.Bot):
         except Exception as e:
             logging.error(e, exc_info=True)
             logging.warning("Failed to send message to Discord server. Will retry.")
+            # Move the failing message to the back of the queue, in case there was something wrong with the message
+            self.msg_queue.append(self.msg_queue.pop(0))
 
     @send_queued_messages.before_loop
     async def before_send_queued_messages_loop(self):
