@@ -126,9 +126,10 @@ class DiscordClient(discord.ext.commands.Bot):
         """
         try:
             for channel, msg in self.msg_queue:
-                if len(msg) > 2000:
-                    msg = msg[-2000:]
-                    logging.warning(f"Clipping message length down to 2000.")
+                # Discord has limit of 2k but sometimes it still fails with 2k. It is preferable to allow moderate truncation.
+                if len(msg) > 1950:
+                    msg = msg[-1950:]
+                    logging.error(f"Clipping message length down to 1950.")
                 logging.info(f"Sending message through {channel} channel:\n{msg}\n")
                 # Ignore empty messages.
                 if not msg:
@@ -145,8 +146,10 @@ class DiscordClient(discord.ext.commands.Bot):
                     logging.error(f"Unknown channel seen in msg queue: {channel}")
                 self.msg_queue = self.msg_queue[1:]
         except Exception as e:
-            logging.warning(e, exc_info=True)
+            logging.error(e, exc_info=True)
             logging.warning("Failed to send message to Discord server. Will retry.")
+            # Move the failing message to the back of the queue, in case there was something wrong with the message
+            self.msg_queue.append(self.msg_queue.pop(0))
 
     @send_queued_messages.before_loop
     async def before_send_queued_messages_loop(self):
