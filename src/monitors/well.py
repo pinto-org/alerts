@@ -1,3 +1,4 @@
+from collections import defaultdict
 from bots.util import *
 from data_access.contracts.beanstalk import BeanstalkClient
 from monitors.monitor import Monitor
@@ -423,30 +424,42 @@ def pure_arbitrage_event_str(all_events: List[WellEventData], beanstalk_client: 
     sum_bean = 0
     dollars_in = 0
     dollars_out = 0
-    deltas_str = ""
 
+    # Sum totals of non-bean tokens in each well (the same well could be swapped in multiple times)
+    from_tokens = defaultdict(int)
+    to_tokens = defaultdict(int)
+    encountered_wells = set()
+    well_price_strs = []
     for i in range(len(all_events)):
         evt = all_events[i]
         # Identify from/to tokens (non-bean) and profits
         if evt.token_out == BEAN_ADDR:
-            erc20_info = get_erc20_info(evt.token_in)
-            from_strs.append(f"{round_token(evt.amount_in, erc20_info.decimals, erc20_info.addr)} {erc20_info.symbol}")
-            dollars_in += evt.amount_in * beanstalk_client.get_token_usd_price(evt.token_in) / 10 ** erc20_info.decimals
+            from_tokens[evt.token_in] += evt.amount_in
         elif evt.token_in == BEAN_ADDR:
-            erc20_info = get_erc20_info(evt.token_out)
-            to_strs.append(f"{round_token(evt.amount_out, erc20_info.decimals, erc20_info.addr)} {erc20_info.symbol}")
             sum_bean += evt.amount_in
-            dollars_out += evt.amount_out * beanstalk_client.get_token_usd_price(evt.token_out) / 10 ** erc20_info.decimals
+            to_tokens[evt.token_out] += evt.amount_out
 
-        # Wells delta strings
         if i == 0:
-            deltas_str += f"> :PINTO:📊 _{evt.bean_price_str}_"
+            well_price_strs.append(f"> :PINTO:📊 _{evt.bean_price_str}_")
+        direction = "📈" if evt.token_out == BEAN_ADDR else "📉"
         well = SILO_TOKENS_MAP.get(evt.well_address.lower())
-        if well is not None:
-            direction = "📈" if evt.token_out == BEAN_ADDR else "📉"
-            deltas_str += f"\n> :{well.upper()}:{direction} _{evt.well_price_str}_"
+        if well not in encountered_wells:
+            encountered_wells.add(well)
+            well_price_strs.append(f"> :{well.upper()}:{direction} _{evt.well_price_str}_")
+
+    # Generate strings from totals
+    for nbt in from_tokens:
+        erc20_info = get_erc20_info(nbt)
+        from_strs.append(f"{round_token(from_tokens[nbt], erc20_info.decimals, erc20_info.addr)} {erc20_info.symbol}")
+        dollars_in += from_tokens[nbt] * beanstalk_client.get_token_usd_price(nbt) / 10 ** erc20_info.decimals
+
+    for nbt in to_tokens:
+        erc20_info = get_erc20_info(nbt)
+        to_strs.append(f"{round_token(to_tokens[nbt], erc20_info.decimals, erc20_info.addr)} {erc20_info.symbol}")
+        dollars_out += to_tokens[nbt] * beanstalk_client.get_token_usd_price(nbt) / 10 ** erc20_info.decimals
 
     bean_amount = round_token(sum_bean, 6, BEAN_ADDR)
+    deltas_str = '\n'.join(well_price_strs)
     profit = dollars_out - dollars_in
     profit_str = f"{'+' if profit >= 0 else '-'}{round_num(abs(profit), 2, avoid_zero=False, incl_dollar=True)}"
     event_str += (
@@ -456,7 +469,6 @@ def pure_arbitrage_event_str(all_events: List[WellEventData], beanstalk_client: 
     )
     event_str += links_footer(all_events[0].receipt)
     return event_str
-
 
 def arbitrage_event_str(evt1: WellEventData, evt2: WellEventData, beanstalk_client: BeanstalkClient):
     event_str = ""
