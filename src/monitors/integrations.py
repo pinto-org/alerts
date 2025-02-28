@@ -34,6 +34,7 @@ class IntegrationsMonitor(Monitor):
 
     def _handle_txn_logs(self, event_logs):
         for event_log in event_logs:
+            # sPinto integration
             if event_log.address == SPINTO_ADDR:
                 event_str = self.spinto_str(event_log)
                 if not event_str:
@@ -43,13 +44,12 @@ class IntegrationsMonitor(Monitor):
 
     def spinto_str(self, event_log):
         event_str = ""
-
         token_info = get_erc20_info(event_log.address)
 
-        # assets/shares
         if event_log.event == "Deposit" or event_log.event == "Withdraw":
-            assets = round_token(event_log.args.get("assets"), BEAN_DECIMALS, BEAN_ADDR)
-            shares = round_token(event_log.args.get("shares"), token_info.decimals, SPINTO_ADDR)
+            # Current assumption is only 1 type of wrapped deposit token
+            pintoAmount = round_token(event_log.args.get("assets"), BEAN_DECIMALS, BEAN_ADDR)
+            sPintoAmount = round_token(event_log.args.get("shares"), token_info.decimals, SPINTO_ADDR)
 
             if event_log.event == "Deposit":
                 emoji = "📥"
@@ -58,9 +58,9 @@ class IntegrationsMonitor(Monitor):
                 emoji = "📭"
                 direction = "unwrapped from"
 
-            event_str += f"{emoji} :PINTO: {assets} Deposited !PINTO {direction} {shares} {token_info.symbol}"
+            event_str += f"{emoji} :PINTO: {pintoAmount} Deposited !PINTO {direction} {sPintoAmount} {token_info.symbol}"
 
             bean_price = self.bean_client.avg_bean_price()
-            event_str += f"\n{value_to_emojis(assets * bean_price)}"
+            event_str += f"\n{value_to_emojis(pintoAmount * bean_price)}"
 
         return event_str
