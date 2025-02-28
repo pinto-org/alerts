@@ -1,5 +1,6 @@
 from bots.util import *
 from data_access.contracts.bean import BeanClient
+from data_access.contracts.integrations import WrappedDepositClient
 from monitors.monitor import Monitor
 from data_access.contracts.util import *
 from data_access.contracts.eth_events import *
@@ -17,6 +18,7 @@ class IntegrationsMonitor(Monitor):
         self.msg_spinto = msg_spinto
         self._eth_event_client = EthEventsClient(EventClientType.INTEGRATIONS)
         self.bean_client = BeanClient()
+        self.spinto_client = WrappedDepositClient(SPINTO_ADDR)
 
     def _monitor_method(self):
         last_check_time = 0
@@ -44,12 +46,14 @@ class IntegrationsMonitor(Monitor):
 
     def spinto_str(self, event_log):
         event_str = ""
-        token_info = get_erc20_info(event_log.address)
+
+        underlying_asset = self.spinto_client.get_underlying_asset()
+        underlying_info = get_erc20_info(underlying_asset)
+        wrapped_info = get_erc20_info(event_log.address)
 
         if event_log.event == "Deposit" or event_log.event == "Withdraw":
-            # Current assumption is only 1 type of wrapped deposit token
-            pintoAmount = round_token(event_log.args.get("assets"), BEAN_DECIMALS, BEAN_ADDR)
-            sPintoAmount = round_token(event_log.args.get("shares"), token_info.decimals, SPINTO_ADDR)
+            pintoAmount = round_token(event_log.args.get("assets"), underlying_info.decimals, underlying_info.addr)
+            sPintoAmount = round_token(event_log.args.get("shares"), wrapped_info.decimals, wrapped_info.addr)
 
             if event_log.event == "Deposit":
                 emoji = "📥"
@@ -58,7 +62,15 @@ class IntegrationsMonitor(Monitor):
                 emoji = "📭"
                 direction = "unwrapped from"
 
-            event_str += f"{emoji} :PINTO: {pintoAmount} Deposited !PINTO {direction} {sPintoAmount} {token_info.symbol}"
+            # X Deposited PINTO wrapped to Y sPinto
+            event_str += f"{emoji} :{underlying_asset.symbol}: {pintoAmount} Deposited !{underlying_asset.symbol} {direction} {sPintoAmount} {wrapped_info.symbol}"
+
+            wrapped_supply = round_token(self.spinto_client.get_supply(), wrapped_info.decimals, wrapped_info.addr)
+            redeem_rate = round_token(self.spinto_client.get_redeem_rate(), underlying_info.decimals, underlying_info.addr)
+            event_str += (
+                    f"\n_{wrapped_info.symbol} Supply: {round_num(wrapped_supply, precision=0)}. "
+                    f"Redeems For {round_num(redeem_rate, precision=4)} {underlying_asset.symbol}_"
+                )
 
             bean_price = self.bean_client.avg_bean_price()
             event_str += f"\n{value_to_emojis(pintoAmount * bean_price)}"
