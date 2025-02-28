@@ -68,9 +68,9 @@ class IntegrationsMonitor(Monitor):
             wrapped_supply = round_token(self.spinto_client.get_supply(), wrapped_info.decimals, wrapped_info.addr)
             redeem_rate = round_token(self.spinto_client.get_redeem_rate(), underlying_info.decimals, underlying_info.addr)
             event_str += (
-                    f"\n_{wrapped_info.symbol} Supply: {round_num(wrapped_supply, precision=0)}. "
-                    f"Redeems For {round_num(redeem_rate, precision=4)} {underlying_asset.symbol}_"
-                )
+                f"\n_{wrapped_info.symbol} Supply: {round_num(wrapped_supply, precision=0)}. "
+                f"Redeems For {round_num(redeem_rate, precision=4)} {underlying_asset.symbol}_"
+            )
 
             bean_price = self.bean_client.avg_bean_price()
             event_str += f"\n{value_to_emojis(pintoAmount * bean_price)}"
