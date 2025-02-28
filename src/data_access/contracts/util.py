@@ -36,6 +36,10 @@ with open(
     os.path.join(os.path.dirname(__file__), "../../constants/abi/fertilizer_abi.json")
 ) as fertilizer_abi_file:
     fertilizer_abi = json.load(fertilizer_abi_file)
+with open(
+    os.path.join(os.path.dirname(__file__), "../../constants/abi/wrapped_silo_erc20_abi.json")
+) as wrapped_silo_erc20_abi_file:
+    wrapped_silo_erc20_abi = json.load(wrapped_silo_erc20_abi_file)
 
 class ChainClient:
     """Base class for clients of Eth chain data."""
@@ -62,6 +66,11 @@ def get_well_contract(web3, address):
 def get_aquifer_contract(web3):
     """Get a web.eth.contract object for the aquifer. Contract is not thread safe."""
     return web3.eth.contract(address=AQUIFER_ADDR, abi=aquifer_abi)
+
+
+def get_wrapped_silo_contract(addr, web3):
+    """Get a web.eth.contract object for the requested wrapped silo token. Contract is not thread safe."""
+    return web3.eth.contract(address=addr, abi=wrapped_silo_erc20_abi)
 
 
 def get_bean_contract(web3):
