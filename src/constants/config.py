@@ -109,6 +109,7 @@ TG_TOKEN_EMOJIS = {
     "PINTOCBBTC": "🟠",
     "PINTOWSOL": "🟣",
     "PINTOUSDC": "🔵",
+    "SPINTO": "TODO",
     "WETH": "🟤",
     "CBETH": "🔴",
     "CBBTC": "🟠",
