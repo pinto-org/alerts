@@ -203,6 +203,20 @@ add_event_to_dict(
     CONTRACTS_MIGRATED_SIGNATURES_LIST,
 )
 
+# Integrations (sPinto)
+INTEGRATIONS_EVENT_MAP = {}
+INTEGRATIONS_SIGNATURES_LIST = []
+add_event_to_dict(
+    "Deposit(address,address,uint256,uint256)",
+    INTEGRATIONS_EVENT_MAP,
+    INTEGRATIONS_SIGNATURES_LIST,
+)
+add_event_to_dict(
+    "Withdraw(address,address,address,uint256,uint256)",
+    INTEGRATIONS_EVENT_MAP,
+    INTEGRATIONS_SIGNATURES_LIST,
+)
+
 class EventClientType(IntEnum):
     BEANSTALK = 0
     SEASON = 1
@@ -211,6 +225,7 @@ class EventClientType(IntEnum):
     WELL = 4
     AQUIFER = 5
     CONTRACT_MIGRATED = 6
+    INTEGRATIONS = 7
 
 class TxnPair:
     """The logs, in order, associated with a transaction."""
@@ -266,6 +281,11 @@ class EthEventsClient:
             self._contract_addresses = [BEANSTALK_ADDR]
             self._events_dict = CONTRACTS_MIGRATED_EVENT_MAP
             self._signature_list = CONTRACTS_MIGRATED_SIGNATURES_LIST
+        elif self._event_client_type == EventClientType.INTEGRATIONS:
+            self._contracts = [get_wrapped_silo_contract(SPINTO_ADDR, self._web3)]
+            self._contract_addresses = [SPINTO_ADDR]
+            self._events_dict = INTEGRATIONS_EVENT_MAP
+            self._signature_list = INTEGRATIONS_SIGNATURES_LIST
         else:
             raise ValueError("Unsupported event client type.")
         self._set_filters()

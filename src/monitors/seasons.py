@@ -40,20 +40,20 @@ class SeasonsMonitor(Monitor):
             seasonal_sg = self._block_and_get_season_stats()
             # A new season has begun.
             if seasonal_sg:
-                block = seasonal_sg.current_beanstalk.sunrise_block
+                block = seasonal_sg.beanstalks[0].sunrise_block
                 # Get the txn hash + any flood events for this sunrise call
                 sunrise_logs = self._eth_event_client.get_log_range(block, block)
                 if len(sunrise_logs) > 0:
-                    seasonal_sg.current_beanstalk.sunrise_hash = sunrise_logs[0].txn_hash.hex()
-                    seasonal_sg.current_beanstalk.well_plenty_logs = get_logs_by_names(["SeasonOfPlentyWell"], sunrise_logs[0].logs)
-                    seasonal_sg.current_beanstalk.field_plenty_logs = get_logs_by_names(["SeasonOfPlentyField"], sunrise_logs[0].logs)
-                    if len(seasonal_sg.current_beanstalk.well_plenty_logs) > 0:
+                    seasonal_sg.beanstalks[0].sunrise_hash = sunrise_logs[0].txn_hash.hex()
+                    seasonal_sg.beanstalks[0].well_plenty_logs = get_logs_by_names(["SeasonOfPlentyWell"], sunrise_logs[0].logs)
+                    seasonal_sg.beanstalks[0].field_plenty_logs = get_logs_by_names(["SeasonOfPlentyField"], sunrise_logs[0].logs)
+                    if len(seasonal_sg.beanstalks[0].well_plenty_logs) > 0:
                         # Get swap logs if there was flood plenty
                         sunrise_swap_logs = self._eth_all_wells.get_log_range(block, block)
                         if len(sunrise_swap_logs) > 0:
                             # Ensure these logs match the sunrise txn hash
-                            sunrise_tx_logs = next(txn.logs for txn in sunrise_swap_logs if txn.txn_hash.hex() == seasonal_sg.current_beanstalk.sunrise_hash)
-                            seasonal_sg.current_beanstalk.flood_swap_logs = get_logs_by_names(["Swap"], sunrise_tx_logs)
+                            sunrise_tx_logs = next(txn.logs for txn in sunrise_swap_logs if txn.txn_hash.hex() == seasonal_sg.beanstalks[0].sunrise_hash)
+                            seasonal_sg.beanstalks[0].flood_swap_logs = get_logs_by_names(["Swap"], sunrise_tx_logs)
 
                 # Report season summary to users.
                 self.message_function(
@@ -91,20 +91,20 @@ class SeasonsMonitor(Monitor):
         """
         while self._thread_active:
             # Proceed once a new season is processed in each subgraph
-            current_beanstalk_stats, prev_beanstalk_stats = self.beanstalk_graph_client.season_stats()
-            current_bean_stats, prev_bean_stats = self.bean_graph_client.season_stats()
+            beanstalk_stats = self.beanstalk_graph_client.season_stats(num_seasons=3)
+            bean_stats = self.bean_graph_client.season_stats()
             well_hourly_stats = self.basin_graph_client.get_well_hourlies(time.time() - SEASON_DURATION)
 
-            beanstalk_ready = int(current_beanstalk_stats.created_at) > time.time() - SEASON_DURATION / 2
-            bean_ready = current_beanstalk_stats.season == current_bean_stats.season
+            beanstalk_ready = int(beanstalk_stats[0].created_at) > time.time() - SEASON_DURATION / 2
+            bean_ready = beanstalk_stats[0].season == bean_stats[0].season
             basin_ready = len(well_hourly_stats) == len(WHITELISTED_WELLS)
             if (
-                self.current_season_id != current_beanstalk_stats.season
+                self.current_season_id != beanstalk_stats[0].season
                 and beanstalk_ready and bean_ready and basin_ready
             ) or self._dry_run:
-                self.current_season_id = current_beanstalk_stats.season
+                self.current_season_id = beanstalk_stats[0].season
                 logging.info(f"New season detected with id {self.current_season_id}")
-                return SeasonalData(prev_beanstalk_stats, current_beanstalk_stats, prev_bean_stats, current_bean_stats, well_hourly_stats)
+                return SeasonalData(beanstalk_stats, bean_stats, well_hourly_stats)
             logging.info(f"Sunrise blocking, waiting for subgraphs:\nbeanstalk: {beanstalk_ready}, bean: {bean_ready}, basin: {basin_ready}\n")
             time.sleep(self.query_rate)
         return None
@@ -114,28 +114,31 @@ class SeasonsMonitor(Monitor):
         # wsteth_price = self.beanstalk_client.get_token_usd_twap(WSTETH, 3600)
         # wsteth_eth_price = wsteth_price / eth_price
 
-        # new_farmable_beans = float(s.current_beanstalk.silo_hourly_bean_mints)
-        reward_beans = sg.current_beanstalk.reward_beans
-        incentive_beans = sg.current_beanstalk.incentive_beans
-        pod_rate = sg.current_beanstalk.pod_rate * 100
-        price = sg.current_beanstalk.price
-        delta_b = sg.current_beanstalk.delta_b
-        issued_soil = sg.current_beanstalk.issued_soil
-        new_pods = sg.prev_beanstalk.new_pods
-        sown_beans = sg.prev_beanstalk.sown_beans
-        delta_temp = sg.current_beanstalk.temperature - sg.prev_beanstalk.temperature
+        # new_farmable_beans = float(s.beanstalks[0].silo_hourly_bean_mints)
+        reward_beans = sg.beanstalks[0].reward_beans
+        incentive_beans = sg.beanstalks[0].incentive_beans
+        pod_rate = sg.beanstalks[0].pod_rate * 100
+        price = sg.beanstalks[0].price
+        delta_b = sg.beanstalks[0].delta_b
+        issued_soil = sg.beanstalks[0].issued_soil
+        new_pods = sg.beanstalks[1].new_pods
+        sown_beans = sg.beanstalks[1].sown_beans
+        delta_temp = sg.beanstalks[0].temperature - sg.beanstalks[1].temperature
 
         # Silo asset balances.
-        current_silo_bdv = sg.current_beanstalk.deposited_bdv
-        prev_silo_bdv = sg.prev_beanstalk.deposited_bdv
+        current_silo_bdv = sg.beanstalks[0].deposited_bdv
+        current_silo_stalk = sg.beanstalks[0].stalk
+        # Uses bdv/stalk from 2 seasons prior as it tracks the value at the end of each season
+        prev_silo_bdv = sg.beanstalks[2].deposited_bdv
+        prev_silo_stalk = sg.beanstalks[2].stalk
         silo_assets_changes = self.beanstalk_graph_client.silo_assets_seasonal_changes(
-            sg.current_beanstalk.pre_assets, sg.prev_beanstalk.pre_assets
+            sg.beanstalks[0].pre_assets, sg.beanstalks[1].pre_assets
         )
         silo_assets_changes.sort(
             key=lambda a: int(a.final_season_asset["depositedBDV"]), reverse=True
         )
 
-        new_season = sg.prev_beanstalk.season + 1
+        new_season = sg.beanstalks[0].season
         ret_string = f"⏱ Season {new_season} has started!"
         if not short_str:
             ret_string += f"\n💵 Pinto price is ${round_num(price, 4)}"
@@ -152,20 +155,20 @@ class SeasonsMonitor(Monitor):
         is_raining = self.beanstalk_client.is_raining()
         rain_flood_string = ""
         flood_beans = 0
-        if hasattr(sg.current_beanstalk, 'well_plenty_logs') and len(sg.current_beanstalk.well_plenty_logs) > 0:
+        if hasattr(sg.beanstalks[0], 'well_plenty_logs') and len(sg.beanstalks[0].well_plenty_logs) > 0:
             pre_flood_price = self.bean_client.block_price(season_block - 1)
             rain_flood_string += f"\n\n**It is Flooding!**"
             rain_flood_string += f"\nPinto price was {round_num(pre_flood_price, precision=4, incl_dollar=True)}"
             flood_field_beans = 0
             flood_well_beans = 0
-            if len(sg.current_beanstalk.field_plenty_logs) > 0:
-                log = sg.current_beanstalk.field_plenty_logs[0]
+            if len(sg.beanstalks[0].field_plenty_logs) > 0:
+                log = sg.beanstalks[0].field_plenty_logs[0]
                 flood_field_beans = log.args.get('toField') / 10 ** BEAN_DECIMALS
                 rain_flood_string += f"\n{round_num(flood_field_beans, 0)} Pinto minted to the Field"
 
             flood_breakdown = ""
-            for i in range(len(sg.current_beanstalk.well_plenty_logs)):
-                log = sg.current_beanstalk.well_plenty_logs[i]
+            for i in range(len(sg.beanstalks[0].well_plenty_logs)):
+                log = sg.beanstalks[0].well_plenty_logs[i]
                 token = log.args.get('token')
                 plenty_amount = log.args.get('amount')
                 erc20_info = get_erc20_info(token)
@@ -173,7 +176,7 @@ class SeasonsMonitor(Monitor):
                 value = plenty_amount * self.beanstalk_client.get_token_usd_price(token) / 10 ** erc20_info.decimals
                 flood_breakdown += f"\n> {amount} {erc20_info.symbol} ({round_num(value, precision=0, incl_dollar=True)})"
 
-                flood_well_beans += sg.current_beanstalk.flood_swap_logs[i].args.get('amountIn') / 10 ** BEAN_DECIMALS
+                flood_well_beans += sg.beanstalks[0].flood_swap_logs[i].args.get('amountIn') / 10 ** BEAN_DECIMALS
 
             rain_flood_string += f"\n{round_num(flood_well_beans, 0)} Pinto minted and sold for:"
             rain_flood_string += flood_breakdown
@@ -201,7 +204,7 @@ class SeasonsMonitor(Monitor):
         # Full string message.
         if not short_str:
 
-            ret_string += f"\n🧮 {sg.prev_bean.crosses} (+{sg.prev_bean.deltaCrosses}) Peg crosses"
+            ret_string += f"\n🧮 {sg.beans[1].crosses} (+{sg.beans[1].deltaCrosses}) Peg crosses"
 
             # Flood
             ret_string += rain_flood_string
@@ -231,12 +234,21 @@ class SeasonsMonitor(Monitor):
             ret_string += f"\n⚖️ :PINTO: Hourly volume: {round_num(wells_volume, 0, incl_dollar=True)}"
 
             # Silo stats.
-            was_raining = self.beanstalk_client.is_raining(sg.prev_beanstalk.sunrise_block)
-            crop_ratio = BeanstalkClient.calc_crop_ratio(sg.current_beanstalk.beanToMaxLpGpPerBdvRatio, is_raining)
-            prev_crop_ratio = BeanstalkClient.calc_crop_ratio(sg.prev_beanstalk.beanToMaxLpGpPerBdvRatio, was_raining)
+            was_raining = self.beanstalk_client.is_raining(sg.beanstalks[1].sunrise_block)
+            crop_ratio = BeanstalkClient.calc_crop_ratio(sg.beanstalks[0].beanToMaxLpGpPerBdvRatio, is_raining)
+            prev_crop_ratio = BeanstalkClient.calc_crop_ratio(sg.beanstalks[1].beanToMaxLpGpPerBdvRatio, was_raining)
             crop_ratio_delta = crop_ratio - prev_crop_ratio
 
             ret_string += f"\n\n**Silo**"
+            ret_string += f"\n🌱 {round_num(current_silo_stalk, 0)} Stalk Supply"
+            delta_stalk = current_silo_stalk - prev_silo_stalk
+            if delta_stalk < 0:
+                ret_string += f"\n> 📉 {round_num(abs(delta_stalk), 0)} decrease this Season"
+            elif prev_silo_stalk == current_silo_stalk:
+                ret_string += f"\n> 📊 No change this Season"
+            else:
+                ret_string += f"\n> 📈 {round_num(delta_stalk, 0)} increase this Season"
+
             ret_string += f"\n🏦 {round_num(current_silo_bdv, 0)} PDV in Silo"
             delta_bdv = current_silo_bdv - prev_silo_bdv
             if delta_bdv < 0:
@@ -245,7 +257,7 @@ class SeasonsMonitor(Monitor):
                 ret_string += f"\n> 📊 No change this Season"
             else:
                 ret_string += f"\n> 📈 {round_num(delta_bdv, 0)} increase this Season"
-            ret_string += f"\n🧽 {round_num(sg.current_bean.l2sr * 100, 2)}% Liquidity to Supply Ratio"
+            ret_string += f"\n🧽 {round_num(sg.beans[0].l2sr * 100, 2)}% Liquidity to Supply Ratio"
             ret_string += f"\n🌾 {round_num(crop_ratio * 100, 2)}% ({'+' if crop_ratio_delta >= 0 else ''}{round_num(crop_ratio_delta * 100, 2)}%) Crop Ratio"
 
             # Gets current and previous season seeds for each asset
@@ -308,7 +320,7 @@ class SeasonsMonitor(Monitor):
             else:
                 ret_string += f"{round_num(issued_soil, 0, avoid_zero=True)}"
             ret_string += f" Soil in Field"
-            ret_string += f"\n🌡 {round_num(sg.current_beanstalk.temperature, 2)}% ({'+' if delta_temp >= 0 else ''}{round_num(delta_temp, 2)}%) Max Temperature"
+            ret_string += f"\n🌡 {round_num(sg.beanstalks[0].temperature, 2)}% ({'+' if delta_temp >= 0 else ''}{round_num(delta_temp, 2)}%) Max Temperature"
             ret_string += f"\n🧮 {round_num(pod_rate, 2)}% Pod Rate"
 
             # Barn.
@@ -316,8 +328,8 @@ class SeasonsMonitor(Monitor):
             # ret_string += f"\n{percent_to_moon_emoji(percent_recap)} {round_num(fertilizer_bought, 0)} Fertilizer sold ({round_num(percent_recap*100, 2)}% recapitalized)"
 
             # Txn hash of sunrise/gm call.
-            if hasattr(sg.current_beanstalk, 'sunrise_hash'):
-                txn_hash = sg.current_beanstalk.sunrise_hash
+            if hasattr(sg.beanstalks[0], 'sunrise_hash'):
+                txn_hash = sg.beanstalks[0].sunrise_hash
                 ret_string += f"\n\n[basescan.org/tx/{shorten_hash(txn_hash)}](<https://basescan.org/tx/{txn_hash}>)"
                 ret_string += "\n_ _"  # Empty line that does not get stripped.
 
@@ -337,7 +349,7 @@ class SeasonsMonitor(Monitor):
             if sown_beans > 0:
                 ret_string += f"\n🚜 {round_num(sown_beans, 0, avoid_zero=True)} Pinto Sown for {round_num(new_pods, 0, avoid_zero=True)} Pods"
 
-            ret_string += f"\n🌡 {round_num(sg.current_beanstalk.temperature, 2)}% ({'+' if delta_temp >= 0 else ''}{round_num(delta_temp, 2)}%) Max Temperature"
+            ret_string += f"\n🌡 {round_num(sg.beanstalks[0].temperature, 2)}% ({'+' if delta_temp >= 0 else ''}{round_num(delta_temp, 2)}%) Max Temperature"
             # ret_string += f"\n🧮 {round_num(pod_rate, 0)}% Pod Rate"
         return ret_string
 
@@ -354,9 +366,7 @@ class SeasonsMonitor(Monitor):
         return ret_string
 
 class SeasonalData:
-    def __init__(self, prev_beanstalk, current_beanstalk, prev_bean, current_bean, well):
-        self.prev_beanstalk = prev_beanstalk
-        self.current_beanstalk = current_beanstalk
-        self.prev_bean = prev_bean
-        self.current_bean = current_bean
+    def __init__(self, beanstalks, beans, well):
+        self.beanstalks = beanstalks
+        self.beans = beans
         self.well = well

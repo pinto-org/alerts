@@ -171,6 +171,7 @@ class BeanstalkGraphClient(object):
                     first: {num_seasons}
                 ){{
                     season
+                    stalk
                     deltaBeanMints
                     depositedBDV
                     beanToMaxLpGpPerBdvRatio
@@ -287,6 +288,9 @@ class SeasonStats:
             )
         if "siloHourlySnapshots" in graph_seasons_response:
             # Beans minted this season # newFarmableBeans
+            self.stalk = stalk_to_float(
+                graph_seasons_response["siloHourlySnapshots"][season_index]["stalk"]
+            )
             self.silo_hourly_bean_mints = bean_to_float(
                 graph_seasons_response["siloHourlySnapshots"][season_index]["deltaBeanMints"]
             )

@@ -116,8 +116,12 @@ def embellish_token_emojis(text, mapping):
     # For each word in the mapping, replace in a case-insensitive way
     for word in mapping:
         # Use re.IGNORECASE to match the word regardless of case
-        pattern = rf'(\b|\s)([<])?(\d[\d,\.]*\s)?({re.escape(word)})\b(?!\.\w|:\d)'
+        pattern = rf'(\b|\s)([<])?(\d[\d,\.]*\s)?(?<!!)({re.escape(word)})\b(?!\.\w|:\d)'
         text = re.sub(pattern, replacer, text, flags=re.IGNORECASE)
+
+    # Ignore/strip occurrences where an emoji was explicitly rejected
+    for key in mapping:
+        text = text.replace(f"!{key}", key)
 
     return text
 
@@ -126,5 +130,6 @@ if __name__ == '__main__':
     logging.info(f"With discord emoji {embellish_token_emojis('100 PINTO sold for <0.1 cbETH (extra :PINTO:)', DISCORD_TOKEN_EMOJIS)}")
     logging.info(f"With telegram emoji {embellish_token_emojis('100 PINTO sold for <0.1 cbETH', TG_TOKEN_EMOJIS)}")
     logging.info(f"Discord lp {embellish_token_emojis('🌊 PINTOcbBTC: $2,254,626', DISCORD_TOKEN_EMOJIS)}")
+    logging.info(f"With rejection {embellish_token_emojis(':PINTO: 500 Deposited !PINTO', DISCORD_TOKEN_EMOJIS)}")
     receipt = get_txn_receipt_or_wait(web3, '0x8b0f3901f9a8ea224c691662877df79d6a9e2e160c2b3e2551e40793aed545d7')
     logging.info(f"got receipt {receipt}")

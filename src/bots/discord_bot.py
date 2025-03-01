@@ -6,6 +6,7 @@ import logging.handlers
 import os
 import signal
 import subprocess
+from monitors.integrations import IntegrationsMonitor
 import telebot
 
 import discord
@@ -129,6 +130,9 @@ class DiscordClient(discord.ext.commands.Bot):
         self.market_monitor = MarketMonitor(self.send_msg_market, prod=prod, dry_run=dry_run)
         self.market_monitor.start()
 
+        # self.integrations_monitor = IntegrationsMonitor(self.send_msg_silo, prod=prod, dry_run=dry_run)
+        # self.integrations_monitor.start()
+
         # self.barn_raise_monitor = BarnRaiseMonitor(self.send_msg_barn_raise, prod=prod, dry_run=dry_run)
         # self.barn_raise_monitor.start()
 
@@ -157,8 +161,9 @@ class DiscordClient(discord.ext.commands.Bot):
         self.well_monitor_whitelisted.stop()
         self.beanstalk_monitor.stop()
         self.market_monitor.stop()
-        self.barn_raise_monitor.stop()
-        self.contract_migration_monitor.stop()
+        # self.integrations_monitor.stop()
+        # self.barn_raise_monitor.stop()
+        # self.contract_migration_monitor.stop()
 
     def send_msg_report(self, text):
         """Send a message through the Discord bot in the error reporting channel."""
@@ -262,9 +267,10 @@ class DiscordClient(discord.ext.commands.Bot):
         """
         try:
             for channel, msg in self.msg_queue:
-                if len(msg) > 2000:
-                    msg = msg[-2000:]
-                    logging.warning(f"Clipping message length down to 2000.")
+                # Discord has limit of 2k but sometimes it still fails with 2k. It is preferable to allow moderate truncation.
+                if len(msg) > 1950:
+                    msg = msg[-1950:]
+                    logging.error(f"Clipping message length down to 1950.")
 
                 # Add token emoji. Dont embellish telegram msg (for tg this is only forwarded messages)
                 tg_msg = msg
