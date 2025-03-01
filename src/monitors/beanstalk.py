@@ -126,19 +126,19 @@ class BeanstalkMonitor(Monitor):
         if net_amount < 0:
             # Determine stalk burn amount. In practice this value is infeasible to retrieve from
             # events except in the majority case of a single withdrawal (through the ui).
-            # Ignore if there are more than 2 StalkBalanceChanged events or more than 1 FarmerGerminatingStalkBalanceChanged
+            # Ignore if there are more than 2 StalkBalanceChanged events or more than 2 FarmerGerminatingStalkBalanceChanged
             stalk_change_events = self.beanstalk_contract.events["StalkBalanceChanged"]().processReceipt(
                 receipt, errors=DISCARD
             )
             germinating_change_events = self.beanstalk_contract.events["FarmerGerminatingStalkBalanceChanged"]().processReceipt(
                 receipt, errors=DISCARD
             )
-            if len(stalk_change_events) <= 2 and len(germinating_change_events) <= 1:
+            if len(stalk_change_events) <= 2 and len(germinating_change_events) <= 2:
                 sum_stalk = 0
                 for i in range(len(stalk_change_events)):
                     sum_stalk += stalk_change_events[i].args.delta
-                if len(germinating_change_events) > 0:
-                    sum_stalk += germinating_change_events[0].args.delta
+                for i in range(len(germinating_change_events)):
+                    sum_stalk += germinating_change_events[i].args.delta
                 if sum_stalk < 0:
                     event_str += f"\n_Stalk Burned: {round_num(stalk_to_float(-sum_stalk), 0)}_"
 
