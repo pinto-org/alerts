@@ -127,8 +127,10 @@ class SeasonsMonitor(Monitor):
 
         # Silo asset balances.
         current_silo_bdv = sg.beanstalks[0].deposited_bdv
-        # Uses bdv from 2 seasons prior as its the value at the end of each season
+        current_silo_stalk = sg.beanstalks[0].stalk
+        # Uses bdv/stalk from 2 seasons prior as it tracks the value at the end of each season
         prev_silo_bdv = sg.beanstalks[2].deposited_bdv
+        prev_silo_stalk = sg.beanstalks[2].stalk
         silo_assets_changes = self.beanstalk_graph_client.silo_assets_seasonal_changes(
             sg.beanstalks[0].pre_assets, sg.beanstalks[1].pre_assets
         )
@@ -238,6 +240,15 @@ class SeasonsMonitor(Monitor):
             crop_ratio_delta = crop_ratio - prev_crop_ratio
 
             ret_string += f"\n\n**Silo**"
+            ret_string += f"\n🌱 {round_num(current_silo_stalk, 0)} Stalk Supply"
+            delta_stalk = current_silo_stalk - prev_silo_stalk
+            if delta_stalk < 0:
+                ret_string += f"\n> 📉 {round_num(abs(delta_stalk), 0)} decrease this Season"
+            elif prev_silo_stalk == current_silo_stalk:
+                ret_string += f"\n> 📊 No change this Season"
+            else:
+                ret_string += f"\n> 📈 {round_num(delta_stalk, 0)} increase this Season"
+
             ret_string += f"\n🏦 {round_num(current_silo_bdv, 0)} PDV in Silo"
             delta_bdv = current_silo_bdv - prev_silo_bdv
             if delta_bdv < 0:
