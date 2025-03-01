@@ -25,6 +25,10 @@ class BeanstalkClient(ChainClient):
         """Gets the current soil in the field"""
         return call_contract_function_with_retry(self.contract.functions.totalSoil()) / 10 ** 6
 
+    def get_total_stalk(self):
+        """Gets the total stalk in the silo"""
+        return stalk_to_float(call_contract_function_with_retry(self.contract.functions.totalStalk()))
+
     def get_season_block(self):
         """Get the block in which the latest season started"""
         return call_contract_function_with_retry(self.contract.functions.sunriseBlock())

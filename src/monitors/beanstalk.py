@@ -123,24 +123,31 @@ class BeanstalkMonitor(Monitor):
 
         event_str += f" - {round_num(amount, precision=2, avoid_zero=True)} {token_info.symbol}"
         event_str += f" ({round_num(value, 0, avoid_zero=True, incl_dollar=True)})"
-        if net_amount < 0:
-            # Determine stalk burn amount. In practice this value is infeasible to retrieve from
-            # events except in the majority case of a single withdrawal (through the ui).
-            # Ignore if there are more than 2 StalkBalanceChanged events or more than 2 FarmerGerminatingStalkBalanceChanged
-            stalk_change_events = self.beanstalk_contract.events["StalkBalanceChanged"]().processReceipt(
-                receipt, errors=DISCARD
-            )
-            germinating_change_events = self.beanstalk_contract.events["FarmerGerminatingStalkBalanceChanged"]().processReceipt(
-                receipt, errors=DISCARD
-            )
-            if len(stalk_change_events) <= 2 and len(germinating_change_events) <= 2:
-                sum_stalk = 0
-                for i in range(len(stalk_change_events)):
-                    sum_stalk += stalk_change_events[i].args.delta
-                for i in range(len(germinating_change_events)):
-                    sum_stalk += germinating_change_events[i].args.delta
-                if sum_stalk < 0:
-                    event_str += f"\n_Stalk Burned: {round_num(stalk_to_float(-sum_stalk), 0)}_"
+        # Determine stalk change amount. In practice this value is hard to generalize from
+        # events, but works in the majority case of a single withdrawal (through the ui).
+        # Ignore if there are more than 2 StalkBalanceChanged events or more than 2 FarmerGerminatingStalkBalanceChanged.
+        stalk_change_events = self.beanstalk_contract.events["StalkBalanceChanged"]().processReceipt(
+            receipt, errors=DISCARD
+        )
+        germinating_change_events = self.beanstalk_contract.events["FarmerGerminatingStalkBalanceChanged"]().processReceipt(
+            receipt, errors=DISCARD
+        )
+        subinfo = []
+        if len(stalk_change_events) <= 2 and len(germinating_change_events) <= 2:
+            sum_stalk = 0
+            for i in range(len(stalk_change_events)):
+                sum_stalk += stalk_change_events[i].args.delta
+            for i in range(len(germinating_change_events)):
+                sum_stalk += germinating_change_events[i].args.delta
+            if sum_stalk > 0:
+                subinfo.append(f"Stalk Minted: {round_num(stalk_to_float(sum_stalk), 0)}")
+            else:
+                subinfo.append(f"Stalk Burned: {round_num(stalk_to_float(-sum_stalk), 0)}")
+
+        total_stalk = self.beanstalk_client.get_total_stalk()
+        subinfo.append(f"Total Stalk: {round_num(total_stalk, 0)}")
+
+        event_str += f"\n_{'. '.join(subinfo)}_"
 
         event_str += f"\n{value_to_emojis(value)}"
         event_str += links_footer(receipt)
