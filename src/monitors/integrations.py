@@ -52,8 +52,9 @@ class IntegrationsMonitor(Monitor):
         wrapped_info = get_erc20_info(event_log.address)
 
         if event_log.event == "Deposit" or event_log.event == "Withdraw":
-            pintoAmount = round_token(event_log.args.get("assets"), underlying_info.decimals, underlying_info.addr)
-            sPintoAmount = round_token(event_log.args.get("shares"), wrapped_info.decimals, wrapped_info.addr)
+            pinto_amount = token_to_float(event_log.args.get("assets"), underlying_info.decimals)
+            pinto_amount_str = round_token(event_log.args.get("assets"), underlying_info.decimals, underlying_info.addr)
+            sPinto_amount_str = round_token(event_log.args.get("shares"), wrapped_info.decimals, wrapped_info.addr)
 
             if event_log.event == "Deposit":
                 emoji = "📥"
@@ -63,16 +64,16 @@ class IntegrationsMonitor(Monitor):
                 direction = "unwrapped from"
 
             # X Deposited PINTO wrapped to Y sPinto
-            event_str += f"{emoji} :{underlying_asset.symbol}: {pintoAmount} Deposited !{underlying_asset.symbol} {direction} {sPintoAmount} {wrapped_info.symbol}"
+            event_str += f"{emoji} :{underlying_info.symbol}: {pinto_amount_str} Deposited !{underlying_info.symbol} {direction} {sPinto_amount_str} {wrapped_info.symbol}"
 
-            wrapped_supply = round_token(self.spinto_client.get_supply(), wrapped_info.decimals, wrapped_info.addr)
+            wrapped_supply = token_to_float(self.spinto_client.get_supply(), wrapped_info.decimals)
             redeem_rate = round_token(self.spinto_client.get_redeem_rate(), underlying_info.decimals, underlying_info.addr)
             event_str += (
                 f"\n_{wrapped_info.symbol} Supply: {round_num(wrapped_supply, precision=0)}. "
-                f"Redeems For {round_num(redeem_rate, precision=4)} {underlying_asset.symbol}_"
+                f"Redeems For {round_num(redeem_rate, precision=4)} {underlying_info.symbol}_"
             )
 
             bean_price = self.bean_client.avg_bean_price()
-            event_str += f"\n{value_to_emojis(pintoAmount * bean_price)}"
+            event_str += f"\n{value_to_emojis(pinto_amount * bean_price)}"
 
         return event_str
