@@ -20,3 +20,9 @@ class WrappedDepositClient(ChainClient):
         """Get the current redemption rate"""
         erc20_info = get_erc20_info(self.address, self._web3)
         return call_contract_function_with_retry(self.contract.functions.previewRedeem(10 ** erc20_info.decimals))
+
+if __name__ == '__main__':
+    logging.basicConfig(level=logging.INFO)
+    client = WrappedDepositClient('0x00b174d66adA7d63789087F50A9b9e0e48446dc1')
+    rate = client.get_redeem_rate()
+    logging.info(rate)
