@@ -68,6 +68,9 @@ class BeanstalkClient(ChainClient):
         bdv = call_contract_function_with_retry(self.contract.functions.bdv(token, 10 ** erc20_info.decimals), block_number=block_number)
         return bean_to_float(bdv)
     
+    def get_stem_tip(self, token, block_number='latest'):
+        return call_contract_function_with_retry(self.contract.functions.stemTipForToken(token), block_number=block_number)
+
     def get_token_usd_price(self, token_addr, block_number='latest'):
         response = call_contract_function_with_retry(self.contract.functions.getTokenUsdPrice(token_addr), block_number=block_number)
         return float(response / 10**6)
