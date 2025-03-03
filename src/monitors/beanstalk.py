@@ -103,7 +103,7 @@ class BeanstalkMonitor(Monitor):
                     bdv = event_log.args.get("bdvs")[i]
                     grown_stalk = bdv * (stem_tips[token] - event_log.args.get("stems")[i])
                     net_deposits[token]["bdv"] += sign * bdv
-                    net_deposits[token]["stalk"] += sign * (1 * bdv + grown_stalk)
+                    net_deposits[token]["stalk"] += sign * (1 * bdv * 10 ** 10 + grown_stalk)
             event_logs.remove(event_log)
 
         for token in net_deposits:
