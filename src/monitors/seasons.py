@@ -204,7 +204,7 @@ class SeasonsMonitor(Monitor):
         # Full string message.
         if not short_str:
 
-            ret_string += f"\n🧮 {sg.beans[1].crosses} (+{sg.beans[1].deltaCrosses}) Peg crosses"
+            ret_string += f"\n🎯 {sg.beans[1].crosses} (+{sg.beans[1].deltaCrosses}) Target crosses"
 
             # Flood
             ret_string += rain_flood_string
