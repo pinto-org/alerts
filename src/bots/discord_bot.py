@@ -130,8 +130,8 @@ class DiscordClient(discord.ext.commands.Bot):
         self.market_monitor = MarketMonitor(self.send_msg_market, prod=prod, dry_run=dry_run)
         self.market_monitor.start()
 
-        # self.integrations_monitor = IntegrationsMonitor(self.send_msg_silo, prod=prod, dry_run=dry_run)
-        # self.integrations_monitor.start()
+        self.integrations_monitor = IntegrationsMonitor(self.send_msg_silo, prod=prod, dry_run=dry_run)
+        self.integrations_monitor.start()
 
         # self.barn_raise_monitor = BarnRaiseMonitor(self.send_msg_barn_raise, prod=prod, dry_run=dry_run)
         # self.barn_raise_monitor.start()
@@ -161,7 +161,7 @@ class DiscordClient(discord.ext.commands.Bot):
         self.well_monitor_whitelisted.stop()
         self.beanstalk_monitor.stop()
         self.market_monitor.stop()
-        # self.integrations_monitor.stop()
+        self.integrations_monitor.stop()
         # self.barn_raise_monitor.stop()
         # self.contract_migration_monitor.stop()
 
