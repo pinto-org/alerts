@@ -106,4 +106,4 @@ class PegCrossMonitor(Monitor):
         elif cross_type.value == PegCrossType.CROSS_BELOW.value:
             return f"↘🎯 PINTO crossed below its value target! (#{cross_num})"
         else:
-            return "Peg not crossed."
+            return "Target not crossed."
