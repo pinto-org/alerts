@@ -81,16 +81,31 @@ class BeanstalkMonitor(Monitor):
         # Else handle txn logs individually using default strings.
 
         # Determine net deposit/withdraw of each token
-        net_deposits = defaultdict(int)
+        # Sums total bdv/stalk as well
+        stem_tips = {}
+        net_deposits = defaultdict(lambda: {"amount": 0, "bdv": 0, "stalk": 0})
         silo_deposit_logs = get_logs_by_names(["AddDeposit", "RemoveDeposit", "RemoveDeposits"], event_logs)
         for event_log in silo_deposit_logs:
             sign = 1 if event_log.event == "AddDeposit" else -1
-            token_address = event_log.args.get("token")
-            token_amount_long = event_log.args.get("amount")
-            net_deposits[token_address] += sign * token_amount_long
+            token = event_log.args.get("token")
+            if token not in stem_tips:
+                stem_tips[token] = self.beanstalk_client.get_stem_tip(token)
+
+            net_deposits[token]["amount"] += sign * event_log.args.get("amount")
+            # Sum bdv/stalk. Assumes 1 bdv credits 1 stalk upon deposit.
+            if event_log.event != "RemoveDeposits":
+                bdv = event_log.args.get("bdv")
+                grown_stalk = bdv * (stem_tips[token] - event_log.args.get("stem"))
+                net_deposits[token]["bdv"] += sign * bdv
+                net_deposits[token]["stalk"] += sign * (1 * bdv * 10 ** 10 + grown_stalk)
+            else:
+                for i in range(len(event_log.args.get("bdvs"))):
+                    bdv = event_log.args.get("bdvs")[i]
+                    grown_stalk = bdv * (stem_tips[token] - event_log.args.get("stems")[i])
+                    net_deposits[token]["bdv"] += sign * bdv
+                    net_deposits[token]["stalk"] += sign * (1 * bdv * 10 ** 10 + grown_stalk)
             event_logs.remove(event_log)
-        
-        # logging.info(f"net token amounts {net_deposits}")
+
         for token in net_deposits:
             event_str = self.silo_event_str(token, net_deposits[token], receipt)
             if event_str:
@@ -101,48 +116,33 @@ class BeanstalkMonitor(Monitor):
             if event_str:
                 self.msg_field(event_str)
     
-    def silo_event_str(self, token_addr, net_amount, receipt):
+    def silo_event_str(self, token_addr, values, receipt):
         """Logs a Silo Deposit/Withdraw"""
 
         event_str = ""
 
-        if net_amount > 0:
+        if values["amount"] > 0:
             event_str += f"📥 Silo Deposit"
-        elif net_amount < 0:
+        elif values["amount"] < 0:
             event_str += f"📭 Silo Withdrawal"
         else:
             return ""
 
         bean_price = self.bean_client.avg_bean_price()
         token_info = get_erc20_info(token_addr)
-        amount = token_to_float(abs(net_amount), token_info.decimals)
+        amount = token_to_float(abs(values["amount"]), token_info.decimals)
 
         # Use current bdv rather than the deposited bdv reported in the event
-        bdv = amount * self.beanstalk_client.get_bdv(token_info)
-        value = bdv * bean_price
+        value = abs(bean_to_float(values["bdv"])) * bean_price
 
         event_str += f" - {round_num(amount, precision=2, avoid_zero=True)} {token_info.symbol}"
         event_str += f" ({round_num(value, 0, avoid_zero=True, incl_dollar=True)})"
-        # Determine stalk change amount. In practice this value is hard to generalize from
-        # events, but works in the majority case of a single withdrawal (through the ui).
-        # Ignore if there are more than 2 StalkBalanceChanged events or more than 2 FarmerGerminatingStalkBalanceChanged.
-        stalk_change_events = self.beanstalk_contract.events["StalkBalanceChanged"]().processReceipt(
-            receipt, errors=DISCARD
-        )
-        germinating_change_events = self.beanstalk_contract.events["FarmerGerminatingStalkBalanceChanged"]().processReceipt(
-            receipt, errors=DISCARD
-        )
+
         subinfo = []
-        if len(stalk_change_events) <= 2 and len(germinating_change_events) <= 2:
-            sum_stalk = 0
-            for i in range(len(stalk_change_events)):
-                sum_stalk += stalk_change_events[i].args.delta
-            for i in range(len(germinating_change_events)):
-                sum_stalk += germinating_change_events[i].args.delta
-            if sum_stalk > 0:
-                subinfo.append(f"Stalk Minted: {round_num(stalk_to_float(sum_stalk), 0)}")
-            else:
-                subinfo.append(f"Stalk Burned: {round_num(stalk_to_float(-sum_stalk), 0)}")
+        if values["stalk"] > 0:
+            subinfo.append(f"Stalk Minted: {round_num(stalk_to_float(values['stalk']), 0)}")
+        else:
+            subinfo.append(f"Stalk Burned: {round_num(stalk_to_float(-values['stalk']), 0)}")
 
         total_stalk = self.beanstalk_client.get_total_stalk()
         subinfo.append(f"Total Stalk: {round_num(total_stalk, 0)}")
