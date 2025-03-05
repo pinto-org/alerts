@@ -102,8 +102,8 @@ class PegCrossMonitor(Monitor):
         # NOTE(funderberker): Have to compare enum values here because method of import of caller
         # can change the enum id.
         if cross_type.value == PegCrossType.CROSS_ABOVE.value:
-            return f"↗🎯 PINTO crossed above its value target! (#{cross_num})"
+            return f"↗🎯 PINTO crossed its value target! (#{cross_num})"
         elif cross_type.value == PegCrossType.CROSS_BELOW.value:
-            return f"↘🎯 PINTO crossed below its value target! (#{cross_num})"
+            return f"↘🎯 PINTO crossed its value target! (#{cross_num})"
         else:
             return "Target not crossed."
