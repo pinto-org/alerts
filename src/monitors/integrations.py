@@ -56,15 +56,14 @@ class IntegrationsMonitor(Monitor):
             pinto_amount_str = round_token(event_log.args.get("assets"), underlying_info.decimals, underlying_info.addr)
             sPinto_amount_str = round_token(event_log.args.get("shares"), wrapped_info.decimals, wrapped_info.addr)
 
+            token_strings = [
+                f":{underlying_info.symbol}: {pinto_amount_str} Deposited !{underlying_info.symbol}",
+                f"{sPinto_amount_str} {wrapped_info.symbol}"
+            ]
             if event_log.event == "Deposit":
-                emoji = "📥"
-                direction = "wrapped to"
+                event_str += f"📥 {token_strings[0]} wrapped to {token_strings[1]}"
             else:
-                emoji = "📭"
-                direction = "unwrapped from"
-
-            # X Deposited PINTO wrapped to Y sPinto
-            event_str += f"{emoji} :{underlying_info.symbol}: {pinto_amount_str} Deposited !{underlying_info.symbol} {direction} {sPinto_amount_str} {wrapped_info.symbol}"
+                event_str += f"📭 {token_strings[1]} unwrapped to {token_strings[0]}"
 
             wrapped_supply = token_to_float(self.spinto_client.get_supply(), wrapped_info.decimals)
             redeem_rate = token_to_float(self.spinto_client.get_redeem_rate(), underlying_info.decimals)
