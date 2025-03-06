@@ -1,6 +1,7 @@
 from bots.util import *
 from data_access.contracts.bean import BeanClient
 from data_access.contracts.integrations import WrappedDepositClient
+from data_access.subgraphs.beanstalk import BeanstalkGraphClient
 from monitors.monitor import Monitor
 from data_access.contracts.util import *
 from data_access.contracts.eth_events import *
@@ -19,6 +20,7 @@ class IntegrationsMonitor(Monitor):
         self._eth_event_client = EthEventsClient(EventClientType.INTEGRATIONS)
         self.bean_client = BeanClient()
         self.spinto_client = WrappedDepositClient(SPINTO_ADDR)
+        self.beanstalk_graph_client = BeanstalkGraphClient()
 
     def _monitor_method(self):
         last_check_time = 0
@@ -52,6 +54,7 @@ class IntegrationsMonitor(Monitor):
         wrapped_info = get_erc20_info(event_log.address)
 
         if event_log.event == "Deposit" or event_log.event == "Withdraw":
+            # owner = event_log.args.get("owner")
             pinto_amount = token_to_float(event_log.args.get("assets"), underlying_info.decimals)
             pinto_amount_str = round_token(event_log.args.get("assets"), underlying_info.decimals, underlying_info.addr)
             sPinto_amount_str = round_token(event_log.args.get("shares"), wrapped_info.decimals, wrapped_info.addr)
@@ -67,9 +70,11 @@ class IntegrationsMonitor(Monitor):
 
             wrapped_supply = token_to_float(self.spinto_client.get_supply(), wrapped_info.decimals)
             redeem_rate = token_to_float(self.spinto_client.get_redeem_rate(), underlying_info.decimals)
+            gspbdv = self.beanstalk_graph_client.get_account_gspbdv(wrapped_info.addr)
             event_str += (
                 f"\n_{wrapped_info.symbol} Supply: {round_num(wrapped_supply, precision=0)}. "
-                f"Redeems For {round_num(redeem_rate, precision=4)} {underlying_info.symbol}_"
+                f"Redeems For {round_num(redeem_rate, precision=4)} !{underlying_info.symbol}. "
+                f"{round_num(gspbdv, precision=4)} Grown Stalk per PDV_"
             )
 
             bean_price = self.bean_client.avg_bean_price()
