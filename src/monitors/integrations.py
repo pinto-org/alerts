@@ -81,3 +81,12 @@ class IntegrationsMonitor(Monitor):
             event_str += f"\n{value_to_emojis(pinto_amount * bean_price)}"
 
         return event_str
+
+    def _spinto_moved_deposit_stalk():
+        """Returns the amount of stalk on the deposit which was added/removed to spinto"""
+        # Silo wrap/unwrap: in both directions of that case you want to look for the
+        # TransferBatch event. then extract the IDs. Then from the IDs you can extract the Stem
+
+        # Direct wrap/unwrap are identifiable by no Transfer event from farmer to spinto
+        # Direct wrap: always brings zero stalk
+        # Direct unwrap: analyze all of the Remove events after the last AddDeposit event

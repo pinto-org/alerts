@@ -1,4 +1,6 @@
 import logging
+from struct import unpack
+from web3 import Web3
 from web3.logs import DISCARD
 from collections import defaultdict
 from bots.util import get_logs_by_names
@@ -36,7 +38,7 @@ def net_deposit_withdrawal_stalk(event_logs, remove_from_logs=False):
 
         if remove_from_logs:
             event_logs.remove(event_log)
-    
+
     return net_deposits
 
 
@@ -71,9 +73,24 @@ def net_erc1155_transfers(token, owner, receipt):
                 net_transfers[id] += sign * value
     return net_transfers
 
+def unpack_address_and_stem(id):
+    """See protocol project"""
+    # (address(uint160(data >> 96)), int96(int256(data)))
+    address = (id >> 96) & ((1 << 160) - 1)  # Extract 160-bit address
+    stem = id & ((1 << 96) - 1)  # Extract 96-bit value
+
+    eth_address = Web3.to_checksum_address(f"0x{address:040x}")
+
+    # Interpret the 96-bit integer as a signed integer
+    if stem >= (1 << 95):
+        stem -= (1 << 96)
+
+    return eth_address, stem
+
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     web3 = get_web3_instance()
+    logging.info(unpack_address_and_stem(80257261365260160448180297953543637015013860948612032607643216503657238214414))
     receipt = web3.eth.get_transaction_receipt("0x4d5e3f3d6a5c77c0a35e308f0380cfd9e10fcfa3ff9bd51d45708e8e33c9dc84")
     xfers = net_erc1155_transfers(
         "0xD1A0D188E861ed9d15773a2F3574a2e94134bA8f",
