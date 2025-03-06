@@ -10,7 +10,7 @@ from constants.config import *
 
 from collections import defaultdict
 
-from utils.silo_events import net_deposit_withdrawal_stalk
+from tools.silo import net_deposit_withdrawal_stalk
 
 class BeanstalkMonitor(Monitor):
     """Monitor the Beanstalk contract for events."""

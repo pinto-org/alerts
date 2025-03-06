@@ -1,5 +1,4 @@
 import logging
-from struct import unpack
 from web3 import Web3
 from web3.logs import DISCARD
 from collections import defaultdict
@@ -7,32 +6,41 @@ from bots.util import get_logs_by_names
 from data_access.contracts.beanstalk import BeanstalkClient
 from data_access.contracts.util import get_erc1155_contract, get_web3_instance
 
+class StemTipCache(object):
+    def __init__(self, block_number='latest'):
+        self.beanstalk_client = BeanstalkClient()
+        self.stem_tips = {}
+        self.block_number = block_number
+
+    def get_stem_tip(self, token):
+        if token not in self.stem_tips:
+            self.stem_tips[token] = self.beanstalk_client.get_stem_tip(token, block_number=self.block_number)
+        return self.stem_tips[token]
+
 def net_deposit_withdrawal_stalk(event_logs, remove_from_logs=False):
     # Determine net deposit/withdraw of each token
     # Sums total bdv/stalk as well
 
-    beanstalk_client = BeanstalkClient()
+    stem_tips = StemTipCache()
 
-    stem_tips = {}
     net_deposits = defaultdict(lambda: {"amount": 0, "bdv": 0, "stalk": 0})
     silo_deposit_logs = get_logs_by_names(["AddDeposit", "RemoveDeposit", "RemoveDeposits"], event_logs)
     for event_log in silo_deposit_logs:
         sign = 1 if event_log.event == "AddDeposit" else -1
         token = event_log.args.get("token")
-        if token not in stem_tips:
-            stem_tips[token] = beanstalk_client.get_stem_tip(token)
+        stem_tip = stem_tips.get_stem_tip(token)
 
         net_deposits[token]["amount"] += sign * event_log.args.get("amount")
         # Sum bdv/stalk. Assumes 1 bdv credits 1 stalk upon deposit.
         if event_log.event != "RemoveDeposits":
             bdv = event_log.args.get("bdv")
-            grown_stalk = bdv * (stem_tips[token] - event_log.args.get("stem"))
+            grown_stalk = bdv * (stem_tip - event_log.args.get("stem"))
             net_deposits[token]["bdv"] += sign * bdv
             net_deposits[token]["stalk"] += sign * (1 * bdv * 10 ** 10 + grown_stalk)
         else:
             for i in range(len(event_log.args.get("bdvs"))):
                 bdv = event_log.args.get("bdvs")[i]
-                grown_stalk = bdv * (stem_tips[token] - event_log.args.get("stems")[i])
+                grown_stalk = bdv * (stem_tip - event_log.args.get("stems")[i])
                 net_deposits[token]["bdv"] += sign * bdv
                 net_deposits[token]["stalk"] += sign * (1 * bdv * 10 ** 10 + grown_stalk)
 
@@ -56,7 +64,7 @@ def net_erc1155_transfers(token, owner, receipt):
 
     # Filter events
     owner_evts = [evt for evt in all_events if evt.args.get("from") == owner or evt.args.get("to") == owner]
-    
+
     # Sum totals
     net_transfers = defaultdict(int)
     for evt_xfer in owner_evts:
