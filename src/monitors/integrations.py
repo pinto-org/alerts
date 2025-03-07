@@ -100,9 +100,7 @@ class IntegrationsMonitor(Monitor):
         stem_tips = StemTipCache()
         farmer_transfers = net_erc1155_transfers(wrapped_info.addr, owner, event_log.receipt)
         if len(farmer_transfers) > 0:
-            evt_add_deposit = self.beanstalk_contract.events["AddDeposit"]().processReceipt(
-                event_log.receipt, errors=DISCARD
-            )
+            evt_add_deposit = self.beanstalk_contract.events["AddDeposit"]().processReceipt(event_log.receipt, errors=DISCARD)
             # Silo wrap/unwrap: in both directions, use the IDs from 1155 transfer events
             for id in farmer_transfers:
                 token, stem = unpack_address_and_stem(id)
@@ -123,6 +121,18 @@ class IntegrationsMonitor(Monitor):
                 stalk = 10 ** 10 * event_log.args.get("assets")
             else:
                 # Direct unwrap: analyze all of the Remove events after the final AddDeposit event
-                pass
+                evt_add_deposit = self.beanstalk_contract.events["AddDeposit"]().processReceipt(event_log.receipt, errors=DISCARD)
+                evt_remove_deposits = self.beanstalk_contract.events["RemoveDeposits"]().processReceipt(event_log.receipt, errors=DISCARD)
+
+                max_deposit_idx = max(evt_add_deposit, key=lambda evt: evt.logIndex).logIndex
+                evt_remove_deposits = [evt for evt in evt_remove_deposits if evt.logIndex > max_deposit_idx]
+
+                for evt_remove in evt_remove_deposits:
+                    token = evt_remove.args.get("token")
+                    stem_tip = stem_tips.get_stem_tip(token)
+                    for i in range(len(evt_remove.args.get("bdvs"))):
+                        bdv = evt_remove.args.get("bdvs")[i]
+                        grown_stalk = bdv * (stem_tip - evt_remove.args.get("stems")[i])
+                        stalk += bdv * 10 ** 10 + grown_stalk
 
         return stalk
