@@ -63,8 +63,12 @@ class IntegrationsMonitor(Monitor):
             pinto_amount_str = round_token(event_log.args.get("assets"), underlying_info.decimals, underlying_info.addr)
             sPinto_amount_str = round_token(event_log.args.get("shares"), wrapped_info.decimals, wrapped_info.addr)
 
+            # Determine whether the source/destination pinto is deposited, and how much stalk is involved
+            is_deposited, stalk_amount = self._spinto_deposit_info(wrapped_info, owner, event_log)
+            if_deposited_str = "Deposited " if is_deposited else ""
+
             token_strings = [
-                f":{underlying_info.symbol}: {pinto_amount_str} Deposited !{underlying_info.symbol}",
+                f":{underlying_info.symbol}: {pinto_amount_str} {if_deposited_str}!{underlying_info.symbol}",
                 f"{sPinto_amount_str} {wrapped_info.symbol}"
             ]
             if event_log.event == "Deposit":
@@ -77,7 +81,6 @@ class IntegrationsMonitor(Monitor):
             wrapped_supply = token_to_float(self.spinto_client.get_supply(), wrapped_info.decimals)
             redeem_rate = token_to_float(self.spinto_client.get_redeem_rate(), underlying_info.decimals)
 
-            stalk_amount = self._spinto_moved_deposit_stalk(wrapped_info, owner, event_log)
             deposit_gspbdv = -1 + stalk_to_float(stalk_amount) / pinto_amount
             total_gspbdv = self.beanstalk_graph_client.get_account_gspbdv(wrapped_info.addr)
             gspbdv_avg_direction = direction[1] if deposit_gspbdv > total_gspbdv else direction[2]
@@ -93,13 +96,17 @@ class IntegrationsMonitor(Monitor):
 
         return event_str
 
-    def _spinto_moved_deposit_stalk(self, wrapped_info, owner, event_log):
-        """Returns the amount of stalk on the deposit which was added/removed to spinto"""
+    def _spinto_deposit_info(self, wrapped_info, owner, event_log):
+        """
+        Returns whether the Pinto was already deposited, and the amount of stalk
+        on the deposit which was added/removed to spinto
+        """
 
         stalk = 0
         stem_tips = StemTipCache()
         farmer_transfers = net_erc1155_transfers(wrapped_info.addr, owner, event_log.receipt)
         if len(farmer_transfers) > 0:
+            is_deposited = True
             evt_add_deposit = self.beanstalk_contract.events["AddDeposit"]().processReceipt(event_log.receipt, errors=DISCARD)
             # Silo wrap/unwrap: in both directions, use the IDs from 1155 transfer events
             for id in farmer_transfers:
@@ -115,6 +122,7 @@ class IntegrationsMonitor(Monitor):
                 grown_stalk = bdv * (stem_tip - stem)
                 stalk += bdv * 10 ** 10 + grown_stalk
         else:
+            is_deposited = False
             # Direct wrap/unwrap are identifiable by no Transfer event between farmer and spinto
             if event_log.event == "Deposit":
                 # Direct wrap: always brings zero grown stalk
@@ -135,4 +143,4 @@ class IntegrationsMonitor(Monitor):
                         grown_stalk = bdv * (stem_tip - evt_remove.args.get("stems")[i])
                         stalk += bdv * 10 ** 10 + grown_stalk
 
-        return stalk
+        return is_deposited, stalk
