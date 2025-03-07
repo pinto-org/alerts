@@ -11,6 +11,7 @@ from constants.config import *
 from collections import defaultdict
 
 from tools.silo import net_deposit_withdrawal_stalk
+from tools.spinto import has_spinto_action_size
 
 class BeanstalkMonitor(Monitor):
     """Monitor the Beanstalk contract for events."""
@@ -98,8 +99,14 @@ class BeanstalkMonitor(Monitor):
     def silo_event_str(self, token_addr, values, receipt):
         """Logs a Silo Deposit/Withdraw"""
 
-        event_str = ""
+        token_info = get_erc20_info(token_addr)
+        amount = token_to_float(abs(values["amount"]), token_info.decimals)
 
+        # If there is an sPinto deposit or withdrawal event using the same amount, ignore this event
+        if has_spinto_action_size(receipt, amount):
+            return ""
+
+        event_str = ""
         if values["amount"] > 0:
             event_str += f"📥 Silo Deposit"
         elif values["amount"] < 0:
@@ -107,11 +114,8 @@ class BeanstalkMonitor(Monitor):
         else:
             return ""
 
-        bean_price = self.bean_client.avg_bean_price()
-        token_info = get_erc20_info(token_addr)
-        amount = token_to_float(abs(values["amount"]), token_info.decimals)
-
         # Use current bdv rather than the deposited bdv reported in the event
+        bean_price = self.bean_client.avg_bean_price()
         value = abs(bean_to_float(values["bdv"])) * bean_price
 
         event_str += f" - {round_num(amount, precision=2, avoid_zero=True)} {token_info.symbol}"
