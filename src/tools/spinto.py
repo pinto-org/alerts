@@ -1,4 +1,5 @@
-from data_access.contracts.util import get_beanstalk_contract, get_web3_instance
+from constants.addresses import SPINTO_ADDR
+from data_access.contracts.util import get_beanstalk_contract, get_web3_instance, get_wrapped_silo_contract
 from tools.silo import StemTipCache, net_erc1155_transfers, unpack_address_and_stem
 from web3.logs import DISCARD
 
@@ -56,5 +57,17 @@ def spinto_deposit_info(wrapped_info, owner, event_log):
 
 def has_spinto_action_size(receipt, amount):
     """Returns true if the given transaction receipt contains a spinto deposit/withdraw of the given size"""
-    # TODO
-    return False
+    spinto_contract = get_wrapped_silo_contract(SPINTO_ADDR, get_web3_instance())
+
+    def sum_assets(events):
+        retval = 0
+        for evt in events:
+            retval += evt.args.get("assets")
+        return retval
+
+    if amount > 0:
+        deposits = spinto_contract.events["Deposit"]().processReceipt(receipt, errors=DISCARD)
+        return sum_assets(deposits) == amount
+    else:
+        withdraws = spinto_contract.events["Withdraw"]().processReceipt(receipt, errors=DISCARD)
+        return sum_assets(withdraws) == abs(amount)

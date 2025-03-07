@@ -70,10 +70,10 @@ class IntegrationsMonitor(Monitor):
             ]
             if event_log.event == "Deposit":
                 event_str += f"📥 {token_strings[0]} wrapped to {token_strings[1]}"
-                direction = ["Added", "📈", "📉"]
+                direction = ["Added", "📈", "📉", "deposited"]
             else:
                 event_str += f"📭 {token_strings[1]} unwrapped to {token_strings[0]}"
-                direction = ["Removed", "📉", "📈"]
+                direction = ["Removed", "📉", "📈", "withdrawn"]
 
             wrapped_supply = token_to_float(self.spinto_client.get_supply(), wrapped_info.decimals)
             redeem_rate = token_to_float(self.spinto_client.get_redeem_rate(), underlying_info.decimals)
@@ -82,8 +82,8 @@ class IntegrationsMonitor(Monitor):
             total_gspbdv = self.beanstalk_graph_client.get_account_gspbdv(wrapped_info.addr)
             gspbdv_avg_direction = direction[1] if deposit_gspbdv > total_gspbdv else direction[2]
             event_str += (
-                f"\n> _🌱 {gspbdv_avg_direction} {direction[0]} {round_num(deposit_gspbdv, precision=4)} Grown Stalk per PDV. "
-                f"New average: {round_num(total_gspbdv, precision=4)}_"
+                f"\n> _🌱 {gspbdv_avg_direction} New average Grown Stalk per PDV: {round_num(total_gspbdv, precision=4)} "
+                f"({direction[0]} {round_num(deposit_gspbdv, precision=4)} per {direction[3]} PDV)_"
                 f"\n> _:SPINTO: {direction[1]} !{wrapped_info.symbol} Supply: {round_num(wrapped_supply, precision=0)}. "
                 f"Redeems For {round_num(redeem_rate, precision=4)} !{underlying_info.symbol}_ "
             )
