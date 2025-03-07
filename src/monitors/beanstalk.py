@@ -10,6 +10,9 @@ from constants.config import *
 
 from collections import defaultdict
 
+from tools.silo import net_deposit_withdrawal_stalk
+from tools.spinto import has_spinto_action_size
+
 class BeanstalkMonitor(Monitor):
     """Monitor the Beanstalk contract for events."""
 
@@ -80,31 +83,8 @@ class BeanstalkMonitor(Monitor):
             return
         # Else handle txn logs individually using default strings.
 
-        # Determine net deposit/withdraw of each token
-        # Sums total bdv/stalk as well
-        stem_tips = {}
-        net_deposits = defaultdict(lambda: {"amount": 0, "bdv": 0, "stalk": 0})
-        silo_deposit_logs = get_logs_by_names(["AddDeposit", "RemoveDeposit", "RemoveDeposits"], event_logs)
-        for event_log in silo_deposit_logs:
-            sign = 1 if event_log.event == "AddDeposit" else -1
-            token = event_log.args.get("token")
-            if token not in stem_tips:
-                stem_tips[token] = self.beanstalk_client.get_stem_tip(token)
-
-            net_deposits[token]["amount"] += sign * event_log.args.get("amount")
-            # Sum bdv/stalk. Assumes 1 bdv credits 1 stalk upon deposit.
-            if event_log.event != "RemoveDeposits":
-                bdv = event_log.args.get("bdv")
-                grown_stalk = bdv * (stem_tips[token] - event_log.args.get("stem"))
-                net_deposits[token]["bdv"] += sign * bdv
-                net_deposits[token]["stalk"] += sign * (1 * bdv * 10 ** 10 + grown_stalk)
-            else:
-                for i in range(len(event_log.args.get("bdvs"))):
-                    bdv = event_log.args.get("bdvs")[i]
-                    grown_stalk = bdv * (stem_tips[token] - event_log.args.get("stems")[i])
-                    net_deposits[token]["bdv"] += sign * bdv
-                    net_deposits[token]["stalk"] += sign * (1 * bdv * 10 ** 10 + grown_stalk)
-            event_logs.remove(event_log)
+        # Determine net deposit/withdraw of each token, removing relevant events from the log list
+        net_deposits = net_deposit_withdrawal_stalk(event_logs=event_logs, remove_from_logs=True)
 
         for token in net_deposits:
             event_str = self.silo_event_str(token, net_deposits[token], receipt)
@@ -119,8 +99,14 @@ class BeanstalkMonitor(Monitor):
     def silo_event_str(self, token_addr, values, receipt):
         """Logs a Silo Deposit/Withdraw"""
 
-        event_str = ""
+        # If there is an sPinto deposit or withdrawal event using the same amount, ignore this event
+        if has_spinto_action_size(receipt, values["amount"]):
+            return ""
 
+        token_info = get_erc20_info(token_addr)
+        amount = token_to_float(abs(values["amount"]), token_info.decimals)
+
+        event_str = ""
         if values["amount"] > 0:
             event_str += f"📥 Silo Deposit"
         elif values["amount"] < 0:
@@ -128,11 +114,8 @@ class BeanstalkMonitor(Monitor):
         else:
             return ""
 
-        bean_price = self.bean_client.avg_bean_price()
-        token_info = get_erc20_info(token_addr)
-        amount = token_to_float(abs(values["amount"]), token_info.decimals)
-
         # Use current bdv rather than the deposited bdv reported in the event
+        bean_price = self.bean_client.avg_bean_price()
         value = abs(bean_to_float(values["bdv"])) * bean_price
 
         event_str += f" - {round_num(amount, precision=2, avoid_zero=True)} {token_info.symbol}"

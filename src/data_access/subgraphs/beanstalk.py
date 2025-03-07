@@ -247,6 +247,20 @@ class BeanstalkGraphClient(object):
                 ):
                     return int(seasons[i + 1]["id"])
 
+    def get_account_gspbdv(self, account):
+        """Returns the current grown stalk per bdv of the requested account"""
+        query_str = f"""
+            query {{
+                silo(id: "{account.lower()}") {{
+                    stalk
+                    depositedBDV
+                }}
+            }}
+        """
+        # Create gql query and execute.
+        result = execute(self._client, query_str)
+        return -1 + stalk_to_float(result["silo"]["stalk"]) / bean_to_float(result["silo"]["depositedBDV"])
+
 class SeasonStats:
     """Standard object containing fields for all fields of interest for a single season.
 

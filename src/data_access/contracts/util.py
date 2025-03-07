@@ -17,6 +17,10 @@ with open(
 ) as erc20_abi_file:
     erc20_abi = json.load(erc20_abi_file)
 with open(
+    os.path.join(os.path.dirname(__file__), "../../constants/abi/erc1155_abi.json")
+) as erc1155_abi_file:
+    erc1155_abi = json.load(erc1155_abi_file)
+with open(
     os.path.join(os.path.dirname(__file__), "../../constants/abi/aquifer_abi.json")
 ) as aquifer_abi_file:
     aquifer_abi = json.load(aquifer_abi_file)
@@ -98,6 +102,13 @@ def get_erc20_contract(web3, address):
     # Ignore checksum requirement.
     address = web3.toChecksumAddress(address.lower())
     return web3.eth.contract(address=address, abi=erc20_abi)
+
+
+def get_erc1155_contract(web3, address):
+    """Get a web3.eth.contract object for a standard ERC1155 token contract."""
+    # Ignore checksum requirement.
+    address = web3.toChecksumAddress(address.lower())
+    return web3.eth.contract(address=address, abi=erc1155_abi)
 
 
 def get_tokens_sent(token, txn_hash, recipient, log_index_bounds):

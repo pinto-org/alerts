@@ -120,8 +120,11 @@ def embellish_token_emojis(text, mapping):
         text = re.sub(pattern, replacer, text, flags=re.IGNORECASE)
 
     # Ignore/strip occurrences where an emoji was explicitly rejected
+    def retain_casing(match):
+        matched_text = match.group(0)
+        return matched_text[1:]
     for key in mapping:
-        text = text.replace(f"!{key}", key)
+        text = re.sub(f"!({re.escape(key)})", retain_casing, text, flags=re.IGNORECASE)
 
     return text
 
