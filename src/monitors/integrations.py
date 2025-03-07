@@ -69,17 +69,23 @@ class IntegrationsMonitor(Monitor):
             ]
             if event_log.event == "Deposit":
                 event_str += f"📥 {token_strings[0]} wrapped to {token_strings[1]}"
+                direction = ["Added", "📈", "📉"]
             else:
                 event_str += f"📭 {token_strings[1]} unwrapped to {token_strings[0]}"
+                direction = ["Removed", "📉", "📈"]
 
             wrapped_supply = token_to_float(self.spinto_client.get_supply(), wrapped_info.decimals)
             redeem_rate = token_to_float(self.spinto_client.get_redeem_rate(), underlying_info.decimals)
-            stalk_amount = self._spinto_moved_deposit_stalk(wrapped_info, owner, event_log.receipt)
-            gspbdv = self.beanstalk_graph_client.get_account_gspbdv(wrapped_info.addr)
+
+            stalk_amount = self._spinto_moved_deposit_stalk(wrapped_info, owner, event_log)
+            deposit_gspbdv = -1 + stalk_to_float(stalk_amount) / pinto_amount
+            total_gspbdv = self.beanstalk_graph_client.get_account_gspbdv(wrapped_info.addr)
+            gspbdv_avg_direction = direction[1] if deposit_gspbdv > total_gspbdv else direction[2]
             event_str += (
-                f"\n_{wrapped_info.symbol} Supply: {round_num(wrapped_supply, precision=0)}. "
-                f"Redeems For {round_num(redeem_rate, precision=4)} !{underlying_info.symbol}. "
-                f"{round_num(gspbdv, precision=4)} Grown Stalk per PDV_"
+                f"\n> _🌱 {gspbdv_avg_direction} {direction[0]} {round_num(deposit_gspbdv, precision=4)} Grown Stalk per PDV. "
+                f"New average: {round_num(total_gspbdv, precision=4)}_"
+                f"\n> _:SPINTO: {direction[1]} !{wrapped_info.symbol} Supply: {round_num(wrapped_supply, precision=0)}. "
+                f"Redeems For {round_num(redeem_rate, precision=4)} !{underlying_info.symbol}_ "
             )
 
             bean_price = self.bean_client.avg_bean_price()
@@ -87,15 +93,15 @@ class IntegrationsMonitor(Monitor):
 
         return event_str
 
-    def _spinto_moved_deposit_stalk(self, wrapped_info, owner, receipt):
+    def _spinto_moved_deposit_stalk(self, wrapped_info, owner, event_log):
         """Returns the amount of stalk on the deposit which was added/removed to spinto"""
 
         stalk = 0
-        stem_tips = StemTipCache(block_number)
-        farmer_transfers = net_erc1155_transfers(wrapped_info.addr, owner, receipt)
+        stem_tips = StemTipCache()
+        farmer_transfers = net_erc1155_transfers(wrapped_info.addr, owner, event_log.receipt)
         if len(farmer_transfers) > 0:
             evt_add_deposit = self.beanstalk_contract.events["AddDeposit"]().processReceipt(
-                receipt, errors=DISCARD
+                event_log.receipt, errors=DISCARD
             )
             # Silo wrap/unwrap: in both directions, use the IDs from 1155 transfer events
             for id in farmer_transfers:
@@ -112,8 +118,11 @@ class IntegrationsMonitor(Monitor):
                 stalk += bdv * 10 ** 10 + grown_stalk
         else:
             # Direct wrap/unwrap are identifiable by no Transfer event between farmer and spinto
-            # Direct wrap: always brings zero stalk
-            # Direct unwrap: analyze all of the Remove events after the last AddDeposit event
-            pass
+            if event_log.event == "Deposit":
+                # Direct wrap: always brings zero grown stalk
+                stalk = 10 ** 10 * event_log.args.get("assets")
+            else:
+                # Direct unwrap: analyze all of the Remove events after the final AddDeposit event
+                pass
 
         return stalk
