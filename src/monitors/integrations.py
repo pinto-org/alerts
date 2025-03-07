@@ -83,7 +83,7 @@ class IntegrationsMonitor(Monitor):
             gspbdv_avg_direction = direction[1] if deposit_gspbdv > total_gspbdv else direction[2]
             event_str += (
                 f"\n> _🌱 {gspbdv_avg_direction} New average Grown Stalk per PDV: {round_num(total_gspbdv, precision=4)} "
-                f"({direction[0]} {round_num(deposit_gspbdv, precision=4)} per {direction[3]} PDV)_"
+                f"({direction[0]} {round_num(deposit_gspbdv, precision=4 if deposit_gspbdv != 0 else 0)} per {direction[3]} PDV)_"
                 f"\n> _:SPINTO: {direction[1]} !{wrapped_info.symbol} Supply: {round_num(wrapped_supply, precision=0)}. "
                 f"Redeems For {round_num(redeem_rate, precision=4)} !{underlying_info.symbol}_ "
             )
