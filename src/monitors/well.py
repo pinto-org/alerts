@@ -183,6 +183,9 @@ class WellsMonitor(Monitor):
                 abs_sum_pinto += evt.amount_in
             trades += 1
 
+        if abs_sum_pinto == 0:
+            return
+
         # Is considered full arbitrage even if the pinto amount mismatches by less than .1%. Some traders move
         # light pinto profits into their trading contract.
         if trades >= 2 and sum_pinto / abs_sum_pinto < 0.001:
