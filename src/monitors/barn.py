@@ -19,7 +19,6 @@ class BarnRaiseMonitor(Monitor):
         super().__init__(
             "BarnRaise", message_function, BARN_RAISE_CHECK_RATE, prod=prod, dry_run=dry_run
         )
-        self.bean_client = BeanClient()
         self.barn_raise_client = BarnRaiseClient()
         self._eth_event_client = EthEventsClient(EventClientType.BARN_RAISE)
         self.beanstalk_graph_client = BeanstalkGraphClient()

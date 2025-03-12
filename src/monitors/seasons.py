@@ -27,7 +27,6 @@ class SeasonsMonitor(Monitor):
         self.beanstalk_graph_client = BeanstalkGraphClient()
         self.bean_graph_client = BeanGraphClient()
         self.basin_graph_client = BasinGraphClient()
-        self.bean_client = BeanClient()
         # Most recent season processed. Do not initialize.
         self.current_season_id = None
 
@@ -110,6 +109,7 @@ class SeasonsMonitor(Monitor):
 
     def season_summary_string(self, sg, short_str=False):
         beanstalk_client = BeanstalkClient()
+        bean_client = BeanClient()
 
         # eth_price = beanstalk_client.get_token_usd_twap(WETH, 3600)
         # wsteth_price = beanstalk_client.get_token_usd_twap(WSTETH, 3600)
@@ -157,7 +157,7 @@ class SeasonsMonitor(Monitor):
         rain_flood_string = ""
         flood_beans = 0
         if hasattr(sg.beanstalks[0], 'well_plenty_logs') and len(sg.beanstalks[0].well_plenty_logs) > 0:
-            pre_flood_price = self.bean_client.block_price(season_block - 1)
+            pre_flood_price = bean_client.block_price(block_number=season_block - 1)
             rain_flood_string += f"\n\n**It is Flooding!**"
             rain_flood_string += f"\nPinto price was {round_num(pre_flood_price, precision=4, incl_dollar=True)}"
             flood_field_beans = 0
@@ -188,7 +188,7 @@ class SeasonsMonitor(Monitor):
         # Well info.
         wells_info = []
         for well_addr in WHITELISTED_WELLS:
-            wells_info.append(self.bean_client.get_pool_info(well_addr))
+            wells_info.append(bean_client.get_pool_info(well_addr))
 
         # Sort highest liquidity wells first
         wells_info = sorted(wells_info, key=lambda x: x['liquidity'], reverse=True)

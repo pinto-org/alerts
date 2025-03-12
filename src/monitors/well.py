@@ -56,7 +56,6 @@ class OtherWellsMonitor(Monitor):
         # All addresses
         self._eth_all_wells = EthEventsClient(EventClientType.WELL)
         self.basin_graph_client = BasinGraphClient()
-        self.bean_client = BeanClient()
     
     def _monitor_method(self):
         last_check_time = 0
@@ -78,7 +77,7 @@ class OtherWellsMonitor(Monitor):
                     if address not in self._ignorelist:
                         if address not in prev_log_index:
                             prev_log_index[address] = 0
-                        event_data = parse_event_data(event_log, prev_log_index[address], self.basin_graph_client, self.bean_client, web3=self._web3)
+                        event_data = parse_event_data(event_log, prev_log_index[address], self.basin_graph_client, web3=self._web3)
                         event_str = single_event_str(event_data)
                         if event_str:
                             self.msg_exchange(event_str)
@@ -122,7 +121,6 @@ class WellsMonitor(Monitor):
         self.arbitrage_senders = arbitrage_senders
         self._eth_event_client = EthEventsClient(EventClientType.WELL, self.pool_addresses)
         self.basin_graph_client = BasinGraphClient()
-        self.bean_client = BeanClient()
         self.bean_reporting = bean_reporting
 
     def _monitor_method(self):
@@ -158,7 +156,6 @@ class WellsMonitor(Monitor):
                         event_log,
                         prev_log_index[address],
                         self.basin_graph_client,
-                        self.bean_client,
                         web3=self._web3
                     )
                 )
@@ -233,7 +230,9 @@ class WellsMonitor(Monitor):
                 else:
                     self.msg_arbitrage(event_str, to_tg=to_tg)
 
-def parse_event_data(event_log, prev_log_index, basin_graph_client, bean_client, web3=get_web3_instance()):
+def parse_event_data(event_log, prev_log_index, basin_graph_client, web3=get_web3_instance()):
+    bean_client = BeanClient(block_number=event_log.blockNumber)
+
     retval = WellEventData()
     retval.receipt = event_log.receipt
     retval.well_address = event_log.get("address")

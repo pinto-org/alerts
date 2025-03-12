@@ -19,7 +19,6 @@ class IntegrationsMonitor(Monitor):
         )
         self.msg_spinto = msg_spinto
         self._eth_event_client = EthEventsClient(EventClientType.INTEGRATIONS)
-        self.bean_client = BeanClient()
         self.spinto_client = WrappedDepositClient(SPINTO_ADDR)
         self.beanstalk_graph_client = BeanstalkGraphClient()
 
@@ -48,6 +47,8 @@ class IntegrationsMonitor(Monitor):
                 self.msg_spinto(event_str)
 
     def spinto_str(self, event_log):
+        bean_client = BeanClient(block_number=event_log.blockNumber)
+
         event_str = ""
 
         underlying_asset = self.spinto_client.get_underlying_asset()
@@ -88,7 +89,7 @@ class IntegrationsMonitor(Monitor):
                 f"Redeems For {round_num(redeem_rate, precision=4)} !{underlying_info.symbol}_ "
             )
 
-            bean_price = self.bean_client.avg_bean_price()
+            bean_price = bean_client.avg_bean_price()
             event_str += f"\n{value_to_emojis(pinto_amount * bean_price)}"
 
         return event_str

@@ -18,7 +18,6 @@ class MarketMonitor(Monitor):
             "Market", message_function, BEANSTALK_CHECK_RATE, prod=prod, dry_run=dry_run
         )
         self._eth_event_client = EthEventsClient(EventClientType.MARKET)
-        self.bean_client = BeanClient()
         self.beanstalk_contract = get_beanstalk_contract()
         self.beanstalk_graph_client = BeanstalkGraphClient()
 
@@ -59,6 +58,8 @@ class MarketMonitor(Monitor):
         Assumes event_log is an event of one of the types implemented below.
         Uses events from Beanstalk contract.
         """
+        bean_client = BeanClient(block_number=event_log.blockNumber)
+
         event_str = ""
         bean_amount = 0
         pod_amount = 0
@@ -103,7 +104,7 @@ class MarketMonitor(Monitor):
         # Highest place in line an order will purchase.
         order_max_place_in_line = pods_to_float(event_log.args.get("maxPlaceInLine"))
 
-        bean_price = self.bean_client.avg_bean_price()
+        bean_price = bean_client.avg_bean_price()
         start_place_in_line_str = round_num(start_place_in_line, 0)
         order_max_place_in_line_str = round_num(order_max_place_in_line, 0)
 

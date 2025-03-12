@@ -23,7 +23,6 @@ class BeanstalkMonitor(Monitor):
         self.msg_silo = msg_silo
         self.msg_field = msg_field
         self._eth_event_client = EthEventsClient(EventClientType.BEANSTALK)
-        self.bean_client = BeanClient()
 
     def _monitor_method(self):
         last_check_time = 0
@@ -97,6 +96,7 @@ class BeanstalkMonitor(Monitor):
     def silo_event_str(self, token_addr, values, receipt):
         """Logs a Silo Deposit/Withdraw"""
         beanstalk_client = BeanstalkClient(block_number=receipt.blockNumber)
+        bean_client = BeanClient(block_number=receipt.blockNumber)
 
         # If there is an sPinto deposit or withdrawal event using the same amount, ignore this event
         if has_spinto_action_size(receipt, values["amount"]):
@@ -114,7 +114,7 @@ class BeanstalkMonitor(Monitor):
             return ""
 
         # Use current bdv rather than the deposited bdv reported in the event
-        bean_price = self.bean_client.avg_bean_price()
+        bean_price = bean_client.avg_bean_price()
         value = abs(bean_to_float(values["bdv"])) * bean_price
 
         event_str += f" - {round_num(amount, precision=2, avoid_zero=True)} {token_info.symbol}"
@@ -143,9 +143,10 @@ class BeanstalkMonitor(Monitor):
         should be processed in batch.
         """
         beanstalk_client = BeanstalkClient(block_number=event_log.blockNumber)
+        bean_client = BeanClient(block_number=event_log.blockNumber)
 
         event_str = ""
-        bean_price = self.bean_client.avg_bean_price()
+        bean_price = bean_client.avg_bean_price()
 
         # Ignore these events
         if event_log.event in ["RemoveWithdrawal", "RemoveWithdrawals" "Plant", "Pick", "L1DepositsMigrated"]:
@@ -195,7 +196,9 @@ class BeanstalkMonitor(Monitor):
         Returns string, boolean
         boolean indicates whether this is a lambda convert
         """
-        bean_price = self.bean_client.avg_bean_price()
+        bean_client = BeanClient(block_number=event_logs[0].blockNumber)
+
+        bean_price = bean_client.avg_bean_price()
         # Find the relevant logs, should contain one RemoveDeposit and one AddDeposit.
         # print(event_logs)
         # in silo v3 AddDeposit event will always be present and these will always get set
@@ -227,13 +230,13 @@ class BeanstalkMonitor(Monitor):
             f"({round_num(bdv_float, 0)} PDV)"
         )
 
-        event_str += f"\n> :PINTO:{direction_emojis[1]} _{latest_pool_price_str(self.bean_client, BEAN_ADDR)}_"
+        event_str += f"\n> :PINTO:{direction_emojis[1]} _{latest_pool_price_str(bean_client, BEAN_ADDR)}_"
         # If regular convert, identifies the non-bean address
         # If LP convert, both are added with the removed token coming first
         if remove_token_addr in WHITELISTED_WELLS:
-            event_str += f"\n> :{remove_token_symbol.upper()}:{direction_emojis[1]} _{latest_pool_price_str(self.bean_client, remove_token_addr)}_"
+            event_str += f"\n> :{remove_token_symbol.upper()}:{direction_emojis[1]} _{latest_pool_price_str(bean_client, remove_token_addr)}_"
         if add_token_addr in WHITELISTED_WELLS:
-            event_str += f"\n> :{add_token_symbol.upper()}:{direction_emojis[1]} _{latest_pool_price_str(self.bean_client, add_token_addr)}_"
+            event_str += f"\n> :{add_token_symbol.upper()}:{direction_emojis[1]} _{latest_pool_price_str(bean_client, add_token_addr)}_"
 
         if not remove_token_addr.startswith(UNRIPE_TOKEN_PREFIX):
             event_str += f"\n{value_to_emojis(value)}"
@@ -243,6 +246,8 @@ class BeanstalkMonitor(Monitor):
         return event_str, add_token_addr == remove_token_addr
 
     def rinse_str(self, event_logs):
+        bean_client = BeanClient(block_number=event_logs[0].blockNumber)
+
         bean_amount = 0.0
         for event_log in event_logs:
             if event_log.event == "ClaimFertilizer":
@@ -250,7 +255,7 @@ class BeanstalkMonitor(Monitor):
         # Ignore rinses with essentially no beans bc they are clutter, especially on transfers.
         if bean_amount < 1:
             return ""
-        bean_price = self.bean_client.avg_bean_price()
+        bean_price = bean_client.avg_bean_price()
         event_str = f"💦 Sprouts Rinsed - {round_num(bean_amount,0)} Sprouts ({round_num(bean_amount * bean_price, 0, avoid_zero=True, incl_dollar=True)})"
         event_str += f"\n{value_to_emojis(bean_amount * bean_price)}"
 
