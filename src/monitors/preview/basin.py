@@ -16,7 +16,7 @@ class BasinStatusPreviewMonitor(PreviewMonitor):
     def __init__(self, name_function, status_function):
         super().__init__("BasinStatus", name_function, status_function, 1)
         self.last_name = ""
-        self.basin_graph_client = BasinGraphClient()
+        self.basin_graph_latest = BasinGraphClient(block_number="latest")
 
     def _monitor_method(self):
         while self._thread_active:
@@ -26,7 +26,7 @@ class BasinStatusPreviewMonitor(PreviewMonitor):
             liquidity = 0
             volume = 0
             well_count = 0
-            wells = self.basin_graph_client.get_wells_stats()
+            wells = self.basin_graph_latest.get_wells_stats()
 
             for well in wells:
                 if well["id"] in {token.lower() for token in WHITELISTED_WELLS}:

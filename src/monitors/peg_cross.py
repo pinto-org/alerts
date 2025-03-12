@@ -18,7 +18,7 @@ class PegCrossMonitor(Monitor):
 
     def __init__(self, message_function, prod=False):
         super().__init__("Peg", message_function, PEG_CHECK_PERIOD, prod=prod, dry_run=None)
-        self.bean_graph_client = BeanGraphClient()
+        self.bean_graph_latest = BeanGraphClient(block_number="latest")
         self.last_known_cross = None
 
     def _monitor_method(self):
@@ -56,7 +56,7 @@ class PegCrossMonitor(Monitor):
             [PegCrossType]
         """
         # Get latest data from graph.
-        last_cross = self.bean_graph_client.last_cross()
+        last_cross = self.bean_graph_latest.last_cross()
 
         # If the last known cross has not been set yet, initialize it.
         if not self.last_known_cross:
@@ -77,7 +77,7 @@ class PegCrossMonitor(Monitor):
 
         if number_of_new_crosses > 1:
             # Returns n crosses ordered most recent -> least recent.
-            new_cross_list = self.bean_graph_client.get_last_crosses(n=number_of_new_crosses)
+            new_cross_list = self.bean_graph_latest.get_last_crosses(n=number_of_new_crosses)
         else:
             new_cross_list = [last_cross]
 

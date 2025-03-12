@@ -5,7 +5,7 @@ from data_access.contracts.util import *
 class BeanClient(ChainClient):
     """Common functionality related to the Bean token."""
 
-    def __init__(self, block_number='latest', web3=get_web3_instance()):
+    def __init__(self, block_number="latest", web3=get_web3_instance()):
         super().__init__(web3)
         self.block_number = block_number
         self.price_contract = get_bean_price_contract(web3=web3)

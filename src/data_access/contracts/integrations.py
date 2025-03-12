@@ -3,7 +3,7 @@ from data_access.contracts.eth_events import *
 
 class WrappedDepositClient(ChainClient):
 
-    def __init__(self, address, block_number='latest', web3=get_web3_instance()):
+    def __init__(self, address, block_number="latest", web3=get_web3_instance()):
         super().__init__(web3)
         self.address = address
         self.block_number = block_number

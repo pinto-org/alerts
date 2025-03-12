@@ -4,7 +4,7 @@ from data_access.contracts.eth_events import *
 class BeanstalkClient(ChainClient):
     """Common functionality related to the Beanstalk contract."""
 
-    def __init__(self, block_number='latest', web3=get_web3_instance()):
+    def __init__(self, block_number="latest", web3=get_web3_instance()):
         super().__init__(web3)
         self.block_number = block_number
         self.contract = get_beanstalk_contract(web3=web3)

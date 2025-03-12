@@ -7,7 +7,7 @@ from data_access.contracts.beanstalk import BeanstalkClient
 from data_access.contracts.util import get_erc1155_contract, get_web3_instance
 
 class StemTipCache(object):
-    def __init__(self, block_number='latest'):
+    def __init__(self, block_number="latest"):
         self.beanstalk_client = BeanstalkClient(block_number=block_number)
         self.stem_tips = {}
 

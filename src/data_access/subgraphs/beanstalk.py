@@ -22,7 +22,7 @@ class BeanstalkGraphClient(object):
     _transport = AIOHTTPTransport(url=BEANSTALK_GRAPH_ENDPOINT)
     _client = Client(transport=_transport, fetch_schema_from_transport=False, execute_timeout=7)
 
-    def __init__(self, block_number='latest'):
+    def __init__(self, block_number="latest"):
         self.block_number = block_number
 
     @classmethod

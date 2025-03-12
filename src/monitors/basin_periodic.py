@@ -21,7 +21,7 @@ class BasinPeriodicMonitor(Monitor):
             16 * 60 * 60 + 5*60
         )
         self.last_update = time.time()  # arbitrary init
-        self.basin_graph_client = BasinGraphClient()
+        self.basin_graph_latest = BasinGraphClient(block_number="latest")
 
     def _monitor_method(self):
         while True:
@@ -66,7 +66,7 @@ class BasinPeriodicMonitor(Monitor):
         total_liquidity = 0
         daily_volume = 0
         weekly_volume = 0
-        wells = self.basin_graph_client.get_latest_well_snapshots(7)
+        wells = self.basin_graph_latest.get_latest_well_snapshots(7)
 
         whitelisted_wells_str = ""
         other_wells_liquidity = 0

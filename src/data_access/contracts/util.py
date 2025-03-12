@@ -206,7 +206,7 @@ def is_valid_wallet_address(address):
     return True
 
 
-def call_contract_function_with_retry(function, max_tries=10, block_number='latest'):
+def call_contract_function_with_retry(function, max_tries=10, block_number="latest"):
     """Try to call a web3 contract object function and retry with exponential backoff."""
     try_count = 1
     while True:

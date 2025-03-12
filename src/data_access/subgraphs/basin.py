@@ -7,17 +7,26 @@ from constants.addresses import *
 from constants.config import *
 
 class BasinGraphClient(object):
-    def __init__(self):
-        transport = AIOHTTPTransport(url=BASIN_GRAPH_ENDPOINT)
-        self._client = Client(
-            transport=transport, fetch_schema_from_transport=False, execute_timeout=7
-        )
+    _transport = AIOHTTPTransport(url=BASIN_GRAPH_ENDPOINT)
+    _client = Client(transport=_transport, fetch_schema_from_transport=False, execute_timeout=7)
 
-    def get_latest_well_snapshots(self, num_snapshots):
+    def __init__(self, block_number="latest"):
+        self.block_number = block_number
+
+    @classmethod
+    def get_client(cls):
+        return cls._client
+
+    def get_latest_well_snapshots(self, num_snapshots, block_number=None):
         """Get a single well snapshot."""
         query_str = f"""
             query {{
-                wells(orderBy: totalLiquidityUSD, orderDirection: desc, where: {{totalLiquidityUSD_gt: 1000}}) {{
+                wells(
+                    {get_block_query_str(block_number or self.block_number)}
+                    where: {{totalLiquidityUSD_gt: 1000}}
+                    orderBy: totalLiquidityUSD
+                    orderDirection: desc
+                ) {{
                     id
                     name
                     symbol
@@ -29,13 +38,17 @@ class BasinGraphClient(object):
             }}
         """
         # Create gql query and execute.
-        return execute(self._client, query_str)["wells"]
+        return execute(self.get_client(), query_str)["wells"]
 
-    def get_wells_stats(self):
+    def get_wells_stats(self, block_number=None):
         """Get high level stats of all wells."""
         query_str = f"""
             query {{
-                wells(orderBy: totalLiquidityUSD, orderDirection: desc) {{
+                wells(
+                    {get_block_query_str(block_number or self.block_number)}
+                    orderBy: totalLiquidityUSD
+                    orderDirection: desc
+                ) {{
                     id
                     cumulativeTradeVolumeUSD
                     totalLiquidityUSD
@@ -43,21 +56,24 @@ class BasinGraphClient(object):
             }}
         """
         # Create gql query and execute.
-        return execute(self._client, query_str)["wells"]
+        return execute(self.get_client(), query_str)["wells"]
     
-    def get_well_liquidity(self, well):
+    def get_well_liquidity(self, well, block_number=None):
         """Get the current USD liquidity for the requested Well"""
         query_str = f"""
             query {{
-                well(id: "{well}") {{
+                well(
+                    {get_block_query_str(block_number or self.block_number)}
+                    id: "{well}"
+                ) {{
                     totalLiquidityUSD
                 }}
             }}
         """
         # Create gql query and execute.
-        return execute(self._client, query_str).get("well").get("totalLiquidityUSD")
+        return execute(self.get_client(), query_str).get("well").get("totalLiquidityUSD")
 
-    def get_well_hourlies(self, timestamp):
+    def get_well_hourlies(self, timestamp, block_number=None):
         """
         Gets info from all whitelisted wells' hourly snapshots.
         Uses the hour corresponding to the provided timestmap
@@ -65,7 +81,10 @@ class BasinGraphClient(object):
         hour_id = int((timestamp - (timestamp % 3600)) / 3600)
         query_str = f"""
             query {{
-                wellHourlySnapshots(where: {{ hour: {hour_id} }}) {{
+                wellHourlySnapshots(
+                    {get_block_query_str(block_number or self.block_number)}
+                    where: {{ hour: {hour_id} }}
+                ) {{
                     deltaTradeVolumeUSD
                     well {{
                         id
@@ -73,9 +92,9 @@ class BasinGraphClient(object):
                 }}
             }}
         """
-        return execute(self._client, query_str)["wellHourlySnapshots"]
+        return execute(self.get_client(), query_str)["wellHourlySnapshots"]
 
-    def get_add_liquidity_info(self, txn_hash, log_index):
+    def get_add_liquidity_info(self, txn_hash, log_index, block_number=None):
         """Get deposit tokens. Retry if data not available. Return None if it does not become available.
 
         This is expected to be used for realtime data retrieval, which means the subgraph may not yet have populated
@@ -83,15 +102,18 @@ class BasinGraphClient(object):
         """
         query_str = f"""
             query {{
-                trades(where: {{
-                    tradeType: "ADD_LIQUIDITY"
-                    hash: "{txn_hash.hex()}"
-                    logIndex: {log_index}
-                }}) {{
+                trades(
+                    {get_block_query_str(block_number or self.block_number)}
+                    where: {{
+                        tradeType: "ADD_LIQUIDITY"
+                        hash: "{txn_hash.hex()}"
+                        logIndex: {log_index}
+                    }}
+                ) {{
                     liqReservesAmount
                     transferVolumeUSD
                 }}
             }}
         """
-        result = try_execute_with_wait("trades", self._client, query_str, check_len=True)
+        result = try_execute_with_wait("trades", self.get_client(), query_str, check_len=True)
         return result[0] if result else None
