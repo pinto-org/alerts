@@ -19,7 +19,6 @@ from constants.config import *
 from data_access.contracts.eth_events import EventClientType
 from data_access.contracts.util import is_valid_wallet_address
 
-from monitors.barn import BarnRaiseMonitor
 from monitors.beanstalk import BeanstalkMonitor
 from monitors.market import MarketMonitor
 from monitors.peg_cross import PegCrossMonitor
@@ -132,9 +131,6 @@ class DiscordClient(discord.ext.commands.Bot):
 
         self.integrations_monitor = IntegrationsMonitor(self.send_msg_silo, prod=prod, dry_run=dry_run)
         self.integrations_monitor.start()
-
-        # self.barn_raise_monitor = BarnRaiseMonitor(self.send_msg_barn_raise, prod=prod, dry_run=dry_run)
-        # self.barn_raise_monitor.start()
 
         # self.contract_migration_monitor = ContractsMigrated(
         #     self.send_msg_contract_migrated,

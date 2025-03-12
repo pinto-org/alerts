@@ -24,7 +24,6 @@ class SeasonsMonitor(Monitor):
         self.short_msgs = short_msgs
         self._eth_event_client = EthEventsClient(EventClientType.SEASON)
         self._eth_all_wells = EthEventsClient(EventClientType.WELL, WHITELISTED_WELLS)
-        self.beanstalk_graph_client = BeanstalkGraphClient()
         self.bean_graph_client = BeanGraphClient()
         self.basin_graph_client = BasinGraphClient()
         # Most recent season processed. Do not initialize.
@@ -87,9 +86,11 @@ class SeasonsMonitor(Monitor):
 
         Repeatedly makes graph calls to check sunrise status.
         """
+        beanstalk_graph_client = BeanstalkGraphClient()
+
         while self._thread_active:
             # Proceed once a new season is processed in each subgraph
-            beanstalk_stats = self.beanstalk_graph_client.season_stats(num_seasons=3)
+            beanstalk_stats = beanstalk_graph_client.season_stats(num_seasons=3)
             bean_stats = self.bean_graph_client.season_stats()
             well_hourly_stats = self.basin_graph_client.get_well_hourlies(time.time() - SEASON_DURATION)
 
@@ -110,6 +111,7 @@ class SeasonsMonitor(Monitor):
     def season_summary_string(self, sg, short_str=False):
         beanstalk_client = BeanstalkClient()
         bean_client = BeanClient()
+        beanstalk_graph_client = BeanstalkGraphClient()
 
         # eth_price = beanstalk_client.get_token_usd_twap(WETH, 3600)
         # wsteth_price = beanstalk_client.get_token_usd_twap(WSTETH, 3600)
@@ -132,7 +134,7 @@ class SeasonsMonitor(Monitor):
         # Uses bdv/stalk from 2 seasons prior as it tracks the value at the end of each season
         prev_silo_bdv = sg.beanstalks[2].deposited_bdv
         prev_silo_stalk = sg.beanstalks[2].stalk
-        silo_assets_changes = self.beanstalk_graph_client.silo_assets_seasonal_changes(
+        silo_assets_changes = beanstalk_graph_client.silo_assets_seasonal_changes(
             sg.beanstalks[0].pre_assets, sg.beanstalks[1].pre_assets
         )
         silo_assets_changes.sort(

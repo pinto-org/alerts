@@ -13,7 +13,7 @@ def spinto_deposit_info(wrapped_info, owner, event_log):
     beanstalk_contract = get_beanstalk_contract()
 
     stalk = 0
-    stem_tips = StemTipCache()
+    stem_tips = StemTipCache(block_number=event_log.blockNumber)
     farmer_transfers = net_erc1155_transfers(wrapped_info.addr, owner, event_log.receipt)
     if len(farmer_transfers) > 0:
         is_deposited = True

@@ -8,7 +8,7 @@ class BeanClient(ChainClient):
     def __init__(self, block_number='latest', web3=get_web3_instance()):
         super().__init__(web3)
         self.block_number = block_number
-        self.price_contract = get_bean_price_contract()
+        self.price_contract = get_bean_price_contract(web3=web3)
 
     def get_price_info(self, block_number=None):
         """Get all pricing info from oracle.

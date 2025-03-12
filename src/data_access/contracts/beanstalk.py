@@ -4,10 +4,10 @@ from data_access.contracts.eth_events import *
 class BeanstalkClient(ChainClient):
     """Common functionality related to the Beanstalk contract."""
 
-    def __init__(self, block_number='latest', web3=None):
+    def __init__(self, block_number='latest', web3=get_web3_instance()):
         super().__init__(web3)
         self.block_number = block_number
-        self.contract = get_beanstalk_contract()
+        self.contract = get_beanstalk_contract(web3=web3)
 
     def get_season(self, block_number=None):
         """Get current season."""
@@ -94,6 +94,12 @@ class BeanstalkClient(ChainClient):
         block_number = block_number or self.block_number
         response = call_contract_function_with_retry(self.contract.functions.getTokenUsdTwap(token_addr, lookback), block_number=block_number)
         return float(response / 10**6)
+    
+    def get_harvested_pods(self, field_id=0, block_number=None):
+        block_number = block_number or self.block_number
+        return bean_to_float(
+            call_contract_function_with_retry(self.contract.functions.harvestableIndex(field_id), block_number=block_number)
+        )
 
     def get_podline_length(self, field_id=0, block_number=None):
         block_number = block_number or self.block_number
@@ -113,22 +119,6 @@ class BeanstalkClient(ChainClient):
             lower_bound = 0.50
 
         return lower_bound + (1 - lower_bound) * (beanToMaxLpGpPerBdvRatio / 100e18)
-
-class BarnRaiseClient(ChainClient):
-    """Common functionality related to the Barn Raise Fertilizer contract."""
-
-    def __init__(self, block_number='latest', web3=None):
-        super().__init__(web3)
-        self.block_number = block_number
-        self.contract = get_fertilizer_contract()
-
-    def remaining(self, block_number=None):
-        """Amount of USD still needed to be raised as decimal float."""
-        block_number = block_number or self.block_number
-        return token_to_float(
-            call_contract_function_with_retry(self.contract.functions.remaining(), block_number=block_number),
-            6
-        )
 
 if __name__ == "__main__":
     """Quick test and demonstrate functionality."""

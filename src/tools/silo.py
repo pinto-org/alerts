@@ -20,9 +20,12 @@ def net_deposit_withdrawal_stalk(event_logs, remove_from_logs=False):
     # Determine net deposit/withdraw of each token
     # Sums total bdv/stalk as well
 
-    stem_tips = StemTipCache()
-
     net_deposits = defaultdict(lambda: {"amount": 0, "bdv": 0, "stalk": 0})
+    if len(event_logs) == 0:
+        return net_deposits
+
+    stem_tips = StemTipCache(block_number=event_logs[0].blockNumber)
+
     silo_deposit_logs = get_logs_by_names(["AddDeposit", "RemoveDeposit", "RemoveDeposits"], event_logs)
     for event_log in silo_deposit_logs:
         sign = 1 if event_log.event == "AddDeposit" else -1

@@ -19,8 +19,6 @@ class IntegrationsMonitor(Monitor):
         )
         self.msg_spinto = msg_spinto
         self._eth_event_client = EthEventsClient(EventClientType.INTEGRATIONS)
-        self.spinto_client = WrappedDepositClient(SPINTO_ADDR)
-        self.beanstalk_graph_client = BeanstalkGraphClient()
 
     def _monitor_method(self):
         last_check_time = 0
@@ -48,10 +46,12 @@ class IntegrationsMonitor(Monitor):
 
     def spinto_str(self, event_log):
         bean_client = BeanClient(block_number=event_log.blockNumber)
+        spinto_client = WrappedDepositClient(event_log.address, block_number=event_log.blockNumber)
+        beanstalk_graph_client = BeanstalkGraphClient(block_number=event_log.blockNumber)
 
         event_str = ""
 
-        underlying_asset = self.spinto_client.get_underlying_asset()
+        underlying_asset = spinto_client.get_underlying_asset()
         underlying_info = get_erc20_info(underlying_asset)
         wrapped_info = get_erc20_info(event_log.address)
 
@@ -76,11 +76,11 @@ class IntegrationsMonitor(Monitor):
                 event_str += f"📭 {token_strings[1]} unwrapped to {token_strings[0]}"
                 direction = ["Removed", "📉", "📈", "withdrawn"]
 
-            wrapped_supply = token_to_float(self.spinto_client.get_supply(), wrapped_info.decimals)
-            redeem_rate = token_to_float(self.spinto_client.get_redeem_rate(), underlying_info.decimals)
+            wrapped_supply = token_to_float(spinto_client.get_supply(), wrapped_info.decimals)
+            redeem_rate = token_to_float(spinto_client.get_redeem_rate(), underlying_info.decimals)
 
             deposit_gspbdv = -1 + stalk_to_float(stalk_amount) / pinto_amount
-            total_gspbdv = self.beanstalk_graph_client.get_account_gspbdv(wrapped_info.addr)
+            total_gspbdv = beanstalk_graph_client.get_account_gspbdv(wrapped_info.addr)
             gspbdv_avg_direction = direction[1] if deposit_gspbdv > total_gspbdv else direction[2]
             event_str += (
                 f"\n> _🌱 {gspbdv_avg_direction} New average Grown Stalk per PDV: {round_num(total_gspbdv, precision=4)} "

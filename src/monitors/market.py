@@ -1,3 +1,4 @@
+from data_access.contracts.beanstalk import BeanstalkClient
 import tools
 
 from bots.util import *
@@ -19,7 +20,6 @@ class MarketMonitor(Monitor):
         )
         self._eth_event_client = EthEventsClient(EventClientType.MARKET)
         self.beanstalk_contract = get_beanstalk_contract()
-        self.beanstalk_graph_client = BeanstalkGraphClient()
 
     def _monitor_method(self):
         last_check_time = 0
@@ -59,6 +59,8 @@ class MarketMonitor(Monitor):
         Uses events from Beanstalk contract.
         """
         bean_client = BeanClient(block_number=event_log.blockNumber)
+        beanstalk_client = BeanstalkClient(block_number=event_log.blockNumber)
+        beanstalk_graph_client = BeanstalkGraphClient(block_number=event_log.blockNumber)
 
         event_str = ""
         bean_amount = 0
@@ -95,10 +97,7 @@ class MarketMonitor(Monitor):
         # Absolute index of the first pod to list.
         start_index = plot_index + relative_start_index
         # Current index at start of pod line (number of pods ever harvested).
-        pods_harvested = pods_to_float(
-            # TODO: move this in the client instead
-            call_contract_function_with_retry(self.beanstalk_contract.functions.harvestableIndex(0))
-        )
+        pods_harvested = beanstalk_client.get_harvested_pods()
         # Lowest place in line of a listing.
         start_place_in_line = start_index - pods_harvested
         # Highest place in line an order will purchase.
@@ -131,7 +130,7 @@ class MarketMonitor(Monitor):
         ):
             if event_log.event == "PodListingCancelled":
                 listing_graph_id = event_log.args.get("lister").lower() + "-" + str(event_log.args.get("index"))
-                pod_listing = self.beanstalk_graph_client.get_pod_listing(listing_graph_id)
+                pod_listing = beanstalk_graph_client.get_pod_listing(listing_graph_id)
                 # If this listing did not exist, or was inactive, ignore cancellation.
                 if pod_listing is None or pod_listing["status"] != "ACTIVE":
                     logging.info(
@@ -148,7 +147,7 @@ class MarketMonitor(Monitor):
                 event_str += f"❌ Pod Listing Cancelled"
                 event_str += f" - {pod_amount_str} Pods Listed at {start_place_in_line_str} @ {price_per_pod_str} Pinto/Pod"
             else:
-                pod_order = self.beanstalk_graph_client.get_pod_order(order_id)
+                pod_order = beanstalk_graph_client.get_pod_order(order_id)
                 # If this order did not exist, ignore cancellation.
                 if pod_order is None:
                     logging.info(
@@ -168,7 +167,7 @@ class MarketMonitor(Monitor):
             ):
                 # Check if this plot was already listed before this transaction
                 listing_graph_id = event_log.args.get("lister").lower() + "-" + str(event_log.args.get("index"))
-                pod_listing = self.beanstalk_graph_client.get_pod_listing(listing_graph_id, block_number=event_log['blockNumber'] - 1)
+                pod_listing = beanstalk_graph_client.get_pod_listing(listing_graph_id, block_number=event_log.blockNumber - 1)
                 if pod_listing is not None and pod_listing["status"] == "ACTIVE":
                     event_str += f"♻ Pods re-Listed"
                 else:

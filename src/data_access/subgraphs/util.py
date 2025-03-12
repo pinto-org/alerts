@@ -95,3 +95,8 @@ def client_subgraph_name(client):
         return "Basin"
     else:
         return "unknown"
+
+
+def get_block_query_str(block_number='latest'):
+    """Returns the block part of the query if something other than the latest block is requested"""
+    return f"block: {{number: {block_number}}}" if block_number != 'latest' else ""

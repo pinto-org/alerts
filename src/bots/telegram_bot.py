@@ -16,7 +16,6 @@ from monitors.seasons import SeasonsMonitor
 from monitors.well import WellsMonitor
 from monitors.beanstalk import BeanstalkMonitor
 from monitors.market import MarketMonitor
-from monitors.barn import BarnRaiseMonitor
 from tools.msg_aggregator import MsgAggregator
 from tools.util import embellish_token_emojis
 from tools.webhook_alerts import activate_webhook_on_error_logs
@@ -73,9 +72,6 @@ class TelegramBot(object):
 
         self.market_monitor = MarketMonitor(send_main_chat, prod=prod, dry_run=dry_run)
         self.market_monitor.start()
-
-        # self.barn_raise_monitor = BarnRaiseMonitor(send_all_chat, prod=prod, dry_run=dry_run)
-        # self.barn_raise_monitor.start()
 
     def send_msg_factory(self, aggregators):
         def send_msg(msg, to_main=True, to_tg=True):

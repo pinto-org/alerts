@@ -145,6 +145,7 @@ def safe_get_block(web3, block_number="latest"):
     raise Exception("Failed to safely get block")
 
 
+# TODO: Need to move this into an erc20 client so a default block number can be considered
 def get_erc20_total_supply(addr, decimals):
     """Get the total supply of ERC-20 token in circulation as float."""
     contract = get_erc20_contract(addr)
@@ -167,6 +168,7 @@ class Erc20Info:
 erc20_info_cache = {}
 
 
+# TODO: Need to move this into an erc20 client so a default block number can be considered
 def get_erc20_info(addr):
     """Get the name, symbol, and decimals of an ERC-20 token."""
     addr = addr.lower()
@@ -183,6 +185,7 @@ def get_erc20_info(addr):
     return erc20_info_cache[addr]
 
 
+# TODO: Need to move this into a client so a default block number can be considered
 def get_constant_product_well_lp_bdv(addr):
     """Get the float bdv of 1 LP token in constant product well at addr. Must contain Bean."""
     well_contract = get_well_contract(addr)
