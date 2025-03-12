@@ -1,6 +1,7 @@
 from collections import defaultdict
 from bots.util import *
 from data_access.contracts.beanstalk import BeanstalkClient
+from data_access.contracts.erc20 import get_erc20_info
 from monitors.monitor import Monitor
 from data_access.contracts.util import *
 from data_access.contracts.eth_events import *
@@ -322,7 +323,7 @@ def parse_event_data(event_log, prev_log_index, web3=get_web3_instance()):
     retval.well_price_str = latest_pool_price_str(bean_client, retval.well_address)
     retval.well_liquidity_str = latest_well_lp_str(basin_graph_client, retval.well_address)
     return retval
-    
+
 def single_event_str(event_data: WellEventData, bean_reporting=False, is_convert=False):
     event_str = ""
 

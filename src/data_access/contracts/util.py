@@ -145,46 +145,6 @@ def safe_get_block(web3, block_number="latest"):
     raise Exception("Failed to safely get block")
 
 
-# TODO: Need to move this into an erc20 client so a default block number can be considered
-def get_erc20_total_supply(addr, decimals):
-    """Get the total supply of ERC-20 token in circulation as float."""
-    contract = get_erc20_contract(addr)
-    return token_to_float(
-        call_contract_function_with_retry(contract.functions.totalSupply()), decimals
-    )
-
-class Erc20Info:
-    def __init__(self, addr, name, symbol, decimals):
-        self.addr = addr
-        self.name = name
-        self.symbol = symbol
-        self.decimals = decimals
-
-    def parse(self):
-        return (self.addr, self.name, self.symbol, self.decimals)
-
-
-# Global cache for erc20 info that is static.
-erc20_info_cache = {}
-
-
-# TODO: Need to move this into an erc20 client so a default block number can be considered
-def get_erc20_info(addr):
-    """Get the name, symbol, and decimals of an ERC-20 token."""
-    addr = addr.lower()
-    if addr not in erc20_info_cache:
-        logging.info(f"Querying chain for erc20 token info of {addr}.")
-        contract = get_erc20_contract(addr)
-        name = call_contract_function_with_retry(contract.functions.name())
-        # Use custom in-house Beanstalk Symbol name, if set, otherwise default to on-chain symbol.
-        symbol = SILO_TOKENS_MAP.get(addr) or call_contract_function_with_retry(
-            contract.functions.symbol()
-        )
-        decimals = call_contract_function_with_retry(contract.functions.decimals())
-        erc20_info_cache[addr] = Erc20Info(addr, name, symbol, decimals)
-    return erc20_info_cache[addr]
-
-
 def is_valid_wallet_address(address):
     """Return True is address is a valid ETH address. Else False."""
     if not Web3.isAddress(address):

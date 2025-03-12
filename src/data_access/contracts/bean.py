@@ -43,19 +43,6 @@ class BeanClient(ChainClient):
             pool_dict["lp_bdv"] = pool_info[9]  # LP Token price in BDV
             price_dict["pool_infos"][pool_info[0]] = pool_dict
         return price_dict
-    
-    def get_lp_token_value(self, token_address, decimals, liquidity_long=None, block_number=None):
-        """Return the $/LP token value of an LP token at address as a float."""
-        block_number = block_number or self.block_number
-        if liquidity_long is None:
-            try:
-                liquidity_long = self.get_price_info(block_number=block_number)["pool_infos"][token_address]["liquidity"]
-            # If the LP is not in the price aggregator, we do not know its value.
-            except KeyError:
-                return None
-        liquidity_usd = token_to_float(liquidity_long, 6)
-        token_supply = get_erc20_total_supply(token_address, decimals)
-        return liquidity_usd / token_supply
 
     def avg_bean_price(self, price_info=None, block_number=None):
         """Current float bean price average across LPs from the Bean price oracle contract."""

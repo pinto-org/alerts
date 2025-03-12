@@ -1,6 +1,7 @@
 from abc import abstractmethod
 
 from bots.util import *
+from data_access.contracts.erc20 import get_erc20_total_supply
 from data_access.subgraphs.basin import BasinGraphClient
 from data_access.subgraphs.bean import BeanGraphClient
 from data_access.subgraphs.season_stats import silo_assets_seasonal_changes
@@ -145,7 +146,7 @@ class SeasonsMonitor(Monitor):
 
         ret_string += f'\n⚖️ {"+" if delta_b >= 0 else ""}{round_num(delta_b, 0)} TWAΔP'
 
-        supply = get_erc20_total_supply(BEAN_ADDR, 6)
+        supply = get_erc20_total_supply(BEAN_ADDR)
         ret_string += f"\n🪙 {round_num(supply, precision=0)} Pinto Supply (${round_num(supply * price, precision=0)})"
 
         season_block = self.beanstalk_latest.get_season_block()
