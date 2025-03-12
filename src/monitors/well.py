@@ -228,12 +228,14 @@ class WellsMonitor(Monitor):
                     self.msg_arbitrage(event_str, to_tg=to_tg)
 
 def parse_event_data(event_log, prev_log_index, web3=get_web3_instance()):
+    beanstalk_client = BeanstalkClient(block_number=event_log.blockNumber)
     bean_client = BeanClient(block_number=event_log.blockNumber)
     basin_graph_client = BasinGraphClient(block_number=event_log.blockNumber)
+    well_client = WellClient(event_log.address)
 
     retval = WellEventData()
     retval.receipt = event_log.receipt
-    retval.well_address = event_log.get("address")
+    retval.well_address = event_log.address
 
     # Parse possible values of interest from the event log. Not all will be populated.
     # Liquidity
@@ -249,7 +251,6 @@ def parse_event_data(event_log, prev_log_index, web3=get_web3_instance()):
     retval.amount_in = event_log.args.get("amountIn")
     retval.amount_out = event_log.args.get("amountOut")
 
-    well_client = WellClient(retval.well_address)
     retval.well_tokens = well_client.tokens()
 
     if event_log.event == "AddLiquidity":
@@ -260,7 +261,7 @@ def parse_event_data(event_log, prev_log_index, web3=get_web3_instance()):
 
         retval.event_type = "LP"
         retval.token_amounts_in = tokenAmountsIn
-        retval.bdv = token_to_float(lpAmountOut, WELL_LP_DECIMALS) * get_constant_product_well_lp_bdv(retval.well_address)
+        retval.bdv = token_to_float(lpAmountOut, WELL_LP_DECIMALS) * beanstalk_client.get_bdv(retval.well_address)
     elif event_log.event == "Sync":
         retval.event_type = "LP"
         deposit = basin_graph_client.get_add_liquidity_info(event_log.transactionHash, event_log.logIndex)
@@ -269,9 +270,7 @@ def parse_event_data(event_log, prev_log_index, web3=get_web3_instance()):
             retval.value = float(deposit["transferVolumeUSD"])
         else:
             # Redundancy in case subgraph is not available
-            retval.bdv = token_to_float(
-                lpAmountOut, WELL_LP_DECIMALS
-            ) * get_constant_product_well_lp_bdv(retval.well_address)
+            retval.bdv = token_to_float(lpAmountOut, WELL_LP_DECIMALS) * beanstalk_client.get_bdv(retval.well_address)
     elif event_log.event == "RemoveLiquidity" or event_log.event == "RemoveLiquidityOneToken":
         retval.event_type = "LP"
         if event_log.event == "RemoveLiquidityOneToken":
@@ -284,7 +283,7 @@ def parse_event_data(event_log, prev_log_index, web3=get_web3_instance()):
         else:
             retval.token_amounts_out = tokenAmountsOut
 
-        retval.bdv = token_to_float(lpAmountIn, WELL_LP_DECIMALS) * get_constant_product_well_lp_bdv(retval.well_address)
+        retval.bdv = token_to_float(lpAmountIn, WELL_LP_DECIMALS) * beanstalk_client.get_bdv(retval.well_address)
     elif event_log.event == "Swap":
         retval.event_type = "SWAP"
         if retval.token_in == BEAN_ADDR:

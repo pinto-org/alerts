@@ -3,6 +3,7 @@ from abc import abstractmethod
 from bots.util import *
 from data_access.subgraphs.basin import BasinGraphClient
 from data_access.subgraphs.bean import BeanGraphClient
+from data_access.subgraphs.season_stats import silo_assets_seasonal_changes
 from monitors.monitor import Monitor
 from data_access.contracts.util import *
 from data_access.contracts.eth_events import *
@@ -132,12 +133,8 @@ class SeasonsMonitor(Monitor):
         # Uses bdv/stalk from 2 seasons prior as it tracks the value at the end of each season
         prev_silo_bdv = sg.beanstalks[2].deposited_bdv
         prev_silo_stalk = sg.beanstalks[2].stalk
-        silo_assets_changes = self.beanstalk_graph_latest.silo_assets_seasonal_changes(
-            sg.beanstalks[0].pre_assets, sg.beanstalks[1].pre_assets
-        )
-        silo_assets_changes.sort(
-            key=lambda a: int(a.final_season_asset["depositedBDV"]), reverse=True
-        )
+        silo_assets_changes = silo_assets_seasonal_changes(sg.beanstalks[0].pre_assets, sg.beanstalks[1].pre_assets)
+        silo_assets_changes.sort(key=lambda a: int(a.final_season_asset["depositedBDV"]), reverse=True)
 
         new_season = sg.beanstalks[0].season
         ret_string = f"⏱ Season {new_season} has started!"

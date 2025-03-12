@@ -185,20 +185,6 @@ def get_erc20_info(addr):
     return erc20_info_cache[addr]
 
 
-# TODO: Need to move this into a client so a default block number can be considered
-def get_constant_product_well_lp_bdv(addr):
-    """Get the float bdv of 1 LP token in constant product well at addr. Must contain Bean."""
-    well_contract = get_well_contract(addr)
-    total_supply = token_to_float(
-        call_contract_function_with_retry(well_contract.functions.totalSupply()), WELL_LP_DECIMALS
-    )
-    bean_contract = get_bean_contract()
-    total_bdv = 2 * token_to_float(
-        call_contract_function_with_retry(bean_contract.functions.balanceOf(addr)), BEAN_DECIMALS
-    )
-    return total_bdv / total_supply
-
-
 def is_valid_wallet_address(address):
     """Return True is address is a valid ETH address. Else False."""
     if not Web3.isAddress(address):

@@ -1,3 +1,4 @@
+from data_access.subgraphs.season_stats import BeanSeasonStats
 from gql import Client
 from gql.transport.aiohttp import AIOHTTPTransport
 
@@ -45,7 +46,7 @@ class BeanGraphClient(object):
             }}
         """
         return execute(self.get_client(), query_str)["beanCrosses"]
-    
+
     def season_stats(self, num_seasons=2, block_number=None):
         query_str = f"""
             query {{
@@ -70,17 +71,6 @@ class BeanGraphClient(object):
         result = execute(self.get_client(), query_str)
         # Return list of BeanSeasonStats class instances
         return [BeanSeasonStats(result, i) for i in range(len(result["beanHourlySnapshots"]))]
-
-class BeanSeasonStats:
-    def __init__(self, graph_response, result_index):
-        bean_hourly = graph_response["beanHourlySnapshots"][result_index]
-        self.season = int(bean_hourly["season"]["season"])
-        self.price = float(bean_hourly["instPrice"])
-        self.supply = int(bean_hourly["supply"]) / 10 ** 6
-        self.marketCap = float(bean_hourly["marketCap"])
-        self.l2sr = float(bean_hourly["l2sr"])
-        self.crosses = int(bean_hourly["crosses"])
-        self.deltaCrosses = int(bean_hourly["deltaCrosses"])
 
 if __name__ == "__main__":
     """Quick test and demonstrate functionality."""

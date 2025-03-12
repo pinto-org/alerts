@@ -74,9 +74,10 @@ class BeanstalkClient(ChainClient):
         token_settings = call_contract_function_with_retry(self.contract.functions.tokenSettings(token), block_number=block_number)
         return token_settings[1] / 10 ** 6
 
-    def get_bdv(self, erc20_info, block_number=None):
-        """Returns the current bdv `token`."""
+    def get_bdv(self, token, block_number=None):
+        """Returns the current bdv of `token`."""
         block_number = block_number or self.block_number
+        erc20_info = get_erc20_info(token)
         token = Web3.to_checksum_address(erc20_info.addr)
         bdv = call_contract_function_with_retry(self.contract.functions.bdv(token, 10 ** erc20_info.decimals), block_number=block_number)
         return bean_to_float(bdv)
