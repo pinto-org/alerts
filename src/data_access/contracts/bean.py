@@ -7,7 +7,7 @@ class BeanClient(ChainClient):
 
     def __init__(self, web3=None):
         super().__init__(web3)
-        self.price_contract = get_bean_price_contract(self._web3)
+        self.price_contract = get_bean_price_contract()
 
     def get_price_info(self):
         """Get all pricing info from oracle.

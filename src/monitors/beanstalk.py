@@ -25,7 +25,7 @@ class BeanstalkMonitor(Monitor):
         self._eth_event_client = EthEventsClient(EventClientType.BEANSTALK)
         self.bean_client = BeanClient()
         self.beanstalk_client = BeanstalkClient()
-        self.beanstalk_contract = get_beanstalk_contract(self._web3)
+        self.beanstalk_contract = get_beanstalk_contract()
 
     def _monitor_method(self):
         last_check_time = 0
@@ -207,13 +207,9 @@ class BeanstalkMonitor(Monitor):
                 value = bdv_float * bean_price
             elif event_log.event == "Convert":
                 remove_token_addr = event_log.args.get("fromToken")
-                _, _, remove_token_symbol, remove_decimals = get_erc20_info(
-                    remove_token_addr, web3=self._web3
-                ).parse()
+                _, _, remove_token_symbol, remove_decimals = get_erc20_info(remove_token_addr).parse()
                 add_token_addr = event_log.args.get("toToken")
-                _, _, add_token_symbol, add_decimals = get_erc20_info(
-                    add_token_addr, web3=self._web3
-                ).parse()
+                _, _, add_token_symbol, add_decimals = get_erc20_info(add_token_addr).parse()
                 remove_amount = event_log.args.get("fromAmount")
                 add_amount = event_log.args.get("toAmount")
 

@@ -52,61 +52,55 @@ class ChainClient:
         self._web3 = web3 or get_web3_instance()
         
 
+web3_instance = Web3(HTTPProvider(RPC_URL))
 def get_web3_instance():
     """Get an instance of web3 lib."""
-    # # NOTE(funderberker): LOCAL TESTING (uses http due to local network constraints).
-    # return Web3(HTTPProvider(LOCAL_TESTING_URL))
-    # NOTE(funderberker): We are using websockets but we are not using any continuous watching
-    # functionality. Monitoring is done through periodic get_new_events calls.
-    # return Web3(WebsocketProvider(URL, websocket_timeout=60))
-    return Web3(HTTPProvider(RPC_URL))
+    return web3_instance
 
 
-def get_well_contract(web3, address):
+def get_well_contract(address, web3=get_web3_instance()):
     """Get a web.eth.contract object for a well. Contract is not thread safe."""
     return web3.eth.contract(address=address, abi=well_abi)
 
 
-def get_aquifer_contract(web3):
+def get_aquifer_contract(web3=get_web3_instance()):
     """Get a web.eth.contract object for the aquifer. Contract is not thread safe."""
     return web3.eth.contract(address=AQUIFER_ADDR, abi=aquifer_abi)
 
 
-def get_wrapped_silo_contract(addr, web3):
+def get_wrapped_silo_contract(addr, web3=get_web3_instance()):
     """Get a web.eth.contract object for the requested wrapped silo token. Contract is not thread safe."""
     return web3.eth.contract(address=addr, abi=wrapped_silo_erc20_abi)
 
 
-def get_bean_contract(web3):
+def get_bean_contract(web3=get_web3_instance()):
     """Get a web.eth.contract object for the Bean token contract. Contract is not thread safe."""
     return web3.eth.contract(address=BEAN_ADDR, abi=erc20_abi)
 
 
-def get_beanstalk_contract(web3):
+def get_beanstalk_contract(web3=get_web3_instance()):
     """Get a web.eth.contract object for the Beanstalk contract. Contract is not thread safe."""
     return web3.eth.contract(address=BEANSTALK_ADDR, abi=beanstalk_abi)
 
 
-def get_bean_price_contract(web3):
+def get_bean_price_contract(web3=get_web3_instance()):
     """Get a web.eth.contract object for the Bean price contract. Contract is not thread safe."""
     return web3.eth.contract(address=BEANSTALK_PRICE_ADDR, abi=bean_price_abi)
 
 
-def get_fertilizer_contract(web3):
+def get_fertilizer_contract(web3=get_web3_instance()):
     """Get a web.eth.contract object for the Barn Raise Fertilizer contract. Contract is not thread safe."""
     return web3.eth.contract(address=FERTILIZER_ADDR, abi=fertilizer_abi)
 
 
-def get_erc20_contract(web3, address):
+def get_erc20_contract(address, web3=get_web3_instance()):
     """Get a web3.eth.contract object for a standard ERC20 token contract."""
-    # Ignore checksum requirement.
     address = web3.toChecksumAddress(address.lower())
     return web3.eth.contract(address=address, abi=erc20_abi)
 
 
-def get_erc1155_contract(web3, address):
+def get_erc1155_contract(address, web3=get_web3_instance()):
     """Get a web3.eth.contract object for a standard ERC1155 token contract."""
-    # Ignore checksum requirement.
     address = web3.toChecksumAddress(address.lower())
     return web3.eth.contract(address=address, abi=erc1155_abi)
 
@@ -151,11 +145,9 @@ def safe_get_block(web3, block_number="latest"):
     raise Exception("Failed to safely get block")
 
 
-def get_erc20_total_supply(addr, decimals, web3=None):
+def get_erc20_total_supply(addr, decimals):
     """Get the total supply of ERC-20 token in circulation as float."""
-    if not web3:
-        web3 = get_web3_instance()
-    contract = get_erc20_contract(web3, address=addr)
+    contract = get_erc20_contract(addr)
     return token_to_float(
         call_contract_function_with_retry(contract.functions.totalSupply()), decimals
     )
@@ -175,15 +167,12 @@ class Erc20Info:
 erc20_info_cache = {}
 
 
-def get_erc20_info(addr, web3=None):
+def get_erc20_info(addr):
     """Get the name, symbol, and decimals of an ERC-20 token."""
     addr = addr.lower()
     if addr not in erc20_info_cache:
         logging.info(f"Querying chain for erc20 token info of {addr}.")
-        if not web3:
-            web3 = get_web3_instance()
-        # addr = web3.toChecksumAddress(addr)
-        contract = get_erc20_contract(web3, address=addr)
+        contract = get_erc20_contract(addr)
         name = call_contract_function_with_retry(contract.functions.name())
         # Use custom in-house Beanstalk Symbol name, if set, otherwise default to on-chain symbol.
         symbol = SILO_TOKENS_MAP.get(addr) or call_contract_function_with_retry(
@@ -194,15 +183,13 @@ def get_erc20_info(addr, web3=None):
     return erc20_info_cache[addr]
 
 
-def get_constant_product_well_lp_bdv(addr, web3=None):
+def get_constant_product_well_lp_bdv(addr):
     """Get the float bdv of 1 LP token in constant product well at addr. Must contain Bean."""
-    if not web3:
-        web3 = get_web3_instance()
-    well_contract = get_well_contract(web3, addr)
+    well_contract = get_well_contract(addr)
     total_supply = token_to_float(
         call_contract_function_with_retry(well_contract.functions.totalSupply()), WELL_LP_DECIMALS
     )
-    bean_contract = get_bean_contract(web3)
+    bean_contract = get_bean_contract()
     total_bdv = 2 * token_to_float(
         call_contract_function_with_retry(bean_contract.functions.balanceOf(addr)), BEAN_DECIMALS
     )

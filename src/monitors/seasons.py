@@ -275,9 +275,7 @@ class SeasonsMonitor(Monitor):
             #     seeds_prev = seed_results[2*i + 1]
 
             #     ret_string += f"\n"
-            #     _, _, token_symbol, decimals = get_erc20_info(
-            #         asset_changes.token, web3=self._web3
-            #     ).parse()
+            #     _, _, token_symbol, decimals = get_erc20_info(asset_changes.token).parse()
             #     delta_asset = token_to_float(asset_changes.delta_asset, decimals)
             #     delta_seeds = seeds_now - seeds_prev
             #     # Asset BDV at final season end, deduced from subgraph data.

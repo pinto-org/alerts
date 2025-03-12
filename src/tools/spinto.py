@@ -1,5 +1,5 @@
 from constants.addresses import SPINTO_ADDR
-from data_access.contracts.util import get_beanstalk_contract, get_web3_instance, get_wrapped_silo_contract
+from data_access.contracts.util import get_beanstalk_contract, get_wrapped_silo_contract
 from tools.silo import StemTipCache, net_erc1155_transfers, unpack_address_and_stem
 from web3.logs import DISCARD
 
@@ -10,7 +10,7 @@ def spinto_deposit_info(wrapped_info, owner, event_log):
     on the deposit which was added/removed to spinto
     """
 
-    beanstalk_contract = get_beanstalk_contract(get_web3_instance())
+    beanstalk_contract = get_beanstalk_contract()
 
     stalk = 0
     stem_tips = StemTipCache()
@@ -57,7 +57,7 @@ def spinto_deposit_info(wrapped_info, owner, event_log):
 
 def has_spinto_action_size(receipt, amount):
     """Returns true if the given transaction receipt contains a spinto deposit/withdraw of the given size"""
-    spinto_contract = get_wrapped_silo_contract(SPINTO_ADDR, get_web3_instance())
+    spinto_contract = get_wrapped_silo_contract(SPINTO_ADDR)
 
     def sum_assets(events):
         retval = 0

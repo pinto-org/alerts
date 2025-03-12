@@ -244,45 +244,45 @@ class EthEventsClient:
         self._web3 = get_web3_instance()
         self._event_client_type = event_client_type
         if self._event_client_type == EventClientType.AQUIFER:
-            self._contracts = [get_aquifer_contract(self._web3)]
+            self._contracts = [get_aquifer_contract()]
             self._contract_addresses = [AQUIFER_ADDR]
             self._events_dict = AQUIFER_EVENT_MAP
             self._signature_list = AQUIFER_SIGNATURES_LIST
         elif self._event_client_type == EventClientType.WELL:
-            self._contracts = [get_well_contract(self._web3, None)]
+            self._contracts = [get_well_contract(None)]
             self._contract_addresses = addresses
             self._events_dict = WELL_EVENT_MAP
             self._signature_list = WELL_SIGNATURES_LIST
         elif self._event_client_type == EventClientType.BEANSTALK:
             self._contracts = [
-                get_beanstalk_contract(self._web3)
-                # get_fertilizer_contract(self._web3),
+                get_beanstalk_contract()
+                # get_fertilizer_contract(),
             ]
             self._contract_addresses = [BEANSTALK_ADDR] #, FERTILIZER_ADDR
             self._events_dict = BEANSTALK_EVENT_MAP
             self._signature_list = BEANSTALK_SIGNATURES_LIST
         elif self._event_client_type == EventClientType.SEASON:
-            self._contracts = [get_beanstalk_contract(self._web3)]
+            self._contracts = [get_beanstalk_contract()]
             self._contract_addresses = [BEANSTALK_ADDR]
             self._events_dict = SEASON_EVENT_MAP
             self._signature_list = SEASON_SIGNATURES_LIST
         elif self._event_client_type == EventClientType.MARKET:
-            self._contracts = [get_beanstalk_contract(self._web3)]
+            self._contracts = [get_beanstalk_contract()]
             self._contract_addresses = [BEANSTALK_ADDR]
             self._events_dict = MARKET_EVENT_MAP
             self._signature_list = MARKET_SIGNATURES_LIST
         elif self._event_client_type == EventClientType.BARN_RAISE:
-            self._contracts = [get_fertilizer_contract(self._web3), get_beanstalk_contract(self._web3)]
+            self._contracts = [get_fertilizer_contract(), get_beanstalk_contract()]
             self._contract_addresses = [FERTILIZER_ADDR, BEANSTALK_ADDR]
             self._events_dict = FERTILIZER_EVENT_MAP
             self._signature_list = FERTILIZER_SIGNATURES_LIST
         elif self._event_client_type == EventClientType.CONTRACT_MIGRATED:
-            self._contracts = [get_beanstalk_contract(self._web3)]
+            self._contracts = [get_beanstalk_contract()]
             self._contract_addresses = [BEANSTALK_ADDR]
             self._events_dict = CONTRACTS_MIGRATED_EVENT_MAP
             self._signature_list = CONTRACTS_MIGRATED_SIGNATURES_LIST
         elif self._event_client_type == EventClientType.INTEGRATIONS:
-            self._contracts = [get_wrapped_silo_contract(SPINTO_ADDR, self._web3)]
+            self._contracts = [get_wrapped_silo_contract(SPINTO_ADDR)]
             self._contract_addresses = [SPINTO_ADDR]
             self._events_dict = INTEGRATIONS_EVENT_MAP
             self._signature_list = INTEGRATIONS_SIGNATURES_LIST

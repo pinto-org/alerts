@@ -19,8 +19,8 @@ class MarketMonitor(Monitor):
         )
         self._eth_event_client = EthEventsClient(EventClientType.MARKET)
         self.bean_client = BeanClient(self._web3)
-        self.bean_contract = get_bean_contract(self._web3)
-        self.beanstalk_contract = get_beanstalk_contract(self._web3)
+        self.bean_contract = get_bean_contract()
+        self.beanstalk_contract = get_beanstalk_contract()
         self.beanstalk_graph_client = BeanstalkGraphClient()
 
     def _monitor_method(self):

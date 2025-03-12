@@ -266,9 +266,7 @@ def parse_event_data(event_log, prev_log_index, basin_graph_client, bean_client,
 
         retval.event_type = "LP"
         retval.token_amounts_in = tokenAmountsIn
-        retval.bdv = token_to_float(lpAmountOut, WELL_LP_DECIMALS) * get_constant_product_well_lp_bdv(
-            retval.well_address, web3=web3
-        )
+        retval.bdv = token_to_float(lpAmountOut, WELL_LP_DECIMALS) * get_constant_product_well_lp_bdv(retval.well_address)
     elif event_log.event == "Sync":
         retval.event_type = "LP"
         deposit = basin_graph_client.get_add_liquidity_info(
@@ -281,7 +279,7 @@ def parse_event_data(event_log, prev_log_index, basin_graph_client, bean_client,
             # Redundancy in case subgraph is not available
             retval.bdv = token_to_float(
                 lpAmountOut, WELL_LP_DECIMALS
-            ) * get_constant_product_well_lp_bdv(retval.well_address, web3=web3)
+            ) * get_constant_product_well_lp_bdv(retval.well_address)
     elif event_log.event == "RemoveLiquidity" or event_log.event == "RemoveLiquidityOneToken":
         retval.event_type = "LP"
         if event_log.event == "RemoveLiquidityOneToken":
@@ -294,9 +292,7 @@ def parse_event_data(event_log, prev_log_index, basin_graph_client, bean_client,
         else:
             retval.token_amounts_out = tokenAmountsOut
 
-        retval.bdv = token_to_float(lpAmountIn, WELL_LP_DECIMALS) * get_constant_product_well_lp_bdv(
-            retval.well_address, web3=web3
-        )
+        retval.bdv = token_to_float(lpAmountIn, WELL_LP_DECIMALS) * get_constant_product_well_lp_bdv(retval.well_address)
     elif event_log.event == "Swap":
         retval.event_type = "SWAP"
         if retval.token_in == BEAN_ADDR:

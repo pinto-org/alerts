@@ -6,7 +6,7 @@ class WellClient(ChainClient):
     def __init__(self, address, web3=None):
         super().__init__(web3)
         self.address = address
-        self.contract = get_well_contract(self._web3, address)
+        self.contract = get_well_contract(address)
 
     def tokens(self, web3=None):
         """Returns a list of ERC20 tokens supported by the Well."""

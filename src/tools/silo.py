@@ -52,7 +52,7 @@ def net_deposit_withdrawal_stalk(event_logs, remove_from_logs=False):
 
 def net_erc1155_transfers(token, owner, receipt):
     """Returns the net transfer amount of token from/to owner in the given transaction"""
-    erc1155_contract = get_erc1155_contract(get_web3_instance(), token)
+    erc1155_contract = get_erc1155_contract(token)
 
     event_names = ["TransferSingle", "TransferBatch"]
     all_events = []

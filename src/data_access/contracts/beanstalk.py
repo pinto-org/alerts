@@ -6,7 +6,7 @@ class BeanstalkClient(ChainClient):
 
     def __init__(self, web3=None):
         super().__init__(web3)
-        self.contract = get_beanstalk_contract(self._web3)
+        self.contract = get_beanstalk_contract()
 
     def get_season(self):
         """Get current season."""
@@ -102,7 +102,7 @@ class BarnRaiseClient(ChainClient):
 
     def __init__(self, web3=None):
         super().__init__(web3)
-        self.contract = get_fertilizer_contract(self._web3)
+        self.contract = get_fertilizer_contract()
 
     def remaining(self):
         """Amount of USD still needed to be raised as decimal float."""
