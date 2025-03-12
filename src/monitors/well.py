@@ -47,17 +47,15 @@ class WellEventData:
 
 # Monitors all wells except those in the ignorelist
 class OtherWellsMonitor(Monitor):
-    def __init__(self, msg_exchange, msg_arbitrage, ignorelist, discord=False, prod=False, dry_run=None):
+    def __init__(self, msg_exchange, msg_arbitrage, ignorelist, prod=False, dry_run=None):
         super().__init__("wells", None, WELL_CHECK_RATE, prod=prod, dry_run=dry_run)
         self.msg_exchange = msg_exchange
         self.msg_arbitrage = msg_arbitrage
         self._ignorelist = ignorelist
-        self._discord = discord
         self._eth_aquifer = EthEventsClient(EventClientType.AQUIFER, AQUIFER_ADDR)
         # All addresses
         self._eth_all_wells = EthEventsClient(EventClientType.WELL)
         self.basin_graph_client = BasinGraphClient()
-        self.beanstalk_client = BeanstalkClient()
         self.bean_client = BeanClient()
     
     def _monitor_method(self):
@@ -125,7 +123,6 @@ class WellsMonitor(Monitor):
         self._eth_event_client = EthEventsClient(EventClientType.WELL, self.pool_addresses)
         self.basin_graph_client = BasinGraphClient()
         self.bean_client = BeanClient()
-        self.beanstalk_client = BeanstalkClient()
         self.bean_reporting = bean_reporting
 
     def _monitor_method(self):
@@ -190,7 +187,7 @@ class WellsMonitor(Monitor):
         # light pinto profits into their trading contract.
         if trades >= 2 and sum_pinto / abs_sum_pinto < 0.001:
             # This trade is pure arbitrage and can be consolidated into a single message
-            event_str = pure_arbitrage_event_str(individual_evts, self.beanstalk_client)
+            event_str = pure_arbitrage_event_str(individual_evts)
             self.msg_arbitrage(event_str, to_tg=to_tg)
             return
 
@@ -209,7 +206,7 @@ class WellsMonitor(Monitor):
                 ):
                     del individual_evts[j]
                     del individual_evts[i]
-                    event_str = arbitrage_event_str(evt1, evt2, self.beanstalk_client)
+                    event_str = arbitrage_event_str(evt1, evt2)
                     self.msg_arbitrage(event_str, to_tg=to_tg)
                     break
                 # Moving LP (LP convert): LP removal that is followed by LP addition
@@ -236,7 +233,7 @@ class WellsMonitor(Monitor):
                 else:
                     self.msg_arbitrage(event_str, to_tg=to_tg)
 
-def parse_event_data(event_log, prev_log_index, basin_graph_client, bean_client, web3=None):
+def parse_event_data(event_log, prev_log_index, basin_graph_client, bean_client, web3=get_web3_instance()):
     retval = WellEventData()
     retval.receipt = event_log.receipt
     retval.well_address = event_log.get("address")
@@ -416,13 +413,15 @@ def single_event_str(event_data: WellEventData, bean_reporting=False, is_convert
     event_str += links_footer(event_data.receipt)
     return event_str
 
-def pure_arbitrage_event_str(all_events: List[WellEventData], beanstalk_client: BeanstalkClient):
+def pure_arbitrage_event_str(all_events: List[WellEventData]):
     event_str = ""
     from_strs = []
     to_strs = []
     sum_bean = 0
     dollars_in = 0
     dollars_out = 0
+
+    beanstalk_client = BeanstalkClient(block_number=all_events[0].receipt.blockNumber)
 
     # Sum totals of non-bean tokens in each well (the same well could be swapped in multiple times)
     from_tokens = defaultdict(int)
@@ -469,8 +468,10 @@ def pure_arbitrage_event_str(all_events: List[WellEventData], beanstalk_client: 
     event_str += links_footer(all_events[0].receipt)
     return event_str
 
-def arbitrage_event_str(evt1: WellEventData, evt2: WellEventData, beanstalk_client: BeanstalkClient):
+def arbitrage_event_str(evt1: WellEventData, evt2: WellEventData):
     event_str = ""
+
+    beanstalk_client = BeanstalkClient(block_number=evt1.receipt.blockNumber)
 
     erc20_info_in = get_erc20_info(evt1.token_in)
     erc20_info_out = get_erc20_info(evt2.token_out)

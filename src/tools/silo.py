@@ -8,13 +8,12 @@ from data_access.contracts.util import get_erc1155_contract, get_web3_instance
 
 class StemTipCache(object):
     def __init__(self, block_number='latest'):
-        self.beanstalk_client = BeanstalkClient()
+        self.beanstalk_client = BeanstalkClient(block_number=block_number)
         self.stem_tips = {}
-        self.block_number = block_number
 
     def get_stem_tip(self, token):
         if token not in self.stem_tips:
-            self.stem_tips[token] = self.beanstalk_client.get_stem_tip(token, block_number=self.block_number)
+            self.stem_tips[token] = self.beanstalk_client.get_stem_tip(token)
         return self.stem_tips[token]
 
 def net_deposit_withdrawal_stalk(event_logs, remove_from_logs=False):

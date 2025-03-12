@@ -4,82 +4,99 @@ from data_access.contracts.eth_events import *
 class BeanstalkClient(ChainClient):
     """Common functionality related to the Beanstalk contract."""
 
-    def __init__(self, web3=None):
+    def __init__(self, block_number='latest', web3=None):
         super().__init__(web3)
+        self.block_number = block_number
         self.contract = get_beanstalk_contract()
 
-    def get_season(self):
+    def get_season(self, block_number=None):
         """Get current season."""
-        return call_contract_function_with_retry(self.contract.functions.season())
+        block_number = block_number or self.block_number
+        return call_contract_function_with_retry(self.contract.functions.season(), block_number=block_number)
     
-    def is_raining(self, block_number='latest'):
+    def is_raining(self, block_number=None):
         """Returns true if the system is currently Raining."""
+        block_number = block_number or self.block_number
         season_struct = call_contract_function_with_retry(self.contract.functions.getSeasonStruct(), block_number=block_number)
         return season_struct[4]
 
-    def get_max_temp(self):
+    def get_max_temp(self, block_number=None):
         """Gets the current max temperature"""
-        return call_contract_function_with_retry(self.contract.functions.maxTemperature()) / 10 ** 6
+        block_number = block_number or self.block_number
+        return call_contract_function_with_retry(self.contract.functions.maxTemperature(), block_number=block_number) / 10 ** 6
 
-    def get_current_soil(self):
+    def get_current_soil(self, block_number=None):
         """Gets the current soil in the field"""
-        return call_contract_function_with_retry(self.contract.functions.totalSoil()) / 10 ** 6
+        block_number = block_number or self.block_number
+        return call_contract_function_with_retry(self.contract.functions.totalSoil(), block_number=block_number) / 10 ** 6
 
-    def get_total_stalk(self):
+    def get_total_stalk(self, block_number=None):
         """Gets the total stalk in the silo"""
-        return stalk_to_float(call_contract_function_with_retry(self.contract.functions.totalStalk()))
+        block_number = block_number or self.block_number
+        return stalk_to_float(call_contract_function_with_retry(self.contract.functions.totalStalk(), block_number=block_number))
 
-    def get_season_block(self):
+    def get_season_block(self, block_number=None):
         """Get the block in which the latest season started"""
-        return call_contract_function_with_retry(self.contract.functions.sunriseBlock())
+        block_number = block_number or self.block_number
+        return call_contract_function_with_retry(self.contract.functions.sunriseBlock(), block_number=block_number)
 
-    def get_total_deposited_beans(self):
+    def get_total_deposited_beans(self, block_number=None):
         """Get current total deposited Beans in the Silo."""
+        block_number = block_number or self.block_number
         return bean_to_float(
-            call_contract_function_with_retry(self.contract.functions.totalDepositedBeans())
+            call_contract_function_with_retry(self.contract.functions.totalDepositedBeans(), block_number=block_number)
         )
 
-    def get_total_deposited(self, address, decimals):
+    def get_total_deposited(self, address, decimals, block_number=None):
         """Return the total deposited of the token at address as a float."""
+        block_number = block_number or self.block_number
         return token_to_float(
-            call_contract_function_with_retry(self.contract.functions.getTotalDeposited(address)),
-            decimals,
+            call_contract_function_with_retry(self.contract.functions.getTotalDeposited(address), block_number=block_number),
+            decimals
         )
 
-    def get_recap_funded_percent(self):
+    def get_recap_funded_percent(self, block_number=None):
         """Return the % of target funds that have already been funded via fertilizer sales."""
         # Note that % recap is same for all unripe tokens.
+        block_number = block_number or self.block_number
         return token_to_float(
             call_contract_function_with_retry(
-                self.contract.functions.getRecapFundedPercent(UNRIPE_LP_ADDR)
+                self.contract.functions.getRecapFundedPercent(UNRIPE_LP_ADDR),
+                block_number=block_number
             ),
-            6,
+            6
         )
 
-    def get_seeds(self, token, block_number='latest'):
+    def get_seeds(self, token, block_number=None):
         """Returns the current amount of Seeds awarded for depositing `token` in the silo."""
+        block_number = block_number or self.block_number
         token = Web3.to_checksum_address(token)
         token_settings = call_contract_function_with_retry(self.contract.functions.tokenSettings(token), block_number=block_number)
         return token_settings[1] / 10 ** 6
 
-    def get_bdv(self, erc20_info, block_number='latest'):
+    def get_bdv(self, erc20_info, block_number=None):
         """Returns the current bdv `token`."""
+        block_number = block_number or self.block_number
         token = Web3.to_checksum_address(erc20_info.addr)
         bdv = call_contract_function_with_retry(self.contract.functions.bdv(token, 10 ** erc20_info.decimals), block_number=block_number)
         return bean_to_float(bdv)
     
-    def get_stem_tip(self, token, block_number='latest'):
+    def get_stem_tip(self, token, block_number=None):
+        block_number = block_number or self.block_number
         return call_contract_function_with_retry(self.contract.functions.stemTipForToken(token), block_number=block_number)
 
-    def get_token_usd_price(self, token_addr, block_number='latest'):
+    def get_token_usd_price(self, token_addr, block_number=None):
+        block_number = block_number or self.block_number
         response = call_contract_function_with_retry(self.contract.functions.getTokenUsdPrice(token_addr), block_number=block_number)
         return float(response / 10**6)
     
-    def get_token_usd_twap(self, token_addr, lookback, block_number='latest'):
+    def get_token_usd_twap(self, token_addr, lookback, block_number=None):
+        block_number = block_number or self.block_number
         response = call_contract_function_with_retry(self.contract.functions.getTokenUsdTwap(token_addr, lookback), block_number=block_number)
         return float(response / 10**6)
 
-    def get_podline_length(self, field_id=0, block_number='latest'):
+    def get_podline_length(self, field_id=0, block_number=None):
+        block_number = block_number or self.block_number
         pod_index = call_contract_function_with_retry(self.contract.functions.podIndex(field_id), block_number=block_number)
         harvestable_index = call_contract_function_with_retry(self.contract.functions.harvestableIndex(field_id), block_number=block_number)
         return bean_to_float(pod_index - harvestable_index)
@@ -100,22 +117,18 @@ class BeanstalkClient(ChainClient):
 class BarnRaiseClient(ChainClient):
     """Common functionality related to the Barn Raise Fertilizer contract."""
 
-    def __init__(self, web3=None):
+    def __init__(self, block_number='latest', web3=None):
         super().__init__(web3)
+        self.block_number = block_number
         self.contract = get_fertilizer_contract()
 
-    def remaining(self):
+    def remaining(self, block_number=None):
         """Amount of USD still needed to be raised as decimal float."""
-        return token_to_float(call_contract_function_with_retry(self.contract.functions.remaining()), 6)
-
-    # def purchased(self):
-    #     """Amount of fertilizer that has been purchased.
-
-    #     Note that this is not the same as amount 'raised', since forfeit silo assets contribute
-    #     to the raised amount.
-    #     """
-    #     return self.token_contract
-
+        block_number = block_number or self.block_number
+        return token_to_float(
+            call_contract_function_with_retry(self.contract.functions.remaining(), block_number=block_number),
+            6
+        )
 
 if __name__ == "__main__":
     """Quick test and demonstrate functionality."""

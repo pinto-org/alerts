@@ -18,8 +18,7 @@ class MarketMonitor(Monitor):
             "Market", message_function, BEANSTALK_CHECK_RATE, prod=prod, dry_run=dry_run
         )
         self._eth_event_client = EthEventsClient(EventClientType.MARKET)
-        self.bean_client = BeanClient(self._web3)
-        self.bean_contract = get_bean_contract()
+        self.bean_client = BeanClient()
         self.beanstalk_contract = get_beanstalk_contract()
         self.beanstalk_graph_client = BeanstalkGraphClient()
 
@@ -96,6 +95,7 @@ class MarketMonitor(Monitor):
         start_index = plot_index + relative_start_index
         # Current index at start of pod line (number of pods ever harvested).
         pods_harvested = pods_to_float(
+            # TODO: move this in the client instead
             call_contract_function_with_retry(self.beanstalk_contract.functions.harvestableIndex(0))
         )
         # Lowest place in line of a listing.

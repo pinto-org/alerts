@@ -24,8 +24,6 @@ class BeanstalkMonitor(Monitor):
         self.msg_field = msg_field
         self._eth_event_client = EthEventsClient(EventClientType.BEANSTALK)
         self.bean_client = BeanClient()
-        self.beanstalk_client = BeanstalkClient()
-        self.beanstalk_contract = get_beanstalk_contract()
 
     def _monitor_method(self):
         last_check_time = 0
@@ -98,6 +96,7 @@ class BeanstalkMonitor(Monitor):
     
     def silo_event_str(self, token_addr, values, receipt):
         """Logs a Silo Deposit/Withdraw"""
+        beanstalk_client = BeanstalkClient(block_number=receipt.blockNumber)
 
         # If there is an sPinto deposit or withdrawal event using the same amount, ignore this event
         if has_spinto_action_size(receipt, values["amount"]):
@@ -127,7 +126,7 @@ class BeanstalkMonitor(Monitor):
         else:
             subinfo.append(f"Stalk Burned: {round_num(stalk_to_float(-values['stalk']), 0)}")
 
-        total_stalk = self.beanstalk_client.get_total_stalk()
+        total_stalk = beanstalk_client.get_total_stalk()
         subinfo.append(f"Total Stalk: {round_num(total_stalk, 0)}")
 
         event_str += f"\n_{'. '.join(subinfo)}_"
@@ -143,6 +142,7 @@ class BeanstalkMonitor(Monitor):
         Events that are from a convert call should not be passed into this function as they
         should be processed in batch.
         """
+        beanstalk_client = BeanstalkClient(block_number=event_log.blockNumber)
 
         event_str = ""
         bean_price = self.bean_client.avg_bean_price()
@@ -161,12 +161,12 @@ class BeanstalkMonitor(Monitor):
                 event_str += (
                     f"🚜 {round_num(beans_amount, 0, avoid_zero=True)} Pinto Sown for "
                     f"{round_num(pods_amount, 0, avoid_zero=True)} Pods "
-                    f"at {round_num_abbreviated(self.beanstalk_client.get_podline_length(), precision=3)} in Line "
+                    f"at {round_num_abbreviated(beanstalk_client.get_podline_length(), precision=3)} in Line "
                     f"({round_num(beans_value, 0, avoid_zero=True, incl_dollar=True)})"
                 )
                 effective_temp = (pods_amount / beans_amount - 1) * 100
-                max_temp = self.beanstalk_client.get_max_temp()
-                current_soil = self.beanstalk_client.get_current_soil()
+                max_temp = beanstalk_client.get_max_temp()
+                current_soil = beanstalk_client.get_current_soil()
                 if abs(effective_temp - max_temp) < 0.01:
                     effective_temp = max_temp
                 event_str += (

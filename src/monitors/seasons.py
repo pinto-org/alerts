@@ -28,7 +28,6 @@ class SeasonsMonitor(Monitor):
         self.bean_graph_client = BeanGraphClient()
         self.basin_graph_client = BasinGraphClient()
         self.bean_client = BeanClient()
-        self.beanstalk_client = BeanstalkClient()
         # Most recent season processed. Do not initialize.
         self.current_season_id = None
 
@@ -110,8 +109,10 @@ class SeasonsMonitor(Monitor):
         return None
 
     def season_summary_string(self, sg, short_str=False):
-        # eth_price = self.beanstalk_client.get_token_usd_twap(WETH, 3600)
-        # wsteth_price = self.beanstalk_client.get_token_usd_twap(WSTETH, 3600)
+        beanstalk_client = BeanstalkClient()
+
+        # eth_price = beanstalk_client.get_token_usd_twap(WETH, 3600)
+        # wsteth_price = beanstalk_client.get_token_usd_twap(WSTETH, 3600)
         # wsteth_eth_price = wsteth_price / eth_price
 
         # new_farmable_beans = float(s.beanstalks[0].silo_hourly_bean_mints)
@@ -150,9 +151,9 @@ class SeasonsMonitor(Monitor):
         supply = get_erc20_total_supply(BEAN_ADDR, 6)
         ret_string += f"\n🪙 {round_num(supply, precision=0)} Pinto Supply (${round_num(supply * price, precision=0)})"
 
-        season_block = self.beanstalk_client.get_season_block()
+        season_block = beanstalk_client.get_season_block()
         # Flood stats
-        is_raining = self.beanstalk_client.is_raining()
+        is_raining = beanstalk_client.is_raining()
         rain_flood_string = ""
         flood_beans = 0
         if hasattr(sg.beanstalks[0], 'well_plenty_logs') and len(sg.beanstalks[0].well_plenty_logs) > 0:
@@ -173,7 +174,7 @@ class SeasonsMonitor(Monitor):
                 plenty_amount = log.args.get('amount')
                 erc20_info = get_erc20_info(token)
                 amount = round_token(plenty_amount, erc20_info.decimals, token)
-                value = plenty_amount * self.beanstalk_client.get_token_usd_price(token) / 10 ** erc20_info.decimals
+                value = plenty_amount * beanstalk_client.get_token_usd_price(token) / 10 ** erc20_info.decimals
                 flood_breakdown += f"\n> {amount} {erc20_info.symbol} ({round_num(value, precision=0, incl_dollar=True)})"
 
                 flood_well_beans += sg.beanstalks[0].flood_swap_logs[i].args.get('amountIn') / 10 ** BEAN_DECIMALS
@@ -234,7 +235,7 @@ class SeasonsMonitor(Monitor):
             ret_string += f"\n⚖️ :PINTO: Hourly volume: {round_num(wells_volume, 0, incl_dollar=True)}"
 
             # Silo stats.
-            was_raining = self.beanstalk_client.is_raining(sg.beanstalks[1].sunrise_block)
+            was_raining = beanstalk_client.is_raining(block_number=sg.beanstalks[1].sunrise_block)
             crop_ratio = BeanstalkClient.calc_crop_ratio(sg.beanstalks[0].beanToMaxLpGpPerBdvRatio, is_raining)
             prev_crop_ratio = BeanstalkClient.calc_crop_ratio(sg.beanstalks[1].beanToMaxLpGpPerBdvRatio, was_raining)
             crop_ratio_delta = crop_ratio - prev_crop_ratio
@@ -263,8 +264,8 @@ class SeasonsMonitor(Monitor):
             # Gets current and previous season seeds for each asset
             parallelized = []
             for asset_changes in silo_assets_changes:
-                parallelized.append(lambda token=asset_changes.token: self.beanstalk_client.get_seeds(token))
-                parallelized.append(lambda token=asset_changes.token, block=season_block - 1: self.beanstalk_client.get_seeds(token, block))
+                parallelized.append(lambda token=asset_changes.token: beanstalk_client.get_seeds(token))
+                parallelized.append(lambda token=asset_changes.token, block=season_block - 1: beanstalk_client.get_seeds(token, block_number=block))
 
             # seed_results = execute_lambdas(*parallelized)
 
@@ -310,7 +311,7 @@ class SeasonsMonitor(Monitor):
             ret_string += f"\n\n**Field**"
             ret_string += (
                 f"\n🌾 {round_num(new_pods, 0, avoid_zero=True)} Pods minted "
-                f"({round_num_abbreviated(self.beanstalk_client.get_podline_length(), precision=3)} in Line)"
+                f"({round_num_abbreviated(beanstalk_client.get_podline_length(), precision=3)} in Line)"
             )
             ret_string += f"\n🏞 "
             if issued_soil == 0:
