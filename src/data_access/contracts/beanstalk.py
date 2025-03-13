@@ -87,15 +87,16 @@ class BeanstalkClient(ChainClient):
     @classmethod
     def calc_crop_ratio(cls, beanToMaxLpGpPerBdvRatio, is_raining):
         """
-        Calcualtes the current crop ratio. Result value ranges from 33.33% to 100%.
+        Calcualtes the current crop ratio. Result value ranges from 33.33% to 150%.
         beanToMaxLpGpPerBdvRatio ranges from 0 to 100e18
         """
+        upper_bound = 1.5
         if is_raining:
             lower_bound = 0.3333
         else:
             lower_bound = 0.50
 
-        return lower_bound + (1 - lower_bound) * (beanToMaxLpGpPerBdvRatio / 100e18)
+        return lower_bound + (upper_bound - lower_bound) * (beanToMaxLpGpPerBdvRatio / 100e18)
 
 class BarnRaiseClient(ChainClient):
     """Common functionality related to the Barn Raise Fertilizer contract."""
@@ -129,5 +130,5 @@ if __name__ == "__main__":
     for i in range(len(events)):
         logging.info(f"found txn: {events[i].txn_hash.hex()}")
     # logging.info(f"lp bdv {bs.get_bdv(get_erc20_info(PINTO_CBETH_ADDR), 20566115)}")
-    logging.info(f"Crop ratio: {BeanstalkClient.calc_crop_ratio(int(50e18), False)}")
-    logging.info(f"Crop ratio: {BeanstalkClient.calc_crop_ratio(int(50e18), True)}")
+    logging.info(f"Crop ratio: {BeanstalkClient.calc_crop_ratio(int(69e18), False)}")
+    # logging.info(f"Crop ratio: {BeanstalkClient.calc_crop_ratio(int(50e18), True)}")
