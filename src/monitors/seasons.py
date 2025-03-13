@@ -1,7 +1,7 @@
 from abc import abstractmethod
 
 from bots.util import *
-from data_access.contracts.erc20 import get_erc20_total_supply
+from data_access.contracts.erc20 import get_erc20_info, get_erc20_total_supply
 from data_access.subgraphs.basin import BasinGraphClient
 from data_access.subgraphs.bean import BeanGraphClient
 from data_access.subgraphs.season_stats import silo_assets_seasonal_changes

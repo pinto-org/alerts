@@ -1,5 +1,6 @@
 from bots.util import *
 from data_access.contracts.bean import BeanClient
+from data_access.contracts.erc20 import get_erc20_info
 from data_access.contracts.integrations import WrappedDepositClient
 from data_access.subgraphs.beanstalk import BeanstalkGraphClient
 from monitors.monitor import Monitor

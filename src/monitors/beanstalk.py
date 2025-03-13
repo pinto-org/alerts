@@ -1,4 +1,5 @@
 from bots.util import *
+from data_access.contracts.erc20 import get_erc20_info
 from monitors.monitor import Monitor
 from data_access.contracts.util import *
 from data_access.contracts.eth_events import *
