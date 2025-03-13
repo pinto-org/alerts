@@ -51,59 +51,48 @@ class ChainClient:
     def __init__(self, web3=None):
         self._web3 = web3 or get_web3_instance()
         
-
 web3_instance = Web3(HTTPProvider(RPC_URL))
 def get_web3_instance():
     """Get an instance of web3 lib."""
     return web3_instance
 
-
 def get_well_contract(address, web3=get_web3_instance()):
     """Get a web.eth.contract object for a well. Contract is not thread safe."""
     return web3.eth.contract(address=address, abi=well_abi)
-
 
 def get_aquifer_contract(web3=get_web3_instance()):
     """Get a web.eth.contract object for the aquifer. Contract is not thread safe."""
     return web3.eth.contract(address=AQUIFER_ADDR, abi=aquifer_abi)
 
-
 def get_wrapped_silo_contract(addr, web3=get_web3_instance()):
     """Get a web.eth.contract object for the requested wrapped silo token. Contract is not thread safe."""
     return web3.eth.contract(address=addr, abi=wrapped_silo_erc20_abi)
-
 
 def get_bean_contract(web3=get_web3_instance()):
     """Get a web.eth.contract object for the Bean token contract. Contract is not thread safe."""
     return web3.eth.contract(address=BEAN_ADDR, abi=erc20_abi)
 
-
 def get_beanstalk_contract(web3=get_web3_instance()):
     """Get a web.eth.contract object for the Beanstalk contract. Contract is not thread safe."""
     return web3.eth.contract(address=BEANSTALK_ADDR, abi=beanstalk_abi)
-
 
 def get_bean_price_contract(web3=get_web3_instance()):
     """Get a web.eth.contract object for the Bean price contract. Contract is not thread safe."""
     return web3.eth.contract(address=BEANSTALK_PRICE_ADDR, abi=bean_price_abi)
 
-
 def get_fertilizer_contract(web3=get_web3_instance()):
     """Get a web.eth.contract object for the Barn Raise Fertilizer contract. Contract is not thread safe."""
     return web3.eth.contract(address=FERTILIZER_ADDR, abi=fertilizer_abi)
-
 
 def get_erc20_contract(address, web3=get_web3_instance()):
     """Get a web3.eth.contract object for a standard ERC20 token contract."""
     address = web3.toChecksumAddress(address.lower())
     return web3.eth.contract(address=address, abi=erc20_abi)
 
-
 def get_erc1155_contract(address, web3=get_web3_instance()):
     """Get a web3.eth.contract object for a standard ERC1155 token contract."""
     address = web3.toChecksumAddress(address.lower())
     return web3.eth.contract(address=address, abi=erc1155_abi)
-
 
 def get_tokens_sent(token, txn_hash, recipient, log_index_bounds):
     """Return the amount (as a float) of token sent in a transaction to the given recipient, within the log index bounds"""
@@ -112,7 +101,6 @@ def get_tokens_sent(token, txn_hash, recipient, log_index_bounds):
     for entry in logs:
         total_sum += int(entry.data, 16)
     return total_sum
-
 
 def get_eth_sent(txn_hash, recipient, web3, log_index_bounds):
     """
@@ -131,7 +119,6 @@ def get_eth_sent(txn_hash, recipient, web3, log_index_bounds):
     txn_value = web3.eth.get_transaction(txn_hash).value
     return txn_value
 
-
 def safe_get_block(web3, block_number="latest"):
     max_tries = 15
     try_count = 0
@@ -143,14 +130,6 @@ def safe_get_block(web3, block_number="latest"):
             time.sleep(2)
             try_count += 1
     raise Exception("Failed to safely get block")
-
-
-def is_valid_wallet_address(address):
-    """Return True is address is a valid ETH address. Else False."""
-    if not Web3.isAddress(address):
-        return False
-    return True
-
 
 def call_contract_function_with_retry(function, max_tries=10, block_number="latest"):
     """Try to call a web3 contract object function and retry with exponential backoff."""
@@ -169,7 +148,6 @@ def call_contract_function_with_retry(function, max_tries=10, block_number="late
                 )
                 raise (e)
 
-
 def get_erc20_transfer_logs_in_txn(token, txn_hash, recipient, log_index_bounds, web3=get_web3_instance()):
     """Return all logs matching transfer signature to the recipient before the end index."""
     lower_idx, upper_idx = log_index_bounds
@@ -185,41 +163,38 @@ def get_erc20_transfer_logs_in_txn(token, txn_hash, recipient, log_index_bounds,
                 pass
     return retval
 
+def is_valid_wallet_address(address):
+    """Return True is address is a valid ETH address. Else False."""
+    if not Web3.isAddress(address):
+        return False
+    return True
 
 # Compares a topic (which has leading zeros) with an ethereum address
 def topic_is_address(topic, address):
     return "0x" + topic.hex().lstrip("0x").zfill(40) == address.lower()
-
 
 def token_to_float(token_long, decimals):
     if not token_long:
         return 0
     return int(token_long) / (10**decimals)
 
-
 def eth_to_float(gwei):
     return token_to_float(gwei, ETH_DECIMALS)
-
 
 def lp_to_float(lp_long):
     return token_to_float(lp_long, LP_DECIMALS)
 
-
 def bean_to_float(bean_long):
     return token_to_float(bean_long, BEAN_DECIMALS)
-
 
 def soil_to_float(soil_long):
     return token_to_float(soil_long, SOIL_DECIMALS)
 
-
 def stalk_to_float(stalk_long):
     return token_to_float(stalk_long, STALK_DECIMALS)
 
-
 def seeds_to_float(seeds_long):
     return token_to_float(seeds_long, SEED_DECIMALS)
-
 
 def pods_to_float(pod_long):
     return token_to_float(pod_long, POD_DECIMALS)
@@ -228,7 +203,6 @@ def underlying_if_unripe(token):
     if token.startswith(UNRIPE_TOKEN_PREFIX):
         return UNRIPE_UNDERLYING_MAP[token]
     return token
-
 
 def get_test_entries(dry_run=None):
     """Get a list of onchain transaction entries to use for testing."""
