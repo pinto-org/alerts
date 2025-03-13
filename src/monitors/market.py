@@ -41,7 +41,7 @@ class MarketMonitor(Monitor):
         Note that Event Log Object is not the same as Event object.
         """
         # Match the txn invoked method. Matching is done on the first 10 characters of the hash.
-        transaction_receipt = tools.util.get_txn_receipt_or_wait(self._web3, txn_hash)
+        transaction_receipt = tools.util.get_txn_receipt(self._web3, txn_hash)
 
         # Handle txn logs individually using default strings.
         for event_log in event_logs:

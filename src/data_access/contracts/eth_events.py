@@ -387,7 +387,7 @@ class EthEventsClient:
             # logging.info(f"{self._event_client_type.name} processing {txn_hash.hex()} logs.")
 
             # Retrieve the full txn and txn receipt.
-            receipt = tools.util.get_txn_receipt_or_wait(self._web3, txn_hash)
+            receipt = tools.util.get_txn_receipt(self._web3, txn_hash)
 
             # Get and decode all logs of interest from the txn. There may be many logs.
             decoded_logs = []

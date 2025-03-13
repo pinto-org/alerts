@@ -151,7 +151,7 @@ def call_contract_function_with_retry(function, max_tries=10, block_number="late
 def get_erc20_transfer_logs_in_txn(token, txn_hash, recipient, log_index_bounds, web3=get_web3_instance()):
     """Return all logs matching transfer signature to the recipient before the end index."""
     lower_idx, upper_idx = log_index_bounds
-    receipt = tools.util.get_txn_receipt_or_wait(web3, txn_hash)
+    receipt = tools.util.get_txn_receipt(web3, txn_hash)
     retval = []
     for log in receipt.logs:
         if log.logIndex >= lower_idx and log.logIndex <= upper_idx:

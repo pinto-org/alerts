@@ -1,8 +1,6 @@
 import re
-from constants.config import DISCORD_TOKEN_EMOJIS, TG_TOKEN_EMOJIS
 from hexbytes.main import HexBytes
 import logging
-import json
 import os
 import time
 from web3 import Web3, WebsocketProvider
@@ -32,40 +30,36 @@ def format_log_str(log, indent=0):
     return "\n".join(ret_str_list)
 
 
-def web3_call_with_retries(web3_function, max_retries=5):
+def retryable(max_retries=5, retry_delay=10):
     """Decorator to wrap web3 calls that could fail and gracefully handle retries."""
+    def decorator(fn):
+        def retry_wrapper(*args, **kwargs):
+            try_count = 0
+            while True:
+                try_count += 1
+                try:
+                    return fn(*args, **kwargs)
+                except Exception as e:
+                    if try_count < max_retries:
+                        logging.warning(f"Failed to get result. Retrying...\n{e}")
+                        time.sleep(retry_delay)
+                        continue
+                    logging.error(
+                        f"Failed to get result after {try_count} retries."
+                    )
+                    raise (e)
+        return retry_wrapper
+    return decorator
 
-    def retry_wrapper(web3, txn_hash):
-        try_count = 0
-        while True:
-            try_count += 1
-            try:
-                return web3_function(web3, txn_hash)
-            except Exception as e:
-                if try_count < max_retries:
-                    logging.warning(f"Failed to get txn. Retrying...\n{e}")
-                    time.sleep(15)
-                    continue
-                logging.error(
-                    f"Failed to get txn after {try_count} retries. Was the block orphaned?"
-                )
-                raise (e)
-
-    return retry_wrapper
-
-@web3_call_with_retries
-def get_txn_receipt_or_wait(web3, txn_hash):
-    """Get the transaction receipt and handle errors and block delays cleanly.
-
-    Occasionally web3 will fail to pull the txn with "not found" error. This is likely
-    because the txn has not been confirmed at the time of call, even though the logs may
-    have already been seen. In this case, wait and hope it will confirm soon.
+@retryable()
+def get_txn_receipt(web3, txn_hash):
+    """
+    Get the transaction receipt and handle errors and block delays cleanly.
 
     Returns:
         AttributeDict containing a single txn receipt.
     """
     return web3.eth.get_transaction_receipt(txn_hash)
-
 
 def format_farm_call_str(decoded_txn, beanstalk_contract):
     """Break down a farm() call and return a list of the sub-method it calls.
@@ -130,9 +124,9 @@ def embellish_token_emojis(text, mapping):
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
-    logging.info(f"With discord emoji {embellish_token_emojis('100 PINTO sold for <0.1 cbETH (extra :PINTO:)', DISCORD_TOKEN_EMOJIS)}")
-    logging.info(f"With telegram emoji {embellish_token_emojis('100 PINTO sold for <0.1 cbETH', TG_TOKEN_EMOJIS)}")
-    logging.info(f"Discord lp {embellish_token_emojis('🌊 PINTOcbBTC: $2,254,626', DISCORD_TOKEN_EMOJIS)}")
-    logging.info(f"With rejection {embellish_token_emojis(':PINTO: 500 Deposited !PINTO', DISCORD_TOKEN_EMOJIS)}")
-    receipt = get_txn_receipt_or_wait(web3, '0x8b0f3901f9a8ea224c691662877df79d6a9e2e160c2b3e2551e40793aed545d7')
+    # logging.info(f"With discord emoji {embellish_token_emojis('100 PINTO sold for <0.1 cbETH (extra :PINTO:)', DISCORD_TOKEN_EMOJIS)}")
+    # logging.info(f"With telegram emoji {embellish_token_emojis('100 PINTO sold for <0.1 cbETH', TG_TOKEN_EMOJIS)}")
+    # logging.info(f"Discord lp {embellish_token_emojis('🌊 PINTOcbBTC: $2,254,626', DISCORD_TOKEN_EMOJIS)}")
+    # logging.info(f"With rejection {embellish_token_emojis(':PINTO: 500 Deposited !PINTO', DISCORD_TOKEN_EMOJIS)}")
+    receipt = get_txn_receipt(web3, '0x9e810260341f174b8596c8acd7c6230ed06e90174de2d8c660faf8f71c437c63')
     logging.info(f"got receipt {receipt}")
