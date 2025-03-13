@@ -15,7 +15,6 @@ from data_access.util import *
 from constants.addresses import *
 from constants.config import *
 
-# TODO: consider whether its beneficial to generate messages for prior seasons
 class SeasonsMonitor(Monitor):
     def __init__(
         self, message_function, short_msgs=False, prod=False, dry_run=None
@@ -116,6 +115,9 @@ class SeasonsMonitor(Monitor):
         # eth_price = self.beanstalk_client.get_token_usd_twap(WETH, 3600)
         # wsteth_price = self.beanstalk_client.get_token_usd_twap(WSTETH, 3600)
         # wsteth_eth_price = wsteth_price / eth_price
+
+        # If generic season number message is desired: sg object can have a block number
+        # and use that value instantiate the rpc objects
 
         # new_farmable_beans = float(s.beanstalks[0].silo_hourly_bean_mints)
         reward_beans = sg.beanstalks[0].reward_beans
