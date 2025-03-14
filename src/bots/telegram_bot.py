@@ -17,7 +17,7 @@ from monitors.well import WellsMonitor
 from monitors.beanstalk import BeanstalkMonitor
 from monitors.market import MarketMonitor
 from tools.msg_aggregator import MsgAggregator
-from tools.util import embellish_token_emojis
+from tools.util import embellish_token_emojis, noop
 from tools.webhook_alerts import activate_webhook_on_error_logs
 
 # Telegram rate limit is 1 msg/s per channel.
@@ -61,7 +61,7 @@ class TelegramBot(object):
         self.sunrise_monitor.start()
 
         self.wells_monitor = WellsMonitor(
-            send_main_chat, send_main_chat, WHITELISTED_WELLS,
+            send_main_chat, noop, WHITELISTED_WELLS,
             arbitrage_senders=['0x711AD32A36f8EbF621fD3bB602Bd3B13724e2AC5'],
             bean_reporting=True, prod=prod, dry_run=dry_run
         )

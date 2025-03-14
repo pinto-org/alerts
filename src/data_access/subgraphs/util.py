@@ -28,17 +28,16 @@ def execute(client, query_str, max_tries=10):
     query = gql(query_str)
 
     try_count = 0
-    retry_delay = 1  # seconds
+    retry_delay = 3  # seconds
     while not max_tries or try_count < max_tries:
         # logging.info(f"GraphQL query:" f'{query_str.replace(NEWLINE_CHAR, "").replace("    ", "")}')
+        try_count += 1
         try:
             result = client.execute(query)
             # logging.info(f"GraphQL result:{result}")
             return result
         except asyncio.TimeoutError:
-            logging.warning(
-                f"Timeout error on {client_subgraph_name(client)} subgraph access. Retrying..."
-            )
+            logging.warning(f"Timeout error on {client_subgraph_name(client)} subgraph access. Retrying...")
         except RuntimeError as e:
             # This is a bad state. It means the underlying thread exiting without properly
             # stopping these threads. This state is never expected.
@@ -46,17 +45,12 @@ def execute(client, query_str, max_tries=10):
             logging.error("Main thread no longer running. Exiting.")
             exit(1)
         except Exception as e:
-            if try_count == 0:
+            if try_count == max_tries:
                 logging.warning(e, exc_info=True)
                 logging.info(f"Failing GraphQL query: {query_str}")
-            logging.warning(
-                f"Unexpected error on {client_subgraph_name(client)} subgraph access."
-                f"\nRetrying..."
-            )
-        # Exponential backoff to prevent eating up all subgraph API calls.
+            else:
+                logging.warning(f"Error on {client_subgraph_name(client)} subgraph access. Retrying...")
         time.sleep(retry_delay)
-        retry_delay *= 2
-        try_count += 1
     logging.error("Unable to access subgraph data")
     raise GraphAccessException
 
