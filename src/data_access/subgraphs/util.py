@@ -34,6 +34,7 @@ def execute(client, query_str, max_tries=10):
     retry_delay = 3  # seconds
     while not max_tries or try_count < max_tries:
         # logging.info(f"GraphQL query:" f'{query_str.replace(NEWLINE_CHAR, "").replace("    ", "")}')
+        try_count += 1
         try:
             result = client.execute(query)
             # logging.info(f"GraphQL result:{result}")
@@ -53,7 +54,6 @@ def execute(client, query_str, max_tries=10):
             else:
                 logging.warning(f"Error on {client_subgraph_name(client)} subgraph access. Retrying...")
         time.sleep(retry_delay)
-        try_count += 1
     logging.error("Unable to access subgraph data")
     raise GraphAccessException
 
