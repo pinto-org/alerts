@@ -14,6 +14,10 @@ URL = "wss://" + os.environ["RPC_URL"]
 web3 = Web3(WebsocketProvider(URL, websocket_timeout=60))
 
 
+def noop(*args, **kwargs):
+    pass
+
+
 def format_log_str(log, indent=0):
     """Format decoded log AttributeDict as a nice str."""
     ret_str_list = []
