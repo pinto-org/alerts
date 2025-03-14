@@ -9,14 +9,10 @@ from constants.config import *
 
 class BeanGraphClient(object):
     _transport = AIOHTTPTransport(url=BEAN_GRAPH_ENDPOINT)
-    _client = Client(transport=_transport, fetch_schema_from_transport=False, execute_timeout=7)
 
     def __init__(self, block_number="latest"):
         self.block_number = block_number
-
-    @classmethod
-    def get_client(cls):
-        return cls._client
+        self.client = Client(transport=BeanGraphClient._transport, fetch_schema_from_transport=False, execute_timeout=7)
 
     def last_cross(self, block_number=None):
         """Returns a dict containing the most recent peg cross."""
@@ -45,7 +41,7 @@ class BeanGraphClient(object):
                 }}
             }}
         """
-        return execute(self.get_client(), query_str)["beanCrosses"]
+        return execute(self.client, query_str)["beanCrosses"]
 
     def season_stats(self, num_seasons=2, block_number=None):
         query_str = f"""
@@ -68,7 +64,7 @@ class BeanGraphClient(object):
                 }}
             }}
         """
-        result = execute(self.get_client(), query_str)
+        result = execute(self.client, query_str)
         # Return list of BeanSeasonStats class instances
         return [BeanSeasonStats(result, i) for i in range(len(result["beanHourlySnapshots"]))]
 

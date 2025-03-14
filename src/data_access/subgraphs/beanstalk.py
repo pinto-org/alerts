@@ -21,14 +21,10 @@ MAX_ASSET_SNAPSHOTS_PER_SEASON = 10
 
 class BeanstalkGraphClient(object):
     _transport = AIOHTTPTransport(url=BEANSTALK_GRAPH_ENDPOINT)
-    _client = Client(transport=_transport, fetch_schema_from_transport=False, execute_timeout=7)
 
     def __init__(self, block_number="latest"):
         self.block_number = block_number
-
-    @classmethod
-    def get_client(cls):
-        return cls._client
+        self.client = Client(transport=BeanstalkGraphClient._transport, fetch_schema_from_transport=False, execute_timeout=7)
 
     def get_pod_listing(self, id, block_number=None):
         """Get a single pod listing based on id.
@@ -53,7 +49,7 @@ class BeanstalkGraphClient(object):
             }}
         """
         # Create gql query and execute.
-        return execute(self.get_client(), query_str)["podListing"]
+        return execute(self.client, query_str)["podListing"]
 
     def get_pod_order(self, id, block_number=None):
         """Get a single pod order based on id."""
@@ -76,7 +72,7 @@ class BeanstalkGraphClient(object):
             }}
         """
         # Create gql query and execute.
-        return execute(self.get_client(), query_str)["podOrder"]
+        return execute(self.client, query_str)["podOrder"]
 
     def season_stats(
         self,
@@ -166,7 +162,7 @@ class BeanstalkGraphClient(object):
         query_str += "}"
 
         # Create gql query and execute.
-        result = execute(self.get_client(), query_str)
+        result = execute(self.client, query_str)
 
         # Return list of BeanstalkSeasonStats class instances
         return [BeanstalkSeasonStats(result, i) for i in range(len(result["seasons"]))]
@@ -185,5 +181,5 @@ class BeanstalkGraphClient(object):
             }}
         """
         # Create gql query and execute.
-        result = execute(self.get_client(), query_str)
+        result = execute(self.client, query_str)
         return -1 + stalk_to_float(result["silo"]["stalk"]) / bean_to_float(result["silo"]["depositedBDV"])
