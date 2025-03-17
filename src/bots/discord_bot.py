@@ -16,7 +16,6 @@ from bots import util
 from constants.addresses import *
 from constants.channels import *
 from constants.config import *
-from data_access.contracts.eth_events import EventClientType
 from data_access.contracts.util import is_valid_wallet_address
 
 from monitors.beanstalk import BeanstalkMonitor
@@ -24,7 +23,6 @@ from monitors.market import MarketMonitor
 from monitors.peg_cross import PegCrossMonitor
 from monitors.seasons import SeasonsMonitor
 from monitors.well import WellsMonitor
-from monitors.contracts_migrated import ContractsMigrated
 from tools.util import embellish_token_emojis
 from tools.webhook_alerts import activate_webhook_on_error_logs
 
@@ -94,7 +92,7 @@ class DiscordClient(discord.ext.commands.Bot):
 
         self.tele_bot = None
         if telegram_token is not None:
-            self.tele_bot = telebot.TeleBot(telegram_token, parse_mode="Markdown")
+            self.tele_bot = telebot.TeleBot(telegram_token, parse_mode="None") # Was "Markdown"
 
         activate_webhook_on_error_logs()
 
