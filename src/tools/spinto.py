@@ -42,7 +42,7 @@ def spinto_deposit_info(wrapped_info, owner, event_log):
             evt_add_deposit = beanstalk_contract.events["AddDeposit"]().processReceipt(event_log.receipt, errors=DISCARD)
             evt_remove_deposits = beanstalk_contract.events["RemoveDeposits"]().processReceipt(event_log.receipt, errors=DISCARD)
 
-            max_deposit_idx = max(evt_add_deposit, key=lambda evt: evt.logIndex).logIndex
+            max_deposit_idx = max((evt.logIndex for evt in evt_add_deposit), default=0)
             evt_remove_deposits = [evt for evt in evt_remove_deposits if evt.logIndex > max_deposit_idx]
 
             for evt_remove in evt_remove_deposits:
