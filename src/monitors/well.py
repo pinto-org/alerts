@@ -1,6 +1,7 @@
 from collections import defaultdict
 from bots.util import *
 from data_access.contracts.beanstalk import BeanstalkClient
+from data_access.contracts.erc20 import get_erc20_info
 from monitors.monitor import Monitor
 from data_access.contracts.util import *
 from data_access.contracts.eth_events import *
@@ -47,18 +48,14 @@ class WellEventData:
 
 # Monitors all wells except those in the ignorelist
 class OtherWellsMonitor(Monitor):
-    def __init__(self, msg_exchange, msg_arbitrage, ignorelist, discord=False, prod=False, dry_run=None):
+    def __init__(self, msg_exchange, msg_arbitrage, ignorelist, prod=False, dry_run=None):
         super().__init__("wells", None, WELL_CHECK_RATE, prod=prod, dry_run=dry_run)
         self.msg_exchange = msg_exchange
         self.msg_arbitrage = msg_arbitrage
         self._ignorelist = ignorelist
-        self._discord = discord
         self._eth_aquifer = EthEventsClient(EventClientType.AQUIFER, AQUIFER_ADDR)
         # All addresses
         self._eth_all_wells = EthEventsClient(EventClientType.WELL)
-        self.basin_graph_client = BasinGraphClient()
-        self.beanstalk_client = BeanstalkClient()
-        self.bean_client = BeanClient()
     
     def _monitor_method(self):
         last_check_time = 0
@@ -80,7 +77,7 @@ class OtherWellsMonitor(Monitor):
                     if address not in self._ignorelist:
                         if address not in prev_log_index:
                             prev_log_index[address] = 0
-                        event_data = parse_event_data(event_log, prev_log_index[address], self.basin_graph_client, self.bean_client, web3=self._web3)
+                        event_data = parse_event_data(event_log, prev_log_index[address], web3=self._web3)
                         event_str = single_event_str(event_data)
                         if event_str:
                             self.msg_exchange(event_str)
@@ -123,9 +120,6 @@ class WellsMonitor(Monitor):
         self.pool_addresses = addresses
         self.arbitrage_senders = arbitrage_senders
         self._eth_event_client = EthEventsClient(EventClientType.WELL, self.pool_addresses)
-        self.basin_graph_client = BasinGraphClient()
-        self.bean_client = BeanClient()
-        self.beanstalk_client = BeanstalkClient()
         self.bean_reporting = bean_reporting
 
     def _monitor_method(self):
@@ -160,8 +154,6 @@ class WellsMonitor(Monitor):
                     parse_event_data(
                         event_log,
                         prev_log_index[address],
-                        self.basin_graph_client,
-                        self.bean_client,
                         web3=self._web3
                     )
                 )
@@ -190,7 +182,7 @@ class WellsMonitor(Monitor):
         # light pinto profits into their trading contract.
         if trades >= 2 and abs(sum_pinto / abs_sum_pinto) < 0.001:
             # This trade is pure arbitrage and can be consolidated into a single message
-            event_str = pure_arbitrage_event_str(individual_evts, self.beanstalk_client)
+            event_str = pure_arbitrage_event_str(individual_evts)
             self.msg_arbitrage(event_str, to_tg=to_tg)
             return
 
@@ -209,7 +201,7 @@ class WellsMonitor(Monitor):
                 ):
                     del individual_evts[j]
                     del individual_evts[i]
-                    event_str = arbitrage_event_str(evt1, evt2, self.beanstalk_client)
+                    event_str = arbitrage_event_str(evt1, evt2)
                     self.msg_arbitrage(event_str, to_tg=to_tg)
                     break
                 # Moving LP (LP convert): LP removal that is followed by LP addition
@@ -236,10 +228,15 @@ class WellsMonitor(Monitor):
                 else:
                     self.msg_arbitrage(event_str, to_tg=to_tg)
 
-def parse_event_data(event_log, prev_log_index, basin_graph_client, bean_client, web3=None):
+def parse_event_data(event_log, prev_log_index, web3=get_web3_instance()):
+    beanstalk_client = BeanstalkClient(block_number=event_log.blockNumber)
+    bean_client = BeanClient(block_number=event_log.blockNumber)
+    basin_graph_client = BasinGraphClient(block_number=event_log.blockNumber)
+    well_client = WellClient(event_log.address)
+
     retval = WellEventData()
     retval.receipt = event_log.receipt
-    retval.well_address = event_log.get("address")
+    retval.well_address = event_log.address
 
     # Parse possible values of interest from the event log. Not all will be populated.
     # Liquidity
@@ -255,7 +252,6 @@ def parse_event_data(event_log, prev_log_index, basin_graph_client, bean_client,
     retval.amount_in = event_log.args.get("amountIn")
     retval.amount_out = event_log.args.get("amountOut")
 
-    well_client = WellClient(retval.well_address)
     retval.well_tokens = well_client.tokens()
 
     if event_log.event == "AddLiquidity":
@@ -266,22 +262,16 @@ def parse_event_data(event_log, prev_log_index, basin_graph_client, bean_client,
 
         retval.event_type = "LP"
         retval.token_amounts_in = tokenAmountsIn
-        retval.bdv = token_to_float(lpAmountOut, WELL_LP_DECIMALS) * get_constant_product_well_lp_bdv(
-            retval.well_address, web3=web3
-        )
+        retval.bdv = token_to_float(lpAmountOut, WELL_LP_DECIMALS) * beanstalk_client.get_bdv(retval.well_address)
     elif event_log.event == "Sync":
         retval.event_type = "LP"
-        deposit = basin_graph_client.get_add_liquidity_info(
-            event_log.transactionHash, event_log.logIndex
-        )
+        deposit = basin_graph_client.get_add_liquidity_info(event_log.transactionHash, event_log.logIndex)
         if deposit:
             retval.token_amounts_in = list(map(int, deposit["liqReservesAmount"]))
             retval.value = float(deposit["transferVolumeUSD"])
         else:
             # Redundancy in case subgraph is not available
-            retval.bdv = token_to_float(
-                lpAmountOut, WELL_LP_DECIMALS
-            ) * get_constant_product_well_lp_bdv(retval.well_address, web3=web3)
+            retval.bdv = token_to_float(lpAmountOut, WELL_LP_DECIMALS) * beanstalk_client.get_bdv(retval.well_address)
     elif event_log.event == "RemoveLiquidity" or event_log.event == "RemoveLiquidityOneToken":
         retval.event_type = "LP"
         if event_log.event == "RemoveLiquidityOneToken":
@@ -294,9 +284,7 @@ def parse_event_data(event_log, prev_log_index, basin_graph_client, bean_client,
         else:
             retval.token_amounts_out = tokenAmountsOut
 
-        retval.bdv = token_to_float(lpAmountIn, WELL_LP_DECIMALS) * get_constant_product_well_lp_bdv(
-            retval.well_address, web3=web3
-        )
+        retval.bdv = token_to_float(lpAmountIn, WELL_LP_DECIMALS) * beanstalk_client.get_bdv(retval.well_address)
     elif event_log.event == "Swap":
         retval.event_type = "SWAP"
         if retval.token_in == BEAN_ADDR:
@@ -335,7 +323,7 @@ def parse_event_data(event_log, prev_log_index, basin_graph_client, bean_client,
     retval.well_price_str = latest_pool_price_str(bean_client, retval.well_address)
     retval.well_liquidity_str = latest_well_lp_str(basin_graph_client, retval.well_address)
     return retval
-    
+
 def single_event_str(event_data: WellEventData, bean_reporting=False, is_convert=False):
     event_str = ""
 
@@ -420,13 +408,15 @@ def single_event_str(event_data: WellEventData, bean_reporting=False, is_convert
     event_str += links_footer(event_data.receipt)
     return event_str
 
-def pure_arbitrage_event_str(all_events: List[WellEventData], beanstalk_client: BeanstalkClient):
+def pure_arbitrage_event_str(all_events: List[WellEventData]):
     event_str = ""
     from_strs = []
     to_strs = []
     sum_bean = 0
     dollars_in = 0
     dollars_out = 0
+
+    beanstalk_client = BeanstalkClient(block_number=all_events[0].receipt.blockNumber)
 
     # Sum totals of non-bean tokens in each well (the same well could be swapped in multiple times)
     from_tokens = defaultdict(int)
@@ -473,8 +463,10 @@ def pure_arbitrage_event_str(all_events: List[WellEventData], beanstalk_client: 
     event_str += links_footer(all_events[0].receipt)
     return event_str
 
-def arbitrage_event_str(evt1: WellEventData, evt2: WellEventData, beanstalk_client: BeanstalkClient):
+def arbitrage_event_str(evt1: WellEventData, evt2: WellEventData):
     event_str = ""
+
+    beanstalk_client = BeanstalkClient(block_number=evt1.receipt.blockNumber)
 
     erc20_info_in = get_erc20_info(evt1.token_in)
     erc20_info_out = get_erc20_info(evt2.token_out)

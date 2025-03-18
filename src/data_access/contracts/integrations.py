@@ -1,25 +1,30 @@
+from data_access.contracts.erc20 import get_erc20_info
 from data_access.contracts.util import *
 from data_access.contracts.eth_events import *
 
 class WrappedDepositClient(ChainClient):
 
-    def __init__(self, address, web3=None):
+    def __init__(self, address, block_number="latest", web3=get_web3_instance()):
         super().__init__(web3)
         self.address = address
-        self.contract = get_wrapped_silo_contract(address, self._web3)
+        self.block_number = block_number
+        self.contract = get_wrapped_silo_contract(address, web3=web3)
 
-    def get_underlying_asset(self):
+    def get_underlying_asset(self, block_number=None):
         """Get the whitelisted deposit token underlying this wrapped deposit token"""
-        return call_contract_function_with_retry(self.contract.functions.asset())
+        block_number = block_number or self.block_number
+        return call_contract_function_with_retry(self.contract.functions.asset(), block_number=block_number)
     
-    def get_supply(self):
+    def get_supply(self, block_number=None):
         """Get the current erc20 token supply"""
-        return call_contract_function_with_retry(self.contract.functions.totalSupply())
+        block_number = block_number or self.block_number
+        return call_contract_function_with_retry(self.contract.functions.totalSupply(), block_number=block_number)
     
-    def get_redeem_rate(self):
+    def get_redeem_rate(self, block_number=None):
         """Get the current redemption rate"""
-        erc20_info = get_erc20_info(self.address, self._web3)
-        return call_contract_function_with_retry(self.contract.functions.previewRedeem(10 ** erc20_info.decimals))
+        block_number = block_number or self.block_number
+        erc20_info = get_erc20_info(self.address)
+        return call_contract_function_with_retry(self.contract.functions.previewRedeem(10 ** erc20_info.decimals), block_number=block_number)
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)

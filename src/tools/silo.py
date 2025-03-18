@@ -7,23 +7,25 @@ from data_access.contracts.beanstalk import BeanstalkClient
 from data_access.contracts.util import get_erc1155_contract, get_web3_instance
 
 class StemTipCache(object):
-    def __init__(self, block_number='latest'):
-        self.beanstalk_client = BeanstalkClient()
+    def __init__(self, block_number="latest"):
+        self.beanstalk_client = BeanstalkClient(block_number=block_number)
         self.stem_tips = {}
-        self.block_number = block_number
 
     def get_stem_tip(self, token):
         if token not in self.stem_tips:
-            self.stem_tips[token] = self.beanstalk_client.get_stem_tip(token, block_number=self.block_number)
+            self.stem_tips[token] = self.beanstalk_client.get_stem_tip(token)
         return self.stem_tips[token]
 
 def net_deposit_withdrawal_stalk(event_logs, remove_from_logs=False):
     # Determine net deposit/withdraw of each token
     # Sums total bdv/stalk as well
 
-    stem_tips = StemTipCache()
-
     net_deposits = defaultdict(lambda: {"amount": 0, "bdv": 0, "stalk": 0})
+    if len(event_logs) == 0:
+        return net_deposits
+
+    stem_tips = StemTipCache(block_number=event_logs[0].blockNumber)
+
     silo_deposit_logs = get_logs_by_names(["AddDeposit", "RemoveDeposit", "RemoveDeposits"], event_logs)
     for event_log in silo_deposit_logs:
         sign = 1 if event_log.event == "AddDeposit" else -1
@@ -52,7 +54,7 @@ def net_deposit_withdrawal_stalk(event_logs, remove_from_logs=False):
 
 def net_erc1155_transfers(token, owner, receipt):
     """Returns the net transfer amount of token from/to owner in the given transaction"""
-    erc1155_contract = get_erc1155_contract(get_web3_instance(), token)
+    erc1155_contract = get_erc1155_contract(token)
 
     event_names = ["TransferSingle", "TransferBatch"]
     all_events = []

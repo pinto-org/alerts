@@ -11,10 +11,8 @@ from gql.transport.aiohttp import log as requests_logger
 
 requests_logger.setLevel(logging.WARNING)
 
-
 class GraphAccessException(Exception):
     """Sustained failure to access the graph."""
-
 
 def string_inject_fields(string, fields):
     """Modify string by replacing fields placeholder with stringified array of fields."""
@@ -24,7 +22,6 @@ def string_inject_fields(string, fields):
 
     # Stringify array and inject it into query string.
     return string[:fields_index_start] + " ".join(fields) + string[fields_index_end:]
-
 
 def execute(client, query_str, max_tries=10):
     """Convert query string into a gql query and execute query."""
@@ -57,7 +54,6 @@ def execute(client, query_str, max_tries=10):
     logging.error("Unable to access subgraph data")
     raise GraphAccessException
 
-
 def try_execute_with_wait(check_key, client, query_str, check_len=False, max_tries=1, max_wait_blocks=10):
     """Perform execute. Wait a 5s and try again if return data is empty. Eventually return None if no data.
 
@@ -77,7 +73,6 @@ def try_execute_with_wait(check_key, client, query_str, check_len=False, max_tri
         time.sleep(5)
     return result
 
-
 def client_subgraph_name(client):
     """Return a plain string name of the subgraph for the given gql.Client object."""
     url = client.transport.url
@@ -89,3 +84,7 @@ def client_subgraph_name(client):
         return "Basin"
     else:
         return "unknown"
+
+def get_block_query_str(block_number="latest"):
+    """Returns the block part of the query if something other than the latest block is requested"""
+    return f"block: {{number: {block_number}}}" if block_number != 'latest' else ""

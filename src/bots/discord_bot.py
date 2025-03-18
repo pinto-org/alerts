@@ -130,9 +130,6 @@ class DiscordClient(discord.ext.commands.Bot):
         self.integrations_monitor = IntegrationsMonitor(self.send_msg_silo, prod=prod, dry_run=dry_run)
         self.integrations_monitor.start()
 
-        # self.barn_raise_monitor = BarnRaiseMonitor(self.send_msg_barn_raise, prod=prod, dry_run=dry_run)
-        # self.barn_raise_monitor.start()
-
         # self.contract_migration_monitor = ContractsMigrated(
         #     self.send_msg_contract_migrated,
         #     prod=prod,

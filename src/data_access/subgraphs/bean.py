@@ -1,3 +1,4 @@
+from data_access.subgraphs.season_stats import BeanSeasonStats
 from gql import Client
 from gql.transport.aiohttp import AIOHTTPTransport
 
@@ -7,17 +8,17 @@ from constants.addresses import *
 from constants.config import *
 
 class BeanGraphClient(object):
-    def __init__(self):
-        transport = AIOHTTPTransport(url=BEAN_GRAPH_ENDPOINT)
-        self._client = Client(
-            transport=transport, fetch_schema_from_transport=False, execute_timeout=7
-        )
+    _transport = AIOHTTPTransport(url=BEAN_GRAPH_ENDPOINT)
 
-    def last_cross(self):
+    def __init__(self, block_number="latest"):
+        self.block_number = block_number
+        self.client = Client(transport=BeanGraphClient._transport, fetch_schema_from_transport=False, execute_timeout=7)
+
+    def last_cross(self, block_number=None):
         """Returns a dict containing the most recent peg cross."""
-        return self.get_last_crosses(n=1)[0]
+        return self.get_last_crosses(n=1, block_number=block_number)[0]
 
-    def get_last_crosses(self, n=1):
+    def get_last_crosses(self, n=1, block_number=None):
         """Retrieve the last n peg crosses, including timestamp and cross direction.
 
         Args:
@@ -28,19 +29,29 @@ class BeanGraphClient(object):
         """
         query_str = f"""
             query {{
-                beanCrosses(first: {n}, orderBy: timestamp, orderDirection: desc) {{
+                beanCrosses(
+                    {get_block_query_str(block_number or self.block_number)}
+                    first: {n}
+                    orderBy: timestamp
+                    orderDirection: desc
+                ) {{
                     id
                     above
                     timestamp
                 }}
             }}
         """
-        return execute(self._client, query_str)["beanCrosses"]
-    
-    def season_stats(self, num_seasons=2):
+        return execute(self.client, query_str)["beanCrosses"]
+
+    def season_stats(self, num_seasons=2, block_number=None):
         query_str = f"""
             query {{
-                beanHourlySnapshots(first: {num_seasons} orderBy: season__season orderDirection: desc) {{
+                beanHourlySnapshots(
+                    {get_block_query_str(block_number or self.block_number)}
+                    first: {num_seasons}
+                    orderBy: season__season
+                    orderDirection: desc
+                ) {{
                     supply
                     marketCap
                     instPrice
@@ -53,20 +64,9 @@ class BeanGraphClient(object):
                 }}
             }}
         """
-        result = execute(self._client, query_str)
+        result = execute(self.client, query_str)
         # Return list of BeanSeasonStats class instances
         return [BeanSeasonStats(result, i) for i in range(len(result["beanHourlySnapshots"]))]
-
-class BeanSeasonStats:
-    def __init__(self, graph_response, result_index):
-        bean_hourly = graph_response["beanHourlySnapshots"][result_index]
-        self.season = int(bean_hourly["season"]["season"])
-        self.price = float(bean_hourly["instPrice"])
-        self.supply = int(bean_hourly["supply"]) / 10 ** 6
-        self.marketCap = float(bean_hourly["marketCap"])
-        self.l2sr = float(bean_hourly["l2sr"])
-        self.crosses = int(bean_hourly["crosses"])
-        self.deltaCrosses = int(bean_hourly["deltaCrosses"])
 
 if __name__ == "__main__":
     """Quick test and demonstrate functionality."""
