@@ -180,7 +180,7 @@ class WellsMonitor(Monitor):
 
         # Is considered full arbitrage even if the pinto amount mismatches by less than .1%. Some traders move
         # light pinto profits into their trading contract.
-        if trades >= 2 and sum_pinto / abs_sum_pinto < 0.001:
+        if trades >= 2 and abs(sum_pinto / abs_sum_pinto) < 0.001:
             # This trade is pure arbitrage and can be consolidated into a single message
             event_str = pure_arbitrage_event_str(individual_evts)
             self.msg_arbitrage(event_str, to_tg=to_tg)
