@@ -60,6 +60,7 @@ class DiscordClient(discord.ext.commands.Bot):
             self._chat_id_barn_raise = BS_DISCORD_CHANNEL_ID_BARN_RAISE
             self._chat_id_contract_migrated = BS_DISCORD_CHANNEL_ID_CONTRACT_MIGRATED
             self._chat_id_everything = BS_DISCORD_CHANNEL_ID_EVERYTHING
+            self._chat_id_whale = BS_DISCORD_CHANNEL_ID_WHALE
             self._chat_id_telegram_fwd = BS_TELEGRAM_FWD_CHAT_ID_PRODUCTION
             self.channels_to_fwd = [BS_DISCORD_CHANNEL_ID_ANNOUNCEMENTS]
             logging.info("Configured as a production instance.")
@@ -75,6 +76,7 @@ class DiscordClient(discord.ext.commands.Bot):
             self._chat_id_barn_raise = BS_DISCORD_CHANNEL_ID_TEST_BOT
             self._chat_id_contract_migrated = BS_DISCORD_CHANNEL_ID_TEST_BOT
             self._chat_id_everything = BS_DISCORD_CHANNEL_ID_EVERYTHING_TEST
+            self._chat_id_whale = BS_DISCORD_CHANNEL_ID_TEST_BOT
             self._chat_id_telegram_fwd = BS_TELEGRAM_FWD_CHAT_ID_TEST
             self.channels_to_fwd = [BS_DISCORD_CHANNEL_ID_FWD_TEST]
             logging.info("Configured as a staging instance.")
@@ -207,6 +209,8 @@ class DiscordClient(discord.ext.commands.Bot):
         self._channel_contract_migrated = self.get_channel(self._chat_id_contract_migrated)
         if self._chat_id_everything:
             self._channel_everything = self.get_channel(self._chat_id_everything)
+        if self._chat_id_whale:
+            self._channel_whale = self.get_channel(self._chat_id_whale)
 
         # Init DM channels.
         for channel_id in self.channel_to_wallets.keys():
@@ -308,6 +312,12 @@ class DiscordClient(discord.ext.commands.Bot):
                 # Repeat all notifications into a separate channel, if configured
                 if hasattr(self, '_channel_everything') and msg and channel not in {Channel.REPORT, Channel.TELEGRAM_FWD}:
                     await self._channel_everything.send(msg)
+
+                # Repeat all large events into a separate channel, if configured
+                if hasattr(self, '_channel_whale') and msg and channel not in {Channel.REPORT, Channel.TELEGRAM_FWD}:
+                    if "🦈" in msg or "🐳" in msg:
+                        logging.info("Forwarding to whale channel")
+                        await self._channel_whale.send(msg)
 
                 self.msg_queue = self.msg_queue[1:]
         except telebot.apihelper.ApiTelegramException as e:
