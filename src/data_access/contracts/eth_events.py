@@ -217,6 +217,26 @@ add_event_to_dict(
     INTEGRATIONS_EVENT_MAP,
     INTEGRATIONS_SIGNATURES_LIST,
 )
+add_event_to_dict(
+    "TokenExchange(address,uint256,uint256,uint256,uint256)",
+    INTEGRATIONS_EVENT_MAP,
+    INTEGRATIONS_SIGNATURES_LIST,
+)
+add_event_to_dict(
+    "AddLiquidity(address,uint256[2],uint256,uint256)",
+    INTEGRATIONS_EVENT_MAP,
+    INTEGRATIONS_SIGNATURES_LIST,
+)
+add_event_to_dict(
+    "RemoveLiquidity(address,uint256[2],uint256)",
+    INTEGRATIONS_EVENT_MAP,
+    INTEGRATIONS_SIGNATURES_LIST,
+)
+add_event_to_dict(
+    "RemoveLiquidityOne(address,uint256,uint256,uint256)",
+    INTEGRATIONS_EVENT_MAP,
+    INTEGRATIONS_SIGNATURES_LIST,
+)
 
 class EventClientType(IntEnum):
     BEANSTALK = 0
