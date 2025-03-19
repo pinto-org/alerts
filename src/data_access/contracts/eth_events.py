@@ -3,6 +3,7 @@ import os
 from collections import OrderedDict
 from enum import IntEnum
 
+from constants.spectra import SPECTRA_SPINTO_POOLS
 from web3 import Web3
 from web3 import exceptions as web3_exceptions
 from web3.logs import DISCARD
@@ -283,7 +284,9 @@ class EthEventsClient:
             self._signature_list = CONTRACTS_MIGRATED_SIGNATURES_LIST
         elif self._event_client_type == EventClientType.INTEGRATIONS:
             self._contracts = [get_wrapped_silo_contract(SPINTO_ADDR)]
+            self._contracts.extend(get_curve_spectra_contract(s.pool) for s in SPECTRA_SPINTO_POOLS)
             self._contract_addresses = [SPINTO_ADDR]
+            self._contract_addresses.extend(s.pool for s in SPECTRA_SPINTO_POOLS)
             self._events_dict = INTEGRATIONS_EVENT_MAP
             self._signature_list = INTEGRATIONS_SIGNATURES_LIST
         else:
