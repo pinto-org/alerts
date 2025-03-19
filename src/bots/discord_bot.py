@@ -5,7 +5,6 @@ import logging
 import logging.handlers
 import os
 import signal
-import subprocess
 from monitors.integrations import IntegrationsMonitor
 import telebot
 
@@ -39,6 +38,7 @@ class Channel(Enum):
     CONTRACT_MIGRATED = 9
     EVERYTHING = 10
     TELEGRAM_FWD = 11
+    INTEGRATIONS = 12
 
 class DiscordClient(discord.ext.commands.Bot):
     def __init__(self, prod=False, telegram_token=None, dry_run=None):
@@ -59,6 +59,7 @@ class DiscordClient(discord.ext.commands.Bot):
             self._chat_id_market = BS_DISCORD_CHANNEL_ID_MARKET
             self._chat_id_barn_raise = BS_DISCORD_CHANNEL_ID_BARN_RAISE
             self._chat_id_contract_migrated = BS_DISCORD_CHANNEL_ID_CONTRACT_MIGRATED
+            self._chat_id_integrations = BS_DISCORD_CHANNEL_ID_INTEGRATIONS
             self._chat_id_everything = BS_DISCORD_CHANNEL_ID_EVERYTHING
             self._chat_id_whale = BS_DISCORD_CHANNEL_ID_WHALE
             self._chat_id_telegram_fwd = BS_TELEGRAM_FWD_CHAT_ID_PRODUCTION
@@ -75,6 +76,7 @@ class DiscordClient(discord.ext.commands.Bot):
             self._chat_id_market = BS_DISCORD_CHANNEL_ID_TEST_BOT
             self._chat_id_barn_raise = BS_DISCORD_CHANNEL_ID_TEST_BOT
             self._chat_id_contract_migrated = BS_DISCORD_CHANNEL_ID_TEST_BOT
+            self._chat_id_integrations = BS_DISCORD_CHANNEL_ID_TEST_BOT
             self._chat_id_everything = BS_DISCORD_CHANNEL_ID_EVERYTHING_TEST
             self._chat_id_whale = BS_DISCORD_CHANNEL_ID_TEST_BOT
             self._chat_id_telegram_fwd = BS_TELEGRAM_FWD_CHAT_ID_TEST
@@ -129,7 +131,10 @@ class DiscordClient(discord.ext.commands.Bot):
         self.market_monitor = MarketMonitor(self.send_msg_market, prod=prod, dry_run=dry_run)
         self.market_monitor.start()
 
-        self.integrations_monitor = IntegrationsMonitor(self.send_msg_silo, prod=prod, dry_run=dry_run)
+        self.integrations_monitor = IntegrationsMonitor(
+            lambda msg: (self.send_msg_silo(msg), self.send_msg_integrations(msg)),
+            self.send_msg_integrations, prod=prod, dry_run=dry_run
+        )
         self.integrations_monitor.start()
 
         # self.contract_migration_monitor = ContractsMigrated(
@@ -192,6 +197,9 @@ class DiscordClient(discord.ext.commands.Bot):
     def send_msg_contract_migrated(self, text, to_main=True, to_tg=None):
         self.msg_queue.append((Channel.CONTRACT_MIGRATED if to_main else Channel.EVERYTHING, text))
 
+    def send_msg_integrations(self, text, to_main=True, to_tg=None):
+        self.msg_queue.append((Channel.INTEGRATIONS if to_main else Channel.EVERYTHING, text))
+
     def send_msg_telegram_fwd(self, text):
         """Forward a message through the Telegram bot in the Beanstalk chat."""
         self.msg_queue.append((Channel.TELEGRAM_FWD, text))
@@ -207,6 +215,7 @@ class DiscordClient(discord.ext.commands.Bot):
         self._channel_market = self.get_channel(self._chat_id_market)
         self._channel_barn_raise = self.get_channel(self._chat_id_barn_raise)
         self._channel_contract_migrated = self.get_channel(self._chat_id_contract_migrated)
+        self._channel_integrations = self.get_channel(self._chat_id_integrations)
         if self._chat_id_everything:
             self._channel_everything = self.get_channel(self._chat_id_everything)
         if self._chat_id_whale:
@@ -219,7 +228,8 @@ class DiscordClient(discord.ext.commands.Bot):
         logging.info(
             f"Discord channels are {self._channel_report}, {self._channel_peg}, {self._channel_seasons}, "
             f"{self._channel_exchange}, {self._channel_arbitrage}, {self._channel_silo}, {self._channel_field}, "
-            f"{self._channel_market}, {self._channel_barn_raise}, {self._chat_id_contract_migrated}"
+            f"{self._channel_market}, {self._channel_barn_raise}, {self._channel_contract_migrated}, "
+            f"{self._channel_integrations}"
         )
 
         # Guild IDs for all servers this bot is in.
@@ -298,6 +308,8 @@ class DiscordClient(discord.ext.commands.Bot):
                     await self._channel_barn_raise.send(msg)
                 elif channel is Channel.CONTRACT_MIGRATED:
                     await self._channel_contract_migrated.send(msg)
+                elif channel is Channel.INTEGRATIONS:
+                    await self._channel_integrations.send(msg)
                 elif channel is Channel.TELEGRAM_FWD:
                     if self.tele_bot is not None:
                         self.tele_bot.send_message(chat_id=self._chat_id_telegram_fwd, text=tg_msg)

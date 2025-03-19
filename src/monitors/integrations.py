@@ -1,4 +1,5 @@
 from bots.util import *
+from constants.spectra import SPECTRA_SPINTO_POOLS
 from data_access.contracts.bean import BeanClient
 from data_access.contracts.erc20 import get_erc20_info
 from data_access.contracts.integrations import WrappedDepositClient
@@ -14,11 +15,12 @@ from tools.spinto import spinto_deposit_info
 class IntegrationsMonitor(Monitor):
     """Monitors various external contracts interacting with beanstalk."""
 
-    def __init__(self, msg_spinto, prod=False, dry_run=None):
+    def __init__(self, msg_spinto, msg_spectra, prod=False, dry_run=None):
         super().__init__(
             "Integrations", None, BEANSTALK_CHECK_RATE, prod=prod, dry_run=dry_run
         )
         self.msg_spinto = msg_spinto
+        self.msg_spectra = msg_spectra
         self._eth_event_client = EthEventsClient(EventClientType.INTEGRATIONS)
 
     def _monitor_method(self):
@@ -40,10 +42,18 @@ class IntegrationsMonitor(Monitor):
             # sPinto integration
             if event_log.address == SPINTO_ADDR:
                 event_str = self.spinto_str(event_log)
-                if not event_str:
-                    continue
-                event_str += links_footer(event_logs[0].receipt)
-                self.msg_spinto(event_str)
+                msg_fn = self.msg_spinto
+
+            # spectra
+            spectra_pool = next((s for s in SPECTRA_SPINTO_POOLS if event_log.address == s.pool), None)
+            if spectra_pool:
+                event_str = self.spectra_pool_str(event_log, spectra_pool)
+                msg_fn = self.msg_spectra
+
+            if not event_str:
+                continue
+            event_str += links_footer(event_logs[0].receipt)
+            msg_fn(event_str)
 
     def spinto_str(self, event_log):
         bean_client = BeanClient(block_number=event_log.blockNumber)
@@ -94,3 +104,6 @@ class IntegrationsMonitor(Monitor):
             event_str += f"\n{value_to_emojis(pinto_amount * bean_price)}"
 
         return event_str
+
+    def spectra_pool_str(self, event_log, spectra_pool):
+        pass
