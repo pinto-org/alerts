@@ -16,7 +16,7 @@ def silo_assets_seasonal_changes(current_silo_assets, previous_silo_assets):
     return assets_changes
 
 class BeanstalkSeasonStats:
-    """Oobject encapsulating beanstalk subgraph season data"""
+    """Object encapsulating beanstalk subgraph season data"""
 
     def __init__(self, graph_seasons_response, season_index=0, season=None):
         """
@@ -84,6 +84,9 @@ class BeanstalkSeasonStats:
             )
             self.new_pods = bean_to_float(
                 graph_seasons_response["fieldHourlySnapshots"][season_index]["deltaPodIndex"]
+            )
+            self.cultivation_factor = float(
+                graph_seasons_response["fieldHourlySnapshots"][season_index]["cultivationFactor"]
             )
 
 class AssetChanges:

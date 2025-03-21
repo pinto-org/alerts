@@ -129,6 +129,7 @@ class SeasonsMonitor(Monitor):
         new_pods = sg.beanstalks[1].new_pods
         sown_beans = sg.beanstalks[1].sown_beans
         delta_temp = sg.beanstalks[0].temperature - sg.beanstalks[1].temperature
+        delta_cultivation_factor = sg.beanstalks[0].cultivation_factor - sg.beanstalks[1].cultivation_factor
 
         # Silo asset balances.
         current_silo_bdv = sg.beanstalks[0].deposited_bdv
@@ -320,6 +321,7 @@ class SeasonsMonitor(Monitor):
                 ret_string += f"{round_num(issued_soil, 0, avoid_zero=True)}"
             ret_string += f" Soil in Field"
             ret_string += f"\n🌡 {round_num(sg.beanstalks[0].temperature, 2)}% ({'+' if delta_temp >= 0 else ''}{round_num(delta_temp, 2)}%) Max Temperature"
+            ret_string += f"\n🪱 {round_num(sg.beanstalks[0].cultivation_factor, 2)}% ({'+' if delta_cultivation_factor >= 0 else ''}{round_num(delta_cultivation_factor, 2)}%) Cultivation Factor"
             ret_string += f"\n🧮 {round_num(pod_rate, 2)}% Pod Rate"
 
             # Barn.
