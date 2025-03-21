@@ -327,7 +327,7 @@ class DiscordClient(discord.ext.commands.Bot):
 
                 # Repeat all large events into a separate channel, if configured
                 if hasattr(self, '_channel_whale') and msg and channel not in {Channel.REPORT, Channel.TELEGRAM_FWD}:
-                    if "🦈" in msg or "🐳" in msg:
+                    if "🦈" in msg or "🐳" in msg and channel is not Channel.EVERYTHING:
                         logging.info("Forwarding to whale channel")
                         await self._channel_whale.send(msg)
 

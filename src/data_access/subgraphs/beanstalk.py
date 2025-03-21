@@ -156,6 +156,7 @@ class BeanstalkGraphClient(object):
                     issuedSoil
                     deltaSownBeans
                     deltaPodIndex
+                    cultivationFactor
                 }}
             """
 
