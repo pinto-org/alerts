@@ -16,7 +16,7 @@ if sys.version_info < MIN_PYTHON:
 LOGGING_FORMAT_STR_SUFFIX = "%(levelname)s : %(asctime)s : %(message)s"
 LOGGING_FORMATTER = logging.Formatter(LOGGING_FORMAT_STR_SUFFIX)
 
-BEANSTALK_GRAPH_ENDPOINT = "https://graph.pinto.money/pintostalk-dev"
+BEANSTALK_GRAPH_ENDPOINT = "https://graph.pinto.money/pintostalk"
 BEAN_GRAPH_ENDPOINT = "https://graph.pinto.money/pinto"
 BASIN_GRAPH_ENDPOINT = "https://graph.pinto.money/exchange"
 
