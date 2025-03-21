@@ -2,7 +2,7 @@ import datetime
 from bots.util import *
 from constants.spectra import SPECTRA_SPINTO_POOLS
 from data_access.contracts.bean import BeanClient
-from data_access.contracts.erc20 import get_erc20_info
+from data_access.contracts.erc20 import get_amount_burned, get_amount_minted, get_erc20_info, get_mint_logs
 from data_access.contracts.integrations import CurveSpectraClient, WrappedDepositClient
 from data_access.subgraphs.beanstalk import BeanstalkGraphClient
 from monitors.monitor import Monitor
@@ -12,6 +12,7 @@ from data_access.util import *
 from constants.addresses import *
 from constants.config import *
 from tools.spinto import spinto_deposit_info
+from tools.util import topic_to_address
 
 class IntegrationsMonitor(Monitor):
     """Monitors various external contracts interacting with beanstalk."""
@@ -113,6 +114,7 @@ class IntegrationsMonitor(Monitor):
 
         token_infos = [get_erc20_info(spectra_pool.ibt), get_erc20_info(spectra_pool.pt)]
         underlying_erc20_info = get_erc20_info(spectra_pool.underlying)
+        ibt_erc20_info = get_erc20_info(spectra_pool.ibt)
 
         ibt_to_pt_rate = pool_client.get_ibt_to_pt_rate()
         ibt_to_underlying_rate = spinto_client.get_redeem_rate()
@@ -132,7 +134,12 @@ class IntegrationsMonitor(Monitor):
             if sold_id == 1:
                 msg_case += 1
 
-            # TODO: Check if YT was minted/burned to narrow case
+            # Check if YT was minted/burned. The pool swap is enough to determine the direction
+            yt_amount = get_amount_minted(spectra_pool.yt, event_log.receipt) + get_amount_burned(spectra_pool.yt, event_log.receipt)
+            if yt_amount > 0:
+                msg_case += 2
+                yt_erc20_info = get_erc20_info(spectra_pool.yt)
+                yt_amount_str = f"{round_token(yt_amount, yt_erc20_info.decimals, yt_erc20_info.addr)} {yt_erc20_info.symbol}"
 
             if msg_case == 0:
                 ibt_underlying = tokens_sold * ibt_to_underlying_rate
@@ -142,7 +149,7 @@ class IntegrationsMonitor(Monitor):
                 ibt_underlying_str = round_token(ibt_underlying, token_infos[sold_id].decimals, underlying_erc20_info.addr)
                 pt_underlying_str = round_token(pt_underlying, token_infos[bought_id].decimals, token_infos[bought_id].addr)
                 event_str = (
-                    f"Fixed yield: {round_num((pt_underlying / ibt_underlying - 1) * 100, 2)}%: {ibt_underlying_str} -> {pt_underlying_str} {underlying_erc20_info.symbol} "
+                    f"Fixed yield {round_num((pt_underlying / ibt_underlying - 1) * 100, 2)}%: {ibt_underlying_str} -> {pt_underlying_str} {underlying_erc20_info.symbol} "
                     f"(bought {tokens_bought_str} with {tokens_sold_str})"
                 )
             elif msg_case == 1:
@@ -150,7 +157,13 @@ class IntegrationsMonitor(Monitor):
             elif msg_case == 2:
                 pass
             elif msg_case == 3:
-                pass
+                # the controlling contract is the one which minted PT/YT in this txn
+                controller = topic_to_address(get_mint_logs(spectra_pool.yt, event_log.receipt)[0].topics[2])
+                # Identify how much ibt is received where the sender is neither PT nor the pool (comes from user or a new mint)
+                ibt_to_controller = get_erc20_transfer_logs(spectra_pool.ibt, controller, event_log.receipt)
+                base_ibt_amount = int([log for log in ibt_to_controller if topic_to_address(log.topics[1]) not in [spectra_pool.pt, spectra_pool.pool]][0].data, 16)
+                yt_to_ibt_ratio = token_to_float(yt_amount, yt_erc20_info.decimals) / token_to_float(base_ibt_amount, ibt_erc20_info.decimals)
+                event_str = f"Leveraged yield {round_num(yt_to_ibt_ratio, 1)}x: bought {yt_amount_str} for {tokens_bought_str}"
 
             maturity_str = "Matures" if msg_case < 2 else "Expires"
 
@@ -161,7 +174,7 @@ class IntegrationsMonitor(Monitor):
         # (0) Fixed yield 10%: 100 -> 110 pinto (bought 110 PT-spinto with 90 spinto)
         # (1) Exited fixed yield: sold 1000 PT-spinto for 900 spinto (910 pinto)
         # (2) Exited leveraged yield: sold 1050 YT-spinto for 100 spinto
-        # (3) Leveraged yield 10.5x:  bought 1050 YT-spinto for 100 spinto
+        # (3) Leveraged yield 10.5x: bought 1050 YT-spinto for 100 spinto
         # > (direction chart) Implied apy: x%. (Matures|Expires) in y days
 
         # (0) PT: fix yield - swaps sPinto to PT

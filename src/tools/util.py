@@ -15,6 +15,12 @@ web3 = Web3(WebsocketProvider(URL, websocket_timeout=60))
 def noop(*args, **kwargs):
     pass
 
+# Compares a topic (which has leading zeros) with an ethereum address
+def topic_is_address(topic, address):
+    return "0x" + topic.hex().lstrip("0x").zfill(40) == address.lower()
+
+def topic_to_address(topic):
+    return Web3.to_checksum_address(f"0x{topic.hex()[-40:]}")
 
 def format_log_str(log, indent=0):
     """Format decoded log AttributeDict as a nice str."""
@@ -32,7 +38,6 @@ def format_log_str(log, indent=0):
         else:
             ret_str_list.append(item_str)
     return "\n".join(ret_str_list)
-
 
 def retryable(max_retries=5, retry_delay=10):
     """Decorator to wrap web3 calls that could fail and gracefully handle retries."""

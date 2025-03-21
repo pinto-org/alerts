@@ -4,6 +4,7 @@ from collections import OrderedDict
 from enum import IntEnum
 
 from constants.spectra import SPECTRA_SPINTO_POOLS
+from tools.util import get_txn_receipt
 from web3 import Web3
 from web3 import exceptions as web3_exceptions
 from web3.logs import DISCARD
@@ -410,7 +411,7 @@ class EthEventsClient:
             # logging.info(f"{self._event_client_type.name} processing {txn_hash.hex()} logs.")
 
             # Retrieve the full txn and txn receipt.
-            receipt = tools.util.get_txn_receipt(self._web3, txn_hash)
+            receipt = get_txn_receipt(self._web3, txn_hash)
 
             # Get and decode all logs of interest from the txn. There may be many logs.
             decoded_logs = []

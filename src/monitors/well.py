@@ -296,9 +296,9 @@ def parse_event_data(event_log, prev_log_index, web3=get_web3_instance()):
 
         # Finds amount of tokens transferred to/from the well since any prior trades in this well
         if shift_from_token == WETH:
-            retval.amount_in = get_eth_sent(event_log.transactionHash, retval.well_address, web3, (prev_log_index + 1, event_log.logIndex))
+            retval.amount_in = get_eth_sent(event_log.receipt, retval.well_address, web3, (prev_log_index + 1, event_log.logIndex))
         else:
-            retval.amount_in = get_tokens_sent(shift_from_token, event_log.transactionHash, retval.well_address, (prev_log_index + 1, event_log.logIndex))
+            retval.amount_in = get_tokens_sent(shift_from_token, event_log.receipt, retval.well_address, (prev_log_index + 1, event_log.logIndex))
 
         if retval.token_out == BEAN_ADDR:
             retval.bdv = bean_to_float(retval.amount_out)
