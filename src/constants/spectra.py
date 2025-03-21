@@ -1,7 +1,8 @@
+import datetime
 from typing import NamedTuple
 
 class SpectraPool(NamedTuple):
-    maturity: str
+    maturity: int
     pool: str
     lp_token: str
     pt: str
@@ -10,7 +11,7 @@ class SpectraPool(NamedTuple):
     ibt: str
 
 SPINTO_1 = SpectraPool(
-    "Sep 17 2025",
+    datetime.datetime.fromtimestamp(1758153782, datetime.timezone.utc),
     "0xd8E4662ffd6b202cF85e3783Fb7252ff0A423a72",
     "0xba1F1eA8c269003aFe161aFAa0bd205E2c7F782a",
     "0x42AF817725D8cda8E69540d72f35dBfB17345178",

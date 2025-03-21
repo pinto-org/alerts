@@ -2,7 +2,7 @@ from bots.util import *
 from constants.spectra import SPECTRA_SPINTO_POOLS
 from data_access.contracts.bean import BeanClient
 from data_access.contracts.erc20 import get_erc20_info
-from data_access.contracts.integrations import WrappedDepositClient
+from data_access.contracts.integrations import CurveSpectraClient, WrappedDepositClient
 from data_access.subgraphs.beanstalk import BeanstalkGraphClient
 from monitors.monitor import Monitor
 from data_access.contracts.util import *
@@ -57,7 +57,7 @@ class IntegrationsMonitor(Monitor):
 
     def spinto_str(self, event_log):
         bean_client = BeanClient(block_number=event_log.blockNumber)
-        spinto_client = WrappedDepositClient(event_log.address, block_number=event_log.blockNumber)
+        spinto_client = WrappedDepositClient(event_log.address, BEAN_ADDR, block_number=event_log.blockNumber)
         beanstalk_graph_client = BeanstalkGraphClient(block_number=event_log.blockNumber)
 
         event_str = ""
@@ -88,7 +88,7 @@ class IntegrationsMonitor(Monitor):
                 direction = ["Removed", "📉", "📈", "withdrawn"]
 
             wrapped_supply = token_to_float(spinto_client.get_supply(), wrapped_info.decimals)
-            redeem_rate = token_to_float(spinto_client.get_redeem_rate(), underlying_info.decimals)
+            redeem_rate = spinto_client.get_redeem_rate()
 
             deposit_gspbdv = -1 + stalk_to_float(stalk_amount) / pinto_amount
             total_gspbdv = beanstalk_graph_client.get_account_gspbdv(wrapped_info.addr)
@@ -106,4 +106,13 @@ class IntegrationsMonitor(Monitor):
         return event_str
 
     def spectra_pool_str(self, event_log, spectra_pool):
+        # pool_client = CurveSpectraClient(spectra_pool, block_number=event_log.blockNumber)
+        pool_client = CurveSpectraClient(spectra_pool, block_number='latest')#TODO
+        spinto_client = WrappedDepositClient(spectra_pool.ibt, spectra_pool.underlying, block_number=event_log.blockNumber)
+
+        ibt_to_pt_rate = pool_client.get_ibt_to_pt_rate()
+        ibt_to_underlying_rate = spinto_client.get_redeem_rate()
+        underlying_to_pt_rate = ibt_to_pt_rate / ibt_to_underlying_rate
+
+        
         pass
