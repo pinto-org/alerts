@@ -141,21 +141,23 @@ class IntegrationsMonitor(Monitor):
                 yt_erc20_info = get_erc20_info(spectra_pool.yt)
                 yt_amount_str = f"{round_token(yt_amount, yt_erc20_info.decimals, yt_erc20_info.addr)} {yt_erc20_info.symbol}"
 
-            if msg_case == 0:
-                ibt_underlying = tokens_sold * ibt_to_underlying_rate
-                pt_underlying = tokens_bought
+            if msg_case <= 1:
+                ibt_underlying = (tokens_sold if msg_case == 0 else tokens_bought) * ibt_to_underlying_rate
                 # Intentionally uses sold token decimals and underlying address. This is because tokens_sold is in terms of
                 # the ibt, and ibt_to_underlying_rate does not have decimals applied.
                 ibt_underlying_str = round_token(ibt_underlying, token_infos[sold_id].decimals, underlying_erc20_info.addr)
+
+            if msg_case == 0:
+                pt_underlying = tokens_bought
                 pt_underlying_str = round_token(pt_underlying, token_infos[bought_id].decimals, token_infos[bought_id].addr)
                 event_str = (
                     f"Fixed yield {round_num((pt_underlying / ibt_underlying - 1) * 100, 2)}%: {ibt_underlying_str} -> {pt_underlying_str} {underlying_erc20_info.symbol} "
                     f"(bought {tokens_bought_str} with {tokens_sold_str})"
                 )
             elif msg_case == 1:
-                pass
+                event_str = f"Exited fixed yield: sold {tokens_sold_str} for {tokens_bought_str} ({ibt_underlying_str} {underlying_erc20_info.symbol})"
             elif msg_case == 2:
-                pass
+                event_str = f"Exited leveraged yield: sold {tokens_sold_str} for {tokens_bought_str}"
             elif msg_case == 3:
                 # the controlling contract is the one which minted PT/YT in this txn
                 controller = topic_to_address(get_mint_logs(spectra_pool.yt, event_log.receipt)[0].topics[2])
