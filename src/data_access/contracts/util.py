@@ -105,7 +105,7 @@ def get_curve_spectra_contract(address, web3=get_web3_instance()):
 
 def get_tokens_sent(token, receipt, recipient, log_index_bounds):
     """Return the amount (as a float) of token sent in a transaction to the given recipient, within the log index bounds"""
-    logs = get_erc20_transfer_logs(token, recipient, receipt, log_index_bounds)
+    logs = get_erc20_transfer_logs(token, receipt, recipient=recipient, log_index_bounds=log_index_bounds)
     total_sum = 0
     for entry in logs:
         total_sum += int(entry.data, 16)
@@ -118,7 +118,7 @@ def get_eth_sent(receipt, recipient, web3, log_index_bounds):
     This is because it is unclear who is the recipient of the ETH based on the .value property.
     """
     # Assumption is if WETH was sent, that any ETH from transaction.value would have already been wrapped and included
-    logs = get_erc20_transfer_logs(WETH, recipient, receipt, log_index_bounds)
+    logs = get_erc20_transfer_logs(WETH, receipt, recipient=recipient, log_index_bounds=log_index_bounds)
     total_sum = 0
     for entry in logs:
         total_sum += int(entry.data, 16)
@@ -157,14 +157,18 @@ def call_contract_function_with_retry(function, max_tries=10, block_number="late
                 )
                 raise (e)
 
-def get_erc20_transfer_logs(token, recipient, receipt, log_index_bounds=[0,999999999]):
+def get_erc20_transfer_logs(token, receipt, sender=None, recipient=None, log_index_bounds=[0,999999999]):
     """Return all logs matching transfer signature to the recipient before the end index."""
+    if sender is None and recipient is None:
+        raise ValueError("Must specify at least one of sender/recipient.")
     lower_idx, upper_idx = log_index_bounds
     retval = []
     for log in receipt.logs:
         if log.logIndex >= lower_idx and log.logIndex <= upper_idx:
             try:
-                if log.address == token and log.topics[0].hex() == ERC20_TRANSFER_EVENT_SIG and topic_is_address(log.topics[2], recipient):
+                match_sender = sender is None or topic_is_address(log.topics[1], sender)
+                match_recipient = recipient is None or topic_is_address(log.topics[2], recipient)
+                if log.address == token and log.topics[0].hex() == ERC20_TRANSFER_EVENT_SIG and match_sender and match_recipient:
                     retval.append(log)
             # Ignore anonymous events (logs without topics).
             except IndexError:

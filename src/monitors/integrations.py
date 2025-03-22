@@ -2,7 +2,7 @@ import datetime
 from bots.util import *
 from constants.spectra import SPECTRA_SPINTO_POOLS
 from data_access.contracts.bean import BeanClient
-from data_access.contracts.erc20 import get_amount_burned, get_amount_minted, get_erc20_info, get_mint_logs
+from data_access.contracts.erc20 import get_amount_burned, get_amount_minted, get_burn_logs, get_erc20_info, get_mint_logs
 from data_access.contracts.integrations import CurveSpectraClient, WrappedDepositClient
 from data_access.subgraphs.beanstalk import BeanstalkGraphClient
 from monitors.monitor import Monitor
@@ -107,6 +107,7 @@ class IntegrationsMonitor(Monitor):
 
         return event_str
 
+    # TODO: move this into a spectra module
     def spectra_pool_str(self, event_log, spectra_pool):
         # pool_client = CurveSpectraClient(spectra_pool, block_number=event_log.blockNumber)
         pool_client = CurveSpectraClient(spectra_pool, block_number='latest')#TODO
@@ -151,21 +152,29 @@ class IntegrationsMonitor(Monitor):
                 pt_underlying = tokens_bought
                 pt_underlying_str = round_token(pt_underlying, token_infos[bought_id].decimals, token_infos[bought_id].addr)
                 event_str = (
-                    f"Fixed yield {round_num((pt_underlying / ibt_underlying - 1) * 100, 2)}%: {ibt_underlying_str} -> {pt_underlying_str} {underlying_erc20_info.symbol} "
+                    f"🔒📥 Fixed yield {round_num((pt_underlying / ibt_underlying - 1) * 100, 2)}%: {ibt_underlying_str} -> {pt_underlying_str} {underlying_erc20_info.symbol} "
                     f"(bought {tokens_bought_str} with {tokens_sold_str})"
                 )
             elif msg_case == 1:
-                event_str = f"Exited fixed yield: sold {tokens_sold_str} for {tokens_bought_str} ({ibt_underlying_str} {underlying_erc20_info.symbol})"
+                event_str = f"🔒📤 Exited fixed yield: sold {tokens_sold_str} for {tokens_bought_str} ({ibt_underlying_str} {underlying_erc20_info.symbol})"
             elif msg_case == 2:
-                event_str = f"Exited leveraged yield: sold {tokens_sold_str} for {tokens_bought_str}"
+                # the controlling contract is the one which minted PT/YT in this txn
+                controller = topic_to_address(get_burn_logs(spectra_pool.yt, event_log.receipt)[0].topics[1])
+                # Identify how much ibt is received where the sender is neither PT nor the pool (comes from user or a new mint)
+                ibt_from_controller = get_erc20_transfer_logs(spectra_pool.ibt, event_log.receipt, sender=controller)
+                base_ibt_amount = int([log for log in ibt_from_controller if topic_to_address(log.topics[2]) not in [spectra_pool.pt, spectra_pool.pool]][0].data, 16)
+                base_ibt_amount_str = f"{round_token(base_ibt_amount, ibt_erc20_info.decimals, ibt_erc20_info.addr)} {ibt_erc20_info.symbol}"
+                event_str = f"⚡📤 Exited leveraged yield: sold {yt_amount_str} for {base_ibt_amount_str}"
             elif msg_case == 3:
                 # the controlling contract is the one which minted PT/YT in this txn
                 controller = topic_to_address(get_mint_logs(spectra_pool.yt, event_log.receipt)[0].topics[2])
                 # Identify how much ibt is received where the sender is neither PT nor the pool (comes from user or a new mint)
-                ibt_to_controller = get_erc20_transfer_logs(spectra_pool.ibt, controller, event_log.receipt)
-                base_ibt_amount = int([log for log in ibt_to_controller if topic_to_address(log.topics[1]) not in [spectra_pool.pt, spectra_pool.pool]][0].data, 16)
+                ibt_from_controller = get_erc20_transfer_logs(spectra_pool.ibt, event_log.receipt, recipient=controller)
+                base_ibt_amount = int([log for log in ibt_from_controller if topic_to_address(log.topics[1]) not in [spectra_pool.pt, spectra_pool.pool]][0].data, 16)
+                base_ibt_amount_str = f"{round_token(base_ibt_amount, ibt_erc20_info.decimals, ibt_erc20_info.addr)} {ibt_erc20_info.symbol}"
+
                 yt_to_ibt_ratio = token_to_float(yt_amount, yt_erc20_info.decimals) / token_to_float(base_ibt_amount, ibt_erc20_info.decimals)
-                event_str = f"Leveraged yield {round_num(yt_to_ibt_ratio, 1)}x: bought {yt_amount_str} for {tokens_bought_str}"
+                event_str = f"⚡📥 Leveraged yield {round_num(yt_to_ibt_ratio, 1)}x: bought {yt_amount_str} for {base_ibt_amount_str}"
 
             maturity_str = "Matures" if msg_case < 2 else "Expires"
 
@@ -183,4 +192,8 @@ class IntegrationsMonitor(Monitor):
         # (1) PT: exit position - swaps PT to sPinto
         # (2) YT: exit position - swaps sPinto to PT and burns YT
         # (3) YT: yield leverage - mints YT/PT and swaps PT to sPinto  
-        return event_str
+        return self._remove_expiry_symbol(event_str)
+
+    def _remove_expiry_symbol(self, event_str):
+        """Removes the expiry timestamp portion from the token symbol, i.e. PT-sPINTO-1758153782"""
+        return re.sub(r'(\b(?:Y|P)T-.+)-\d{8,}\b', r'\1', event_str)
