@@ -128,17 +128,8 @@ def get_eth_sent(receipt, recipient, web3, log_index_bounds):
     txn_value = web3.eth.get_transaction(receipt.transactionHash).value
     return txn_value
 
-def safe_get_block(web3, block_number="latest"):
-    max_tries = 15
-    try_count = 0
-    while try_count < max_tries:
-        try:
-            return web3.eth.get_block(block_number)
-        except websockets.exceptions.ConnectionClosedError as e:
-            logging.warning(e, exc_info=True)
-            time.sleep(2)
-            try_count += 1
-    raise Exception("Failed to safely get block")
+def get_block(block_number="latest", web3=get_web3_instance()):
+    return web3.eth.get_block(block_number)
 
 def call_contract_function_with_retry(function, max_tries=10, block_number="latest"):
     """Try to call a web3 contract object function and retry with exponential backoff."""

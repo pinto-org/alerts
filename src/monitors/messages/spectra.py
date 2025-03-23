@@ -3,12 +3,11 @@ import re
 from bots.util import round_num, round_token
 from data_access.contracts.erc20 import get_amount_burned, get_amount_minted, get_burn_logs, get_erc20_info, get_mint_logs
 from data_access.contracts.integrations import CurveSpectraClient, WrappedDepositClient
-from data_access.contracts.util import get_erc20_transfer_logs, token_to_float
+from data_access.contracts.util import get_block, get_erc20_transfer_logs, token_to_float
 from tools.util import topic_to_address
 
 def spectra_pool_str(event_log, spectra_pool):
-    # pool_client = CurveSpectraClient(spectra_pool, block_number=event_log.blockNumber)
-    pool_client = CurveSpectraClient(spectra_pool, block_number='latest')#TODO
+    pool_client = CurveSpectraClient(spectra_pool, block_number=event_log.blockNumber)
     spinto_client = WrappedDepositClient(spectra_pool.ibt, spectra_pool.underlying, block_number=event_log.blockNumber)
 
     token_infos = [get_erc20_info(spectra_pool.ibt), get_erc20_info(spectra_pool.pt)]
@@ -81,9 +80,14 @@ def spectra_pool_str(event_log, spectra_pool):
 
         maturity_str = "Matures" if msg_case < 2 else "Expires"
 
-        hours_to_maturity = (spectra_pool.maturity - datetime.datetime.now(datetime.timezone.utc)).total_seconds() / (60 * 60)
+        timestamp = get_block(block_number=event_log.blockNumber).timestamp
+        event_dt = datetime.datetime.fromtimestamp(timestamp, datetime.timezone.utc)
+        hours_to_maturity = (spectra_pool.maturity - event_dt).total_seconds() / (60 * 60)
         apr = ((underlying_to_pt_rate - 1) / hours_to_maturity) * 24 * 365
         event_str += f"\n> {apy_direction} Implied apy: {round_num(apr * 100, 2)}%. {maturity_str} in {round_num(hours_to_maturity / 24, 0)} days"
+    else:
+        # TODO: Implement add/remove liquidity events
+        return None
 
     return _remove_expiry_symbol(event_str)
 
