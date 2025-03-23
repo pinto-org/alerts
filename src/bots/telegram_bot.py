@@ -3,6 +3,7 @@ import logging.handlers
 import os
 import signal
 
+from monitors.integrations import IntegrationsMonitor
 import telebot
 from telebot import apihelper
 
@@ -73,6 +74,11 @@ class TelegramBot(object):
         self.market_monitor = MarketMonitor(send_main_chat, prod=prod, dry_run=dry_run)
         self.market_monitor.start()
 
+        self.integrations_monitor = IntegrationsMonitor(
+            send_main_chat, send_main_chat, prod=prod, dry_run=dry_run
+        )
+        self.integrations_monitor.start()
+
     def send_msg_factory(self, aggregators):
         def send_msg(msg, to_main=True, to_tg=True):
 
@@ -98,7 +104,7 @@ class TelegramBot(object):
         self.wells_monitor.stop()
         self.beanstalk_monitor.stop()
         self.market_monitor.stop()
-        self.barn_raise_monitor.stop()
+        self.integrations_monitor.stop()
         self.msg_main_agg.stop()
         self.msg_seasons_agg.stop()
 

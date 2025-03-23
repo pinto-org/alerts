@@ -2,13 +2,13 @@ import logging
 import json
 import os
 import time
+from tools.util import topic_is_address
 import websockets
 
 from web3 import HTTPProvider
 
 from constants.addresses import *
 from constants.config import *
-import tools.util
 
 from constants import dry_run_entries
 
@@ -44,6 +44,10 @@ with open(
     os.path.join(os.path.dirname(__file__), "../../constants/abi/wrapped_silo_erc20_abi.json")
 ) as wrapped_silo_erc20_abi_file:
     wrapped_silo_erc20_abi = json.load(wrapped_silo_erc20_abi_file)
+with open(
+    os.path.join(os.path.dirname(__file__), "../../constants/abi/curve_spectra_abi.json")
+) as curve_spectra_abi_file:
+    curve_spectra_abi = json.load(curve_spectra_abi_file)
 
 class ChainClient:
     """Base class for clients of Eth chain data."""
@@ -94,42 +98,38 @@ def get_erc1155_contract(address, web3=get_web3_instance()):
     address = web3.toChecksumAddress(address.lower())
     return web3.eth.contract(address=address, abi=erc1155_abi)
 
-def get_tokens_sent(token, txn_hash, recipient, log_index_bounds):
+def get_curve_spectra_contract(address, web3=get_web3_instance()):
+    """Get a web3.eth.contract object for a spectra curve amm."""
+    address = web3.toChecksumAddress(address.lower())
+    return web3.eth.contract(address=address, abi=curve_spectra_abi)
+
+def get_tokens_sent(token, receipt, recipient, log_index_bounds):
     """Return the amount (as a float) of token sent in a transaction to the given recipient, within the log index bounds"""
-    logs = get_erc20_transfer_logs_in_txn(token, txn_hash, recipient, log_index_bounds)
+    logs = get_erc20_transfer_logs(token, receipt, recipient=recipient, log_index_bounds=log_index_bounds)
     total_sum = 0
     for entry in logs:
         total_sum += int(entry.data, 16)
     return total_sum
 
-def get_eth_sent(txn_hash, recipient, web3, log_index_bounds):
+def get_eth_sent(receipt, recipient, web3, log_index_bounds):
     """
     Return the amount (as a float) of ETH or WETH sent in a transaction to the given recipient, within the log index bounds.
     If an aggregate value (ETH + WETH) is required, a specialized approach should be taken for the particular use case.
     This is because it is unclear who is the recipient of the ETH based on the .value property.
     """
     # Assumption is if WETH was sent, that any ETH from transaction.value would have already been wrapped and included
-    logs = get_erc20_transfer_logs_in_txn(WETH, txn_hash, recipient, log_index_bounds)
+    logs = get_erc20_transfer_logs(WETH, receipt, recipient=recipient, log_index_bounds=log_index_bounds)
     total_sum = 0
     for entry in logs:
         total_sum += int(entry.data, 16)
     if total_sum != 0:
         return total_sum
 
-    txn_value = web3.eth.get_transaction(txn_hash).value
+    txn_value = web3.eth.get_transaction(receipt.transactionHash).value
     return txn_value
 
-def safe_get_block(web3, block_number="latest"):
-    max_tries = 15
-    try_count = 0
-    while try_count < max_tries:
-        try:
-            return web3.eth.get_block(block_number)
-        except websockets.exceptions.ConnectionClosedError as e:
-            logging.warning(e, exc_info=True)
-            time.sleep(2)
-            try_count += 1
-    raise Exception("Failed to safely get block")
+def get_block(block_number="latest", web3=get_web3_instance()):
+    return web3.eth.get_block(block_number)
 
 def call_contract_function_with_retry(function, max_tries=10, block_number="latest"):
     """Try to call a web3 contract object function and retry with exponential backoff."""
@@ -148,15 +148,18 @@ def call_contract_function_with_retry(function, max_tries=10, block_number="late
                 )
                 raise (e)
 
-def get_erc20_transfer_logs_in_txn(token, txn_hash, recipient, log_index_bounds, web3=get_web3_instance()):
+def get_erc20_transfer_logs(token, receipt, sender=None, recipient=None, log_index_bounds=[0,999999999]):
     """Return all logs matching transfer signature to the recipient before the end index."""
+    if sender is None and recipient is None:
+        raise ValueError("Must specify at least one of sender/recipient.")
     lower_idx, upper_idx = log_index_bounds
-    receipt = tools.util.get_txn_receipt(web3, txn_hash)
     retval = []
     for log in receipt.logs:
         if log.logIndex >= lower_idx and log.logIndex <= upper_idx:
             try:
-                if log.address == token and log.topics[0].hex() == ERC20_TRANSFER_EVENT_SIG and topic_is_address(log.topics[2], recipient):
+                match_sender = sender is None or topic_is_address(log.topics[1], sender)
+                match_recipient = recipient is None or topic_is_address(log.topics[2], recipient)
+                if log.address == token and log.topics[0].hex() == ERC20_TRANSFER_EVENT_SIG and match_sender and match_recipient:
                     retval.append(log)
             # Ignore anonymous events (logs without topics).
             except IndexError:
@@ -168,10 +171,6 @@ def is_valid_wallet_address(address):
     if not Web3.isAddress(address):
         return False
     return True
-
-# Compares a topic (which has leading zeros) with an ethereum address
-def topic_is_address(topic, address):
-    return "0x" + topic.hex().lstrip("0x").zfill(40) == address.lower()
 
 def token_to_float(token_long, decimals):
     if not token_long:

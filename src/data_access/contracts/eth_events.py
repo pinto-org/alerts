@@ -3,6 +3,8 @@ import os
 from collections import OrderedDict
 from enum import IntEnum
 
+from constants.spectra import SPECTRA_SPINTO_POOLS
+from tools.util import get_txn_receipt
 from web3 import Web3
 from web3 import exceptions as web3_exceptions
 from web3.logs import DISCARD
@@ -216,6 +218,26 @@ add_event_to_dict(
     INTEGRATIONS_EVENT_MAP,
     INTEGRATIONS_SIGNATURES_LIST,
 )
+add_event_to_dict(
+    "TokenExchange(address,uint256,uint256,uint256,uint256)",
+    INTEGRATIONS_EVENT_MAP,
+    INTEGRATIONS_SIGNATURES_LIST,
+)
+add_event_to_dict(
+    "AddLiquidity(address,uint256[2],uint256,uint256)",
+    INTEGRATIONS_EVENT_MAP,
+    INTEGRATIONS_SIGNATURES_LIST,
+)
+add_event_to_dict(
+    "RemoveLiquidity(address,uint256[2],uint256)",
+    INTEGRATIONS_EVENT_MAP,
+    INTEGRATIONS_SIGNATURES_LIST,
+)
+add_event_to_dict(
+    "RemoveLiquidityOne(address,uint256,uint256,uint256)",
+    INTEGRATIONS_EVENT_MAP,
+    INTEGRATIONS_SIGNATURES_LIST,
+)
 
 class EventClientType(IntEnum):
     BEANSTALK = 0
@@ -283,7 +305,9 @@ class EthEventsClient:
             self._signature_list = CONTRACTS_MIGRATED_SIGNATURES_LIST
         elif self._event_client_type == EventClientType.INTEGRATIONS:
             self._contracts = [get_wrapped_silo_contract(SPINTO_ADDR)]
+            self._contracts.extend(get_curve_spectra_contract(s.pool) for s in SPECTRA_SPINTO_POOLS)
             self._contract_addresses = [SPINTO_ADDR]
+            self._contract_addresses.extend(s.pool for s in SPECTRA_SPINTO_POOLS)
             self._events_dict = INTEGRATIONS_EVENT_MAP
             self._signature_list = INTEGRATIONS_SIGNATURES_LIST
         else:
@@ -387,7 +411,7 @@ class EthEventsClient:
             # logging.info(f"{self._event_client_type.name} processing {txn_hash.hex()} logs.")
 
             # Retrieve the full txn and txn receipt.
-            receipt = tools.util.get_txn_receipt(self._web3, txn_hash)
+            receipt = get_txn_receipt(self._web3, txn_hash)
 
             # Get and decode all logs of interest from the txn. There may be many logs.
             decoded_logs = []
