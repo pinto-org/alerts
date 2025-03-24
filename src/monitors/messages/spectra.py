@@ -137,11 +137,13 @@ def spectra_pool_str(event_log, spectra_pool):
 
     if abs(apr - prev_apr) < 0.0001:
         apy_direction = "📊"
+        apr_string = f"{round_num(apr * 100, 2)}%"
     else:
         apy_direction = "📉" if apr - prev_apr < 0 else "📈"
+        apr_string = f"{round_num(prev_apr * 100, 2)}% -> {round_num(apr * 100, 2)}%"
 
     event_str += (
-        f"\n> _{apy_direction} Implied apr: {round_num(prev_apr * 100, 2)}% -> {round_num(apr * 100, 2)}%. "
+        f"\n> _{apy_direction} Implied apr: {apr_string}. "
         f"{maturity_str} in {round_num(hours_to_maturity / 24, 0)} days_"
     )
     event_str += f"\n{value_to_emojis(value)}"
