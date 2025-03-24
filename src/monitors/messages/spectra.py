@@ -18,12 +18,15 @@ def spectra_pool_str(event_log, spectra_pool):
 
     ibt_to_pt_rate = pool_client.get_ibt_to_pt_rate()
     ibt_to_underlying_rate = spinto_client.get_redeem_rate()
-    underlying_to_pt_rate = ibt_to_pt_rate / ibt_to_underlying_rate
 
     underlying_price = bean_client.avg_bean_price()
     ibt_price = ibt_to_underlying_rate * underlying_price
     pt_price = ibt_price / ibt_to_pt_rate
     yt_price = ibt_price - pt_price
+
+    apr, hours_to_maturity = _calc_apr(spectra_pool, ibt_to_pt_rate / ibt_to_underlying_rate, block_number=event_log.blockNumber)
+    prev_ibt_to_pt_rate = pool_client.get_ibt_to_pt_rate(block_number=event_log.blockNumber - 1)
+    prev_apr, _ = _calc_apr(spectra_pool, prev_ibt_to_pt_rate / ibt_to_underlying_rate, block_number=event_log.blockNumber)
 
     msg_case = 0
     if event_log.event == "TokenExchange":
@@ -39,7 +42,6 @@ def spectra_pool_str(event_log, spectra_pool):
         tokens_sold_str = f"{round_token(tokens_sold, token_infos[sold_id].decimals, token_infos[sold_id].addr)} {token_infos[sold_id].symbol}"
         tokens_bought_str = f"{round_token(tokens_bought, token_infos[bought_id].decimals, token_infos[bought_id].addr)} {token_infos[bought_id].symbol}"
 
-        apy_direction = "📉" if sold_id == 0 else "📈"
         if sold_id == 0:
             value = ibt_price * token_to_float(tokens_sold, token_infos[0].decimals)
         if sold_id == 1:
@@ -101,7 +103,6 @@ def spectra_pool_str(event_log, spectra_pool):
 
             tokens_removed_str = f"{round_token(token_amount, token_infos[token_idx].decimals, token_infos[token_idx].addr)} {token_infos[token_idx].symbol}"
             event_str = f"📤 LP removed - {tokens_removed_str} ({round_num(value, 0, avoid_zero=True, incl_dollar=True)})"
-            apy_direction = "📈" if token_idx == 0 else "📉"
         else:
             token_amounts = event_log.args.get("token_amounts")
 
@@ -113,9 +114,7 @@ def spectra_pool_str(event_log, spectra_pool):
                 f"{dynamic[0]} LP {dynamic[1]} - {' and '.join(token_strs)}"
                 f" ({round_num(value, 0, avoid_zero=True, incl_dollar=True)})"
             )
-            # TODO: can infer the direction according to whether the added proportion was higher or lower than
-            # the computed apr in subinfo.
-            apy_direction = "📊"
+
             if event_log.event == "AddLiquidity":
                 pt_minted = get_amount_minted(spectra_pool.pt, event_log.receipt)
                 if pt_minted > 0:
@@ -136,16 +135,25 @@ def spectra_pool_str(event_log, spectra_pool):
 
         maturity_str = "Matures"
 
-    # Subinfo
-    timestamp = get_block(block_number=event_log.blockNumber).timestamp
-    event_dt = datetime.datetime.fromtimestamp(timestamp, datetime.timezone.utc)
-    hours_to_maturity = (spectra_pool.maturity - event_dt).total_seconds() / (60 * 60)
-    apr = ((underlying_to_pt_rate - 1) / hours_to_maturity) * 24 * 365
-    event_str += f"\n> _{apy_direction} Implied apr: {round_num(apr * 100, 2)}%. {maturity_str} in {round_num(hours_to_maturity / 24, 0)} days_"
+    if abs(apr - prev_apr) < 0.0001:
+        apy_direction = "📊"
+    else:
+        apy_direction = "📉" if apr - prev_apr < 0 else "📈"
 
+    event_str += (
+        f"\n> _{apy_direction} Implied apr: {round_num(prev_apr * 100, 2)}% -> {round_num(apr * 100, 2)}%. "
+        f"{maturity_str} in {round_num(hours_to_maturity / 24, 0)} days_"
+    )
     event_str += f"\n{value_to_emojis(value)}"
 
     return _remove_expiry_symbol(event_str)
+
+def _calc_apr(spectra_pool, underlying_to_pt_rate, block_number=None, ):
+    timestamp = get_block(block_number=block_number).timestamp
+    event_dt = datetime.datetime.fromtimestamp(timestamp, datetime.timezone.utc)
+    hours_to_maturity = (spectra_pool.maturity - event_dt).total_seconds() / (60 * 60)
+    apr = ((underlying_to_pt_rate - 1) / hours_to_maturity) * 24 * 365
+    return apr, hours_to_maturity
 
 def _remove_expiry_symbol(event_str):
     """Removes the expiry timestamp portion from the token symbol, i.e. PT-sPINTO-1758153782"""
