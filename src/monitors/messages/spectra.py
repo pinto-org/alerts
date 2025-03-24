@@ -17,14 +17,14 @@ def spectra_pool_str(event_log, spectra_pool):
     ibt_to_pt_rate = pool_client.get_ibt_to_pt_rate()
     ibt_to_underlying_rate = spinto_client.get_redeem_rate()
     underlying_to_pt_rate = ibt_to_pt_rate / ibt_to_underlying_rate
-    
-    # (0) Fixed yield 10%: 100 -> 110 pinto (bought 110 PT-spinto with 90 spinto)
-    # (1) Exited fixed yield: sold 1000 PT-spinto for 900 spinto (910 pinto)
-    # (2) Exited leveraged yield: sold 1050 YT-spinto for 100 spinto
-    # (3) Leveraged yield 10.5x: bought 1050 YT-spinto for 100 spinto
+    # ibt_price = ?
 
     msg_case = 0
     if event_log.event == "TokenExchange":
+        # (0) Fixed yield 10%: 100 -> 110 pinto (bought 110 PT-spinto with 90 spinto)
+        # (1) Exited fixed yield: sold 1000 PT-spinto for 900 spinto (910 pinto)
+        # (2) Exited leveraged yield: sold 1050 YT-spinto for 100 spinto
+        # (3) Leveraged yield 10.5x: bought 1050 YT-spinto for 100 spinto
         sold_id = event_log.args.get("sold_id")
         tokens_sold = event_log.args.get("tokens_sold")
         bought_id = event_log.args.get("bought_id")
@@ -54,7 +54,7 @@ def spectra_pool_str(event_log, spectra_pool):
             pt_underlying = tokens_bought
             pt_underlying_str = round_token(pt_underlying, token_infos[bought_id].decimals, token_infos[bought_id].addr)
             event_str = (
-                f"🔒📥 Fixed yield {round_num((pt_underlying / ibt_underlying - 1) * 100, 2)}%: {ibt_underlying_str} -> {pt_underlying_str} {underlying_erc20_info.symbol} "
+                f"🔒📥 Fixed yield {round_num((pt_underlying / ibt_underlying - 1) * 100, 2)}%: :{underlying_erc20_info.symbol}: {ibt_underlying_str} -> {pt_underlying_str} {underlying_erc20_info.symbol} "
                 f"(bought {tokens_bought_str} with {tokens_sold_str})"
             )
         elif msg_case == 1:
@@ -79,15 +79,49 @@ def spectra_pool_str(event_log, spectra_pool):
             event_str = f"⚡📥 Leveraged yield {round_num(yt_to_ibt_ratio, 1)}x: bought {yt_amount_str} for {base_ibt_amount_str}"
 
         maturity_str = "Matures" if msg_case < 2 else "Expires"
-
-        timestamp = get_block(block_number=event_log.blockNumber).timestamp
-        event_dt = datetime.datetime.fromtimestamp(timestamp, datetime.timezone.utc)
-        hours_to_maturity = (spectra_pool.maturity - event_dt).total_seconds() / (60 * 60)
-        apr = ((underlying_to_pt_rate - 1) / hours_to_maturity) * 24 * 365
-        event_str += f"\n> {apy_direction} Implied apy: {round_num(apr * 100, 2)}%. {maturity_str} in {round_num(hours_to_maturity / 24, 0)} days"
     else:
-        # TODO: Implement add/remove liquidity events
-        return None
+        if event_log.event == "RemoveLiquidityOne":
+            token_idx = event_log.args.get("coin_index")
+            token_amount = event_log.args.get("coin_amount")
+
+            tokens_removed_str = f"{round_token(token_amount, token_infos[token_idx].decimals, token_infos[token_idx].addr)} {token_infos[token_idx].symbol}"
+            event_str = f"📤 LP removed - {tokens_removed_str}"
+            apy_direction = "📈" if token_idx == 0 else "📉"
+        else:
+            token_amounts = event_log.args.get("token_amounts")
+
+            token_strs = [f"{round_token(token_amounts[i], token_infos[i].decimals, token_infos[i].addr)} {token_infos[i].symbol}" for i in range(2)]
+            dynamic = ["📥", "added"] if event_log.event == "AddLiquidity" else ["📤", "removed"]
+
+            event_str = f"{dynamic[0]} LP {dynamic[1]} - {' and '.join(token_strs)}"
+            apy_direction = "📊" # Assumption is that this is always in equal proportions
+            # TODO: LP add is more complicated as there are YT mints too and not all the funds get
+            # added directly to lp. And it may not be in equal proportion if YT output is converted
+            # (converting YT -> rates go higher).
+            if event_log.event == "AddLiquidity":
+                pt_minted = get_amount_minted(spectra_pool.pt, event_log.receipt)
+                pt_erc20_info = get_erc20_info(spectra_pool.pt)
+                pt_amount_str = f"{round_token(pt_minted, pt_erc20_info.decimals, pt_erc20_info.addr)} {pt_erc20_info.symbol}"
+
+                yt_minted = get_amount_minted(spectra_pool.yt, event_log.receipt)
+                yt_erc20_info = get_erc20_info(spectra_pool.yt)
+                yt_amount_str = f"{round_token(yt_minted, yt_erc20_info.decimals, yt_erc20_info.addr)} {yt_erc20_info.symbol}"
+
+                event_str += f"\n> _🪙 Minted {pt_amount_str} and {yt_amount_str}_"
+
+                # TODO: price PT according to ibt to pt exchange rate and ibt price
+                # price YT according to underlying + PT
+
+        maturity_str = "Matures"
+
+    # Subinfo
+    timestamp = get_block(block_number=event_log.blockNumber).timestamp
+    event_dt = datetime.datetime.fromtimestamp(timestamp, datetime.timezone.utc)
+    hours_to_maturity = (spectra_pool.maturity - event_dt).total_seconds() / (60 * 60)
+    apr = ((underlying_to_pt_rate - 1) / hours_to_maturity) * 24 * 365
+    event_str += f"\n> _{apy_direction} Implied apy: {round_num(apr * 100, 2)}%. {maturity_str} in {round_num(hours_to_maturity / 24, 0)} days_"
+
+    # TODO: value emojis (and value in messages)
 
     return _remove_expiry_symbol(event_str)
 
