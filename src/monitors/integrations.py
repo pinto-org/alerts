@@ -36,6 +36,7 @@ class IntegrationsMonitor(Monitor):
 
     def _handle_txn_logs(self, event_logs):
         for event_log in event_logs:
+            event_str = None
             # sPinto integration
             if event_log.address == SPINTO_ADDR:
                 event_str = spinto_str(event_log)
@@ -47,7 +48,6 @@ class IntegrationsMonitor(Monitor):
                 event_str = spectra_pool_str(event_log, spectra_pool)
                 msg_fn = self.msg_spectra
 
-            if not event_str:
-                continue
-            event_str += links_footer(event_logs[0].receipt)
-            msg_fn(event_str)
+            if event_str:
+                event_str += links_footer(event_logs[0].receipt)
+                msg_fn(event_str)
