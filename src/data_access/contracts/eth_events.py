@@ -436,6 +436,7 @@ class EthEventsClient:
             #     f"{NEWLINE_CHAR.join([str(l) for l in decoded_logs])}"
             # )
 
+        txn_logs_list.sort(key=lambda entry: entry.logs[0].receipt.blockNumber)
         return txn_logs_list
 
     def safe_get_new_entries(self, filter, get_all=False):
