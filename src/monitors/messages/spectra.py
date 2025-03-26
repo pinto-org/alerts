@@ -42,11 +42,8 @@ def spectra_pool_str(event_log, spectra_pool):
         tokens_sold_str = f"{round_token(tokens_sold, token_infos[sold_id].decimals, token_infos[sold_id].addr)} {token_infos[sold_id].symbol}"
         tokens_bought_str = f"{round_token(tokens_bought, token_infos[bought_id].decimals, token_infos[bought_id].addr)} {token_infos[bought_id].symbol}"
 
-        if sold_id == 0:
-            value = ibt_price * token_to_float(tokens_sold, token_infos[0].decimals)
         if sold_id == 1:
             msg_case += 1
-            value = ibt_price * token_to_float(tokens_bought, token_infos[0].decimals)
 
         # Check if YT was minted/burned. The pool swap is enough to determine the direction
         yt_amount = get_amount_minted(spectra_pool.yt, event_log.receipt) + get_amount_burned(spectra_pool.yt, event_log.receipt)
@@ -64,11 +61,13 @@ def spectra_pool_str(event_log, spectra_pool):
         if msg_case == 0:
             pt_underlying = tokens_bought
             pt_underlying_str = round_token(pt_underlying, token_infos[bought_id].decimals, token_infos[bought_id].addr)
+            value = ibt_price * token_to_float(tokens_sold, token_infos[0].decimals)
             event_str = (
                 f"🔒📥 Fixed yield {round_num((pt_underlying / ibt_underlying - 1) * 100, 2)}%: :{underlying_erc20_info.symbol}: {ibt_underlying_str} -> {pt_underlying_str} {underlying_erc20_info.symbol} "
                 f"(bought {tokens_bought_str} with {tokens_sold_str})"
             )
         elif msg_case == 1:
+            value = ibt_price * token_to_float(tokens_bought, token_infos[0].decimals)
             event_str = f"🔒📤 Exited fixed yield: sold {tokens_sold_str} for {tokens_bought_str} ({ibt_underlying_str} {underlying_erc20_info.symbol})"
         elif msg_case == 2:
             # the controlling contract is the one which minted PT/YT in this txn
@@ -77,6 +76,8 @@ def spectra_pool_str(event_log, spectra_pool):
             ibt_from_controller = get_erc20_transfer_logs(spectra_pool.ibt, event_log.receipt, sender=controller)
             base_ibt_amount = int([log for log in ibt_from_controller if topic_to_address(log.topics[2]) not in [spectra_pool.pt, spectra_pool.pool]][0].data, 16)
             base_ibt_amount_str = f"{round_token(base_ibt_amount, ibt_erc20_info.decimals, ibt_erc20_info.addr)} {ibt_erc20_info.symbol}"
+            value = ibt_price * token_to_float(base_ibt_amount, ibt_erc20_info.decimals)
+
             event_str = f"⚡📤 Exited leveraged yield: sold {yt_amount_str} for {base_ibt_amount_str}"
         elif msg_case == 3:
             # the controlling contract is the one which minted PT/YT in this txn
@@ -85,6 +86,7 @@ def spectra_pool_str(event_log, spectra_pool):
             ibt_from_controller = get_erc20_transfer_logs(spectra_pool.ibt, event_log.receipt, recipient=controller)
             base_ibt_amount = int([log for log in ibt_from_controller if topic_to_address(log.topics[1]) not in [spectra_pool.pt, spectra_pool.pool]][0].data, 16)
             base_ibt_amount_str = f"{round_token(base_ibt_amount, ibt_erc20_info.decimals, ibt_erc20_info.addr)} {ibt_erc20_info.symbol}"
+            value = ibt_price * token_to_float(base_ibt_amount, ibt_erc20_info.decimals)
 
             yt_to_ibt_ratio = token_to_float(yt_amount, yt_erc20_info.decimals) / token_to_float(base_ibt_amount, ibt_erc20_info.decimals)
             event_str = f"⚡📥 Leveraged yield {round_num(yt_to_ibt_ratio, 1)}x: bought {yt_amount_str} for {base_ibt_amount_str}"
