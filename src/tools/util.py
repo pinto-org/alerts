@@ -8,6 +8,8 @@ from web3 import Web3, WebsocketProvider
 from web3.datastructures import AttributeDict
 from web3.logs import DISCARD
 
+from datetime import datetime
+
 
 URL = "wss://" + os.environ["RPC_URL"]
 web3 = Web3(WebsocketProvider(URL, websocket_timeout=60))
@@ -129,6 +131,11 @@ def embellish_token_emojis(text, mapping):
         return matched_text[1:]
     for key in mapping:
         text = re.sub(f"!({re.escape(key)})", retain_casing, text, flags=re.IGNORECASE)
+
+    # Other
+    today = datetime.today()
+    if today.month == 4 and today.day == 1:
+        text = text.replace("🧑‍🌾", mapping["MC"])
 
     return text
 
