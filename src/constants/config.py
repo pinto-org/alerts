@@ -104,6 +104,7 @@ DISCORD_TOKEN_EMOJIS = {
     "CBBTC": "<:cbBTC:1308203792818241628>" if is_prod else "<:cbBTC:1301707489527464056>",
     "WSOL": "<:WSOL:1308203700149555231>" if is_prod else "<:WSOL:1304499424545996831>",
     "USDC": "<:USDC:1308203721225670656>" if is_prod else "<:USDC:1301707657270267966>",
+    "MC": "<:PintoMC:1346666068717863025>" if is_prod else "<:PintoMC:1346666003097980968>"
 }
 TG_TOKEN_EMOJIS = {
     "PINTO": "🟢",
@@ -117,7 +118,8 @@ TG_TOKEN_EMOJIS = {
     "CBETH": "🔴",
     "CBBTC": "🟠",
     "WSOL": "🟣",
-    "USDC": "🔵"
+    "USDC": "🔵",
+    "MC": "🧑‍🌾"
 }
 
 GRAPH_FIELDS_PLACEHOLDER = "_FIELDS_"
