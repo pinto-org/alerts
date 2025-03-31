@@ -118,7 +118,8 @@ TG_TOKEN_EMOJIS = {
     "CBETH": "🔴",
     "CBBTC": "🟠",
     "WSOL": "🟣",
-    "USDC": "🔵"
+    "USDC": "🔵",
+    "MC": "🧑‍🌾"
 }
 
 GRAPH_FIELDS_PLACEHOLDER = "_FIELDS_"
