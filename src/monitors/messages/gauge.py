@@ -31,8 +31,10 @@ def seasonal_gauge_str(sunrise_receipt):
     async_values = execute_lambdas(*parallelized)
 
     gauge_strs = []
+    gauge_strs.append("**Seed Gauge**")
     gauge_strs.append(seed_gauge_str(seasons_info, async_values[:2]))
 
+    gauge_strs.append("\n**Other Gauges**")
     gen_gauge_values = async_values[2:]
     for i in range(len(gen_gauge_values) // 2):
         gauge_strs.append(
@@ -63,8 +65,9 @@ def seed_gauge_str(seasons_info, asset_bdvs):
     b_prev = seasons_info["prev"]["block"]
 
     # Get seeds/gauge point info for every asset
+    assets = [BEAN_ADDR, *WHITELISTED_WELLS]
     parallelized = []
-    for asset in asset_bdvs[0]:
+    for asset in assets:
         parallelized.append(lambda token=asset, block=b_prev: beanstalk_client.get_seeds(token, block))
         parallelized.append(lambda token=asset, block=b: beanstalk_client.get_seeds(token, block))
         parallelized.append(lambda token=asset, block=b_prev: beanstalk_client.get_gauge_points(token, block))
@@ -74,7 +77,6 @@ def seed_gauge_str(seasons_info, asset_bdvs):
 
     total_lp_bdvs = [sum(season[token] for token in season if token != BEAN_ADDR) for season in asset_bdvs]
 
-    assets = [BEAN_ADDR, *WHITELISTED_WELLS]
     asset_strs = []
     for i in range(len(assets)):
         asset_str = (
@@ -89,19 +91,19 @@ def seed_gauge_str(seasons_info, asset_bdvs):
                 f"\n> {round_num(bdv_pcts[1], 2)}% of Deposited LP PDV ({pct_change_str(bdv_pcts[0], bdv_pcts[1], precision=2, is_percent=True, use_emoji=False)})"
             )
         asset_strs.append(asset_str)
-    return "**Seed Gauge**\n" + "\n".join(asset_strs)
+    return "\n".join(asset_strs)
 
 def cultivation_factor_str(value_bytes):
     percent_factors = [token_to_float(decode_abi(['uint256'], v)[0], 6) for v in value_bytes]
     return (
-        f"**Cultivation Factor**: {round_num(percent_factors[1], precision=2)}%"
+        f"🪱 Cultivation Factor: {round_num(percent_factors[1], precision=2)}%"
         f"\n> {pct_change_str(percent_factors[0], percent_factors[1], precision=2, is_percent=True, use_emoji=True)}"
     )
 
 def convert_down_penalty_str(value_bytes):
     percent_penalties = [token_to_float(decode_abi(['uint256', 'uint256'], v)[0], 18 - 2) for v in value_bytes]
     return (
-        f"**Convert Down Penalty**: {round_num(percent_penalties[1], precision=2)}%"
+        f"🔄 Convert Down Penalty: {round_num(percent_penalties[1], precision=2)}%"
         f"\n> {pct_change_str(percent_penalties[0], percent_penalties[1], precision=2, is_percent=True, use_emoji=True)}"
     )
 
