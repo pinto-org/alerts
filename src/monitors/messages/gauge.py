@@ -2,6 +2,7 @@ import logging
 from bots.util import round_num
 from data_access.contracts.beanstalk import BeanstalkClient
 from data_access.contracts.util import get_web3_instance, token_to_float
+from data_access.util import execute_lambdas
 from eth_abi import decode_abi
 from tools.util import get_txn_receipt
 
@@ -11,12 +12,20 @@ def seasonal_gauge_str(sunrise_receipt):
 
     gauge_strs = []
 
+    # Parallelize rpc calls
+    parallelized = []
     gauge_str_methods = [cultivation_factor_str, convert_down_penalty_str]
     for i in range(len(gauge_str_methods)):
+        parallelized.append(lambda gauge_id=i, block=b-1: beanstalk_client.get_gauge_value(gauge_id, block))
+        parallelized.append(lambda gauge_id=i, block=b: beanstalk_client.get_gauge_value(gauge_id, block))
+
+    gauge_values = execute_lambdas(*parallelized)
+
+    for i in range(len(gauge_values) // 2):
         gauge_strs.append(
             gauge_str_methods[i]([
-                beanstalk_client.get_gauge_value(i, b - 1),
-                beanstalk_client.get_gauge_value(i, b)
+                gauge_values[2 * i],
+                gauge_values[2 * i + 1]
             ])
         )
 
