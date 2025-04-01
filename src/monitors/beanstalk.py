@@ -123,9 +123,9 @@ class BeanstalkMonitor(Monitor):
 
         subinfo = []
         if values["stalk"] > 0:
-            subinfo.append(f"Stalk Minted: {round_num(stalk_to_float(values['stalk']), 0)}")
+            subinfo.append(f"Stalk Minted: {round_num(stalk_to_float(values['stalk']), 0, avoid_zero=True)}")
         else:
-            subinfo.append(f"Stalk Burned: {round_num(stalk_to_float(-values['stalk']), 0)}")
+            subinfo.append(f"Stalk Burned: {round_num(stalk_to_float(-values['stalk']), 0, avoid_zero=True)}")
 
         total_stalk = beanstalk_client.get_total_stalk()
         subinfo.append(f"Total Stalk: {round_num(total_stalk, 0)}")
