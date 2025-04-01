@@ -5,6 +5,7 @@ from data_access.contracts.erc20 import get_erc20_info, get_erc20_total_supply
 from data_access.subgraphs.basin import BasinGraphClient
 from data_access.subgraphs.bean import BeanGraphClient
 from data_access.subgraphs.season_stats import silo_assets_seasonal_changes
+from monitors.messages.gauge import seasonal_gauge_str
 from monitors.monitor import Monitor
 from data_access.contracts.util import *
 from data_access.contracts.eth_events import *
@@ -20,7 +21,7 @@ class SeasonsMonitor(Monitor):
         self, message_function, short_msgs=False, prod=False, dry_run=None
     ):
         super().__init__(
-            "Seasons", message_function, SUNRISE_CHECK_PERIOD, prod=prod, dry_run=dry_run
+            "Seasons", message_function, None, prod=prod, dry_run=dry_run
         )
         # Toggle shorter messages (must fit into <280 character safely).
         self.short_msgs = short_msgs
@@ -44,11 +45,16 @@ class SeasonsMonitor(Monitor):
             if seasonal_sg:
                 block = seasonal_sg.beanstalks[0].sunrise_block
                 # Get the txn hash + any flood events for this sunrise call
-                sunrise_logs = self._eth_event_client.get_log_range(block, block)
-                if len(sunrise_logs) > 0:
-                    seasonal_sg.beanstalks[0].sunrise_hash = sunrise_logs[0].txn_hash.hex()
-                    seasonal_sg.beanstalks[0].well_plenty_logs = get_logs_by_names(["SeasonOfPlentyWell"], sunrise_logs[0].logs)
-                    seasonal_sg.beanstalks[0].field_plenty_logs = get_logs_by_names(["SeasonOfPlentyField"], sunrise_logs[0].logs)
+                sunrise_txns = self._eth_event_client.get_log_range(block, block)
+                if len(sunrise_txns) > 0:
+                    txn_hash, sunrise_logs = sunrise_txns[0].txn_hash, sunrise_txns[0].logs
+
+                    # TODO: change message function
+                    self.message_function(seasonal_gauge_str(sunrise_logs))
+
+                    seasonal_sg.beanstalks[0].sunrise_hash = txn_hash.hex()
+                    seasonal_sg.beanstalks[0].well_plenty_logs = get_logs_by_names(["SeasonOfPlentyWell"], sunrise_logs)
+                    seasonal_sg.beanstalks[0].field_plenty_logs = get_logs_by_names(["SeasonOfPlentyField"], sunrise_logs)
                     if len(seasonal_sg.beanstalks[0].well_plenty_logs) > 0:
                         # Get swap logs if there was flood plenty
                         sunrise_swap_logs = self._eth_all_wells.get_log_range(block, block)
@@ -65,26 +71,18 @@ class SeasonsMonitor(Monitor):
                 )
 
     def _wait_until_expected_sunrise(self):
-        """Wait until beanstalk is eligible for a sunrise call.
-
-        Assumes sunrise timing cycle beings with Unix Epoch (1/1/1970 00:00:00 UTC).
-        This is not exact since we do not bother with syncing local and graph time.
-        """
+        """Wait until the top of the hour where a sunrise call is expected"""
         if self._dry_run == ["seasons"]:
             time.sleep(1)
             return
 
-        seconds_until_next_sunrise = SEASON_DURATION - time.time() % SEASON_DURATION
-        sunrise_ready_timestamp = time.time() + seconds_until_next_sunrise
-        loop_count = 0
-        while self._thread_active and time.time() < sunrise_ready_timestamp:
-            if loop_count % 60 == 0:
-                logging.info(
-                    f"Blindly waiting {int((sunrise_ready_timestamp - time.time())/60)} "
-                    "more minutes until expected sunrise."
-                )
-            loop_count += 1
-            time.sleep(1)
+        while self._thread_active:
+            seconds_until_next_sunrise = SEASON_DURATION - time.time() % SEASON_DURATION
+            sunrise_ready_timestamp = time.time() + seconds_until_next_sunrise
+            if time.time() < sunrise_ready_timestamp:
+                time.sleep(min(seconds_until_next_sunrise, 60))
+            else:
+                break
 
     def _block_and_get_season_stats(self):
         """Blocks until sunrise is complete, then returns stats of current and previous season.
@@ -108,7 +106,7 @@ class SeasonsMonitor(Monitor):
                 logging.info(f"New season detected with id {self.current_season_id}")
                 return SeasonalData(beanstalk_stats, bean_stats, well_hourly_stats)
             logging.info(f"Sunrise blocking, waiting for subgraphs:\nbeanstalk: {beanstalk_ready}, bean: {bean_ready}, basin: {basin_ready}\n")
-            time.sleep(self.query_rate)
+            time.sleep(5)
         return None
 
     def season_summary_string(self, sg, short_str=False):
