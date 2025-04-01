@@ -30,6 +30,8 @@ def seasonal_gauge_str(sunrise_receipt):
 
     async_values = execute_lambdas(*parallelized)
 
+    # TODO: Add season number, crop ratio
+
     gauge_strs = []
     gauge_strs.append("**Seed Gauge**")
     gauge_strs.append(seed_gauge_str(seasons_info, async_values[:2]))
@@ -110,14 +112,16 @@ def convert_down_penalty_str(value_bytes):
 def pct_change_str(before, after, precision=2, is_percent=False, use_emoji=False):
     diff = abs(after - before)
     if before < after:
-        return f"{'📈 ' if use_emoji else ''}+{round_num(diff, precision=precision, avoid_zero=True)}{'%' if is_percent else ''} this Season"
+        diff_str = round_num(diff, precision=precision, avoid_zero=True)
+        return f"{'📈 ' if use_emoji else ''}+{' ' if diff_str.startswith('<') else ''}{diff_str}{'%' if is_percent else ''} this Season"
     elif after < before:
-        return f"{'📉 ' if use_emoji else ''}-{round_num(diff, precision=precision, avoid_zero=True)}{'%' if is_percent else ''} this Season"
+        diff_str = round_num(diff, precision=precision, avoid_zero=True)
+        return f"{'📉 ' if use_emoji else ''}-{' ' if diff_str.startswith('<') else ''}{diff_str}{'%' if is_percent else ''} this Season"
     else:
         return f"{'📊 ' if use_emoji else ''}No change this Season"
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-    receipt = get_txn_receipt(get_web3_instance(), "0x8e95accae8fdb9658f0af0c215c98e03b5c7f4a5fc97bb852d6177b5dacbcb6e")
+    receipt = get_txn_receipt(get_web3_instance(), "0x0bbf37cf9f8e5e21867679bf2d8734695d018b89bd2c34b44d1d899d75edfb9b")
     gauge_str = seasonal_gauge_str(receipt)
     logging.info(gauge_str)
