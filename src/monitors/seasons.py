@@ -18,11 +18,13 @@ from constants.config import *
 
 class SeasonsMonitor(Monitor):
     def __init__(
-        self, message_function, short_msgs=False, prod=False, dry_run=None
+        self, msg_seasons, msg_gauges, short_msgs=False, prod=False, dry_run=None
     ):
         super().__init__(
-            "Seasons", message_function, None, prod=prod, dry_run=dry_run
+            "Seasons", None, None, prod=prod, dry_run=dry_run
         )
+        self.msg_seasons = msg_seasons
+        self.msg_gauges = msg_gauges
         # Toggle shorter messages (must fit into <280 character safely).
         self.short_msgs = short_msgs
         self._eth_event_client = EthEventsClient(EventClientType.SEASON)
@@ -49,8 +51,7 @@ class SeasonsMonitor(Monitor):
                 if len(sunrise_txns) > 0:
                     txn_hash, sunrise_logs = sunrise_txns[0].txn_hash, sunrise_txns[0].logs
 
-                    # TODO: change message function
-                    self.message_function(seasonal_gauge_str(sunrise_logs[0].receipt))
+                    self.msg_gauges(seasonal_gauge_str(sunrise_logs[0].receipt))
 
                     seasonal_sg.beanstalks[0].sunrise_hash = txn_hash.hex()
                     seasonal_sg.beanstalks[0].well_plenty_logs = get_logs_by_names(["SeasonOfPlentyWell"], sunrise_logs)
@@ -63,12 +64,7 @@ class SeasonsMonitor(Monitor):
                             sunrise_tx_logs = next(txn.logs for txn in sunrise_swap_logs if txn.txn_hash.hex() == seasonal_sg.beanstalks[0].sunrise_hash)
                             seasonal_sg.beanstalks[0].flood_swap_logs = get_logs_by_names(["Swap"], sunrise_tx_logs)
 
-                # Report season summary to users.
-                self.message_function(
-                    self.season_summary_string(
-                        seasonal_sg, short_str=self.short_msgs
-                    )
-                )
+                self.msg_seasons(self.season_summary_string(seasonal_sg))
 
     def _wait_until_expected_sunrise(self):
         """Wait until the top of the hour where a sunrise call is expected"""
@@ -109,7 +105,7 @@ class SeasonsMonitor(Monitor):
             time.sleep(5)
         return None
 
-    def season_summary_string(self, sg, short_str=False):
+    def season_summary_string(self, sg):
         # eth_price = self.beanstalk_client.get_token_usd_twap(WETH, 3600)
         # wsteth_price = self.beanstalk_client.get_token_usd_twap(WSTETH, 3600)
         # wsteth_eth_price = wsteth_price / eth_price
@@ -140,7 +136,7 @@ class SeasonsMonitor(Monitor):
 
         new_season = sg.beanstalks[0].season
         ret_string = f"⏱ Season {new_season} has started!"
-        if not short_str:
+        if not self.short_msgs:
             ret_string += f"\n💵 Pinto price is ${round_num(price, 4)}"
         else:
             ret_string += f" — Pinto price is ${round_num(price, 4)}"
@@ -202,7 +198,7 @@ class SeasonsMonitor(Monitor):
             wells_volume += float(stats.get("deltaTradeVolumeUSD"))
 
         # Full string message.
-        if not short_str:
+        if not self.short_msgs:
 
             ret_string += f"\n🎯 {sg.beans[1].crosses} (+{sg.beans[1].deltaCrosses}) Target crosses"
 
