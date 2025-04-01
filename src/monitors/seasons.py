@@ -50,7 +50,7 @@ class SeasonsMonitor(Monitor):
                     txn_hash, sunrise_logs = sunrise_txns[0].txn_hash, sunrise_txns[0].logs
 
                     # TODO: change message function
-                    self.message_function(seasonal_gauge_str(sunrise_logs))
+                    self.message_function(seasonal_gauge_str(sunrise_logs[0].receipt))
 
                     seasonal_sg.beanstalks[0].sunrise_hash = txn_hash.hex()
                     seasonal_sg.beanstalks[0].well_plenty_logs = get_logs_by_names(["SeasonOfPlentyWell"], sunrise_logs)

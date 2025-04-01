@@ -108,6 +108,11 @@ class BeanstalkClient(ChainClient):
         pod_index = call_contract_function_with_retry(self.contract.functions.podIndex(field_id), block_number=block_number)
         harvestable_index = call_contract_function_with_retry(self.contract.functions.harvestableIndex(field_id), block_number=block_number)
         return bean_to_float(pod_index - harvestable_index)
+    
+    def get_gauge_value(self, gauge_id, block_number=None):
+        block_number = block_number or self.block_number
+        gauge_value = call_contract_function_with_retry(self.contract.functions.getGaugeValue(gauge_id), block_number=block_number)
+        return gauge_value
 
     @classmethod
     def calc_crop_ratio(cls, beanToMaxLpGpPerBdvRatio, is_raining):

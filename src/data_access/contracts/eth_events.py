@@ -124,11 +124,6 @@ add_event_to_dict(
     SEASON_EVENT_MAP,
     SEASON_SIGNATURES_LIST,
 )
-add_event_to_dict(
-    "Engaged(uint8,bytes)",
-    SEASON_EVENT_MAP,
-    SEASON_SIGNATURES_LIST,
-)
 
 # Farmer's market events.
 MARKET_EVENT_MAP = {}
