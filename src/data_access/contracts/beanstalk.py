@@ -109,6 +109,17 @@ class BeanstalkClient(ChainClient):
         harvestable_index = call_contract_function_with_retry(self.contract.functions.harvestableIndex(field_id), block_number=block_number)
         return bean_to_float(pod_index - harvestable_index)
     
+    def get_deposited_bdv_totals(self, block_number=None):
+        """Returns the total recorded bdv of each silo asset"""
+        block_number = block_number or self.block_number
+        silo_tokens = call_contract_function_with_retry(self.contract.functions.getWhitelistedTokens(), block_number=block_number)
+        total_bdvs = call_contract_function_with_retry(self.contract.functions.getTotalSiloDepositedBdv(), block_number=block_number)
+
+        retval = {}
+        for i in range(len(silo_tokens)):
+            retval[silo_tokens[i]] = bean_to_float(total_bdvs[i])
+        return retval
+
     def get_gauge_value(self, gauge_id, block_number=None):
         block_number = block_number or self.block_number
         gauge_value = call_contract_function_with_retry(self.contract.functions.getGaugeValue(gauge_id), block_number=block_number)
