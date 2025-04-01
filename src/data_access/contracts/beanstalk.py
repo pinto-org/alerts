@@ -87,6 +87,11 @@ class BeanstalkClient(ChainClient):
         block_number = block_number or self.block_number
         return call_contract_function_with_retry(self.contract.functions.stemTipForToken(token), block_number=block_number)
 
+    def get_gauge_points(self, token, block_number=None):
+        block_number = block_number or self.block_number
+        gauge_points = call_contract_function_with_retry(self.contract.functions.getGaugePoints(token), block_number=block_number)
+        return token_to_float(gauge_points, 18)
+
     def get_token_usd_price(self, token_addr, block_number=None):
         block_number = block_number or self.block_number
         response = call_contract_function_with_retry(self.contract.functions.getTokenUsdPrice(token_addr), block_number=block_number)
@@ -108,7 +113,7 @@ class BeanstalkClient(ChainClient):
         pod_index = call_contract_function_with_retry(self.contract.functions.podIndex(field_id), block_number=block_number)
         harvestable_index = call_contract_function_with_retry(self.contract.functions.harvestableIndex(field_id), block_number=block_number)
         return bean_to_float(pod_index - harvestable_index)
-    
+
     def get_deposited_bdv_totals(self, block_number=None):
         """Returns the total recorded bdv of each silo asset"""
         block_number = block_number or self.block_number
