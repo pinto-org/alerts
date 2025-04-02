@@ -74,11 +74,10 @@ class SeasonsMonitor(Monitor):
 
         while self._thread_active:
             seconds_until_next_sunrise = SEASON_DURATION - time.time() % SEASON_DURATION
-            sunrise_ready_timestamp = time.time() + seconds_until_next_sunrise
-            if time.time() < sunrise_ready_timestamp:
-                time.sleep(min(seconds_until_next_sunrise, 60))
-            else:
+            if seconds_until_next_sunrise < 60:
+                time.sleep(seconds_until_next_sunrise)
                 break
+            time.sleep(60)
 
     def _block_and_get_season_stats(self):
         """Blocks until sunrise is complete, then returns stats of current and previous season.
