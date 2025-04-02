@@ -252,7 +252,7 @@ class SeasonsMonitor(Monitor):
                 ret_string += f"\n> 📈 {round_num(delta_stalk, 0)} increase this Season"
 
             if germinating_stalk > 0:
-                ret_string += f"\n> 🌱 {round_num(current_silo_stalk, 0)} Stalk is Germinating"
+                ret_string += f"\n> ⏰ {round_num(germinating_stalk, 0)} Stalk is Germinating"
 
             ret_string += f"\n🌱 {round_num(grown_stalk, 0)} total Mown Stalk ({round_num(100 * grown_stalk / current_silo_stalk, 2)}% of Stalk supply)"
             ret_string += f"\n> 🌱 +{round_num(grown_stalk_per_season, 0)} claimable Grown Stalk this Season"
