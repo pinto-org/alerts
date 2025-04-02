@@ -39,6 +39,7 @@ class Channel(Enum):
     EVERYTHING = 10
     TELEGRAM_FWD = 11
     SPECTRA = 12
+    GAUGES = 13
 
 class DiscordClient(discord.ext.commands.Bot):
     def __init__(self, prod=False, telegram_token=None, dry_run=None):
@@ -60,6 +61,7 @@ class DiscordClient(discord.ext.commands.Bot):
             self._chat_id_barn_raise = BS_DISCORD_CHANNEL_ID_BARN_RAISE
             self._chat_id_contract_migrated = BS_DISCORD_CHANNEL_ID_CONTRACT_MIGRATED
             self._chat_id_spectra = BS_DISCORD_CHANNEL_ID_SPECTRA
+            self._chat_id_gauges = BS_DISCORD_CHANNEL_ID_GAUGES
             self._chat_id_everything = BS_DISCORD_CHANNEL_ID_EVERYTHING
             self._chat_id_whale = BS_DISCORD_CHANNEL_ID_WHALE
             self._chat_id_telegram_fwd = BS_TELEGRAM_FWD_CHAT_ID_PRODUCTION
@@ -77,6 +79,7 @@ class DiscordClient(discord.ext.commands.Bot):
             self._chat_id_barn_raise = BS_DISCORD_CHANNEL_ID_TEST_BOT
             self._chat_id_contract_migrated = BS_DISCORD_CHANNEL_ID_TEST_BOT
             self._chat_id_spectra = BS_DISCORD_CHANNEL_ID_TEST_BOT
+            self._chat_id_gauges = BS_DISCORD_CHANNEL_ID_TEST_BOT
             self._chat_id_everything = BS_DISCORD_CHANNEL_ID_EVERYTHING_TEST
             self._chat_id_whale = BS_DISCORD_CHANNEL_ID_TEST_BOT
             self._chat_id_telegram_fwd = BS_TELEGRAM_FWD_CHAT_ID_TEST
@@ -111,6 +114,7 @@ class DiscordClient(discord.ext.commands.Bot):
 
         self.sunrise_monitor = SeasonsMonitor(
             self.send_msg_seasons,
+            self.send_msg_gauges,
             prod=prod,
             dry_run=dry_run,
         )
@@ -199,6 +203,9 @@ class DiscordClient(discord.ext.commands.Bot):
     def send_msg_spectra(self, text, to_main=True, to_tg=None):
         self.msg_queue.append((Channel.SPECTRA if to_main else Channel.EVERYTHING, text))
 
+    def send_msg_gauges(self, text, to_main=True, to_tg=None):
+        self.msg_queue.append((Channel.GAUGES if to_main else Channel.EVERYTHING, text))
+
     def send_msg_telegram_fwd(self, text):
         """Forward a message through the Telegram bot in the Beanstalk chat."""
         self.msg_queue.append((Channel.TELEGRAM_FWD, text))
@@ -215,6 +222,7 @@ class DiscordClient(discord.ext.commands.Bot):
         self._channel_barn_raise = self.get_channel(self._chat_id_barn_raise)
         self._channel_contract_migrated = self.get_channel(self._chat_id_contract_migrated)
         self._channel_spectra = self.get_channel(self._chat_id_spectra)
+        self._channel_gauges = self.get_channel(self._chat_id_gauges)
         if self._chat_id_everything:
             self._channel_everything = self.get_channel(self._chat_id_everything)
         if self._chat_id_whale:
@@ -228,7 +236,7 @@ class DiscordClient(discord.ext.commands.Bot):
             f"Discord channels are {self._channel_report}, {self._channel_peg}, {self._channel_seasons}, "
             f"{self._channel_exchange}, {self._channel_arbitrage}, {self._channel_silo}, {self._channel_field}, "
             f"{self._channel_market}, {self._channel_barn_raise}, {self._channel_contract_migrated}, "
-            f"{self._channel_spectra}"
+            f"{self._channel_spectra}, {self._channel_gauges}"
         )
 
         # Guild IDs for all servers this bot is in.
@@ -309,6 +317,8 @@ class DiscordClient(discord.ext.commands.Bot):
                     await self._channel_contract_migrated.send(msg)
                 elif channel is Channel.SPECTRA:
                     await self._channel_spectra.send(msg)
+                elif channel is Channel.GAUGES:
+                    await self._channel_gauges.send(msg)
                 elif channel is Channel.TELEGRAM_FWD:
                     if self.tele_bot is not None:
                         self.tele_bot.send_message(chat_id=self._chat_id_telegram_fwd, text=tg_msg)
@@ -326,7 +336,7 @@ class DiscordClient(discord.ext.commands.Bot):
 
                 # Repeat all large events into a separate channel, if configured
                 if hasattr(self, '_channel_whale') and msg and channel not in {Channel.REPORT, Channel.TELEGRAM_FWD}:
-                    if "🦈" in msg or "🐳" in msg and channel is not Channel.EVERYTHING:
+                    if ("🦈" in msg or "🐳" in msg) and channel is not Channel.EVERYTHING:
                         logging.info("Forwarding to whale channel")
                         await self._channel_whale.send(msg)
 

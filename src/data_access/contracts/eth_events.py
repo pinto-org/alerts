@@ -110,7 +110,7 @@ add_event_to_dict(
 SEASON_EVENT_MAP = {}
 SEASON_SIGNATURES_LIST = []
 add_event_to_dict(
-    "Incentivization(address,uint256)",
+    "Sunrise(uint256)",
     SEASON_EVENT_MAP,
     SEASON_SIGNATURES_LIST,
 )
@@ -342,6 +342,24 @@ class EthEventsClient:
             )
         return self.get_new_logs(filters=filters, get_all=True)
 
+    def get_log_with_topics(self, event_name, indexed_topics):
+        """Returns all matching logs"""
+        signature = [s for s in self._events_dict if event_name in self._events_dict[s]]
+        if signature:
+            filters = []
+            for address in self._contract_addresses:
+                filters.append(
+                    safe_create_filter(
+                        self._web3,
+                        address=address,
+                        topics=[signature[0], *indexed_topics],
+                        from_block=0,
+                        to_block="latest"
+                    )
+                )
+            return self.get_new_logs(filters=filters, get_all=True)
+        return []
+
     def get_new_logs(self, dry_run=None, filters=None, get_all=False):
         """Iterate through all entries passing filter and return list of decoded Log Objects.
 
@@ -412,21 +430,7 @@ class EthEventsClient:
 
             # Retrieve the full txn and txn receipt.
             receipt = get_txn_receipt(self._web3, txn_hash)
-
-            # Get and decode all logs of interest from the txn. There may be many logs.
-            decoded_logs = []
-            for signature in self._signature_list:
-                for contract in self._contracts:
-                    try:
-                        decoded_type_logs = contract.events[
-                            self._events_dict[signature]
-                        ]().processReceipt(receipt, errors=DISCARD)
-                    except web3_exceptions.ABIEventFunctionNotFound:
-                        continue
-                    for log in decoded_type_logs:
-                        # Attach the full receipt
-                        updated_log = AttributeDict({**dict(log), "receipt": receipt})
-                        decoded_logs.append(updated_log)
+            decoded_logs = self.logs_from_receipt(receipt)
 
             # Add all remaining txn logs to log map.
             txn_hash_set.add(txn_hash)
@@ -475,6 +479,23 @@ class EthEventsClient:
             self._recent_processed_txns.popitem(last=False)
         return new_unique_entries
         # return filter.get_all_entries() # Use this to search for old events.
+
+    def logs_from_receipt(self, receipt):
+        """Decode and return all logs of interest from the given receipt"""
+        decoded_logs = []
+        for signature in self._signature_list:
+            for contract in self._contracts:
+                try:
+                    decoded_type_logs = contract.events[
+                        self._events_dict[signature]
+                    ]().processReceipt(receipt, errors=DISCARD)
+                except web3_exceptions.ABIEventFunctionNotFound:
+                    continue
+                for log in decoded_type_logs:
+                    # Attach the full receipt
+                    updated_log = AttributeDict({**dict(log), "receipt": receipt})
+                    decoded_logs.append(updated_log)
+        return decoded_logs
 
 def safe_create_filter(web3, address, topics, from_block, to_block):
     """Create a filter but handle connection exceptions that web3 cannot manage."""

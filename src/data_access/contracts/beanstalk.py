@@ -87,6 +87,11 @@ class BeanstalkClient(ChainClient):
         block_number = block_number or self.block_number
         return call_contract_function_with_retry(self.contract.functions.stemTipForToken(token), block_number=block_number)
 
+    def get_gauge_points(self, token, block_number=None):
+        block_number = block_number or self.block_number
+        gauge_points = call_contract_function_with_retry(self.contract.functions.getGaugePoints(token), block_number=block_number)
+        return token_to_float(gauge_points, 18)
+
     def get_token_usd_price(self, token_addr, block_number=None):
         block_number = block_number or self.block_number
         response = call_contract_function_with_retry(self.contract.functions.getTokenUsdPrice(token_addr), block_number=block_number)
@@ -108,6 +113,36 @@ class BeanstalkClient(ChainClient):
         pod_index = call_contract_function_with_retry(self.contract.functions.podIndex(field_id), block_number=block_number)
         harvestable_index = call_contract_function_with_retry(self.contract.functions.harvestableIndex(field_id), block_number=block_number)
         return bean_to_float(pod_index - harvestable_index)
+
+    def get_deposited_bdv_totals(self, block_number=None):
+        """Returns the total recorded bdv of each silo asset"""
+        block_number = block_number or self.block_number
+        silo_tokens = call_contract_function_with_retry(self.contract.functions.getWhitelistedTokens(), block_number=block_number)
+        total_bdvs = call_contract_function_with_retry(self.contract.functions.getTotalSiloDepositedBdv(), block_number=block_number)
+
+        retval = {}
+        for i in range(len(silo_tokens)):
+            retval[silo_tokens[i]] = bean_to_float(total_bdvs[i])
+        return retval
+
+    def get_germinating_stalk_total(self, block_number=None):
+        block_number = block_number or self.block_number
+        germinating_stalk = call_contract_function_with_retry(self.contract.functions.getTotalGerminatingStalk(), block_number=block_number)
+        return stalk_to_float(germinating_stalk)
+
+    def get_avg_gs_per_bdv_per_season(self, block_number=None):
+        block_number = block_number or self.block_number
+        agspbdv = call_contract_function_with_retry(self.contract.functions.getAverageGrownStalkPerBdvPerSeason(), block_number=block_number)
+        return stalk_to_float(agspbdv)
+
+    def get_gauge_value(self, gauge_id, block_number=None):
+        block_number = block_number or self.block_number
+        return call_contract_function_with_retry(self.contract.functions.getGaugeValue(gauge_id), block_number=block_number)
+
+    def get_crop_ratio(self, block_number=None):
+        block_number = block_number or self.block_number
+        crop_ratio = call_contract_function_with_retry(self.contract.functions.getBeanToMaxLpGpPerBdvRatioScaled(), block_number=block_number)
+        return token_to_float(crop_ratio, 18)
 
     @classmethod
     def calc_crop_ratio(cls, beanToMaxLpGpPerBdvRatio, is_raining):
