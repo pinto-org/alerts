@@ -130,6 +130,7 @@ def pct_change_str(before, after, precision=2, is_percent=False, use_emoji=False
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-    receipt = get_txn_receipt(get_web3_instance(), "0x0bbf37cf9f8e5e21867679bf2d8734695d018b89bd2c34b44d1d899d75edfb9b")
+    # receipt = get_txn_receipt(get_web3_instance(), "0x0bbf37cf9f8e5e21867679bf2d8734695d018b89bd2c34b44d1d899d75edfb9b")
+    receipt = get_txn_receipt(get_web3_instance(), "0x095bed5217a03ef8beff957534381a2babf64171c02f824152e3fa51133055c4")
     gauge_str = seasonal_gauge_str(receipt)
     logging.info(gauge_str)

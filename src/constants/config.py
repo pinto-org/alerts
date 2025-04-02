@@ -41,6 +41,8 @@ DISCORD_NICKNAME_LIMIT = 32
 WALLET_WATCH_LIMIT = 10
 
 RPC_URL = "https://" + os.environ["RPC_URL"]
+if "localhost" in RPC_URL:
+    RPC_URL = RPC_URL.replace("https", "http")
 ENS_RPC_URL = os.environ["ENS_RPC_URL"]
 
 # Decimals for conversion from chain int values to float decimal values.

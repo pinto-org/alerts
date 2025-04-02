@@ -205,6 +205,7 @@ class BeanstalkMonitor(Monitor):
         # in silo v3 AddDeposit event will always be present and these will always get set
         bdv_float = 0
         value = 0
+        penalty_bonus_str = None
         for event_log in event_logs:
             if event_log.event == "AddDeposit":
                 bdv_float = bean_to_float(event_log.args.get("bdv"))
@@ -216,6 +217,18 @@ class BeanstalkMonitor(Monitor):
                 _, _, add_token_symbol, add_decimals = get_erc20_info(add_token_addr).parse()
                 remove_amount = event_log.args.get("fromAmount")
                 add_amount = event_log.args.get("toAmount")
+            elif event_log.event == "ConvertDownPenalty":
+                # TODO: this part is going to need to get updated with PI-8. Per conversation with DefaultJuice and Frijo, it is expected
+                # that the event signature will be updated to include account, the amount of stalk penalized, and the amount of stalk not penalized.
+                stalk_penalized = stalk_to_float(event_log.args.stalkLost)
+                if stalk_penalized > 0:
+                    stalk_not_penalized = stalk_to_float(25 * 10 ** 16) # TODO event_log.args.???
+                    penalty_percent = 100 * stalk_penalized / (stalk_penalized + stalk_not_penalized)
+
+                    penalty_bonus_str = (
+                        f"🌱🔥 {round_num(stalk_penalized, 0, avoid_zero=True)} Mown Stalk burned from penalty "
+                        f"({round_num(penalty_percent, 2, avoid_zero=True)}%)"
+                    )
 
         if remove_token_addr == BEAN_ADDR:
             direction_emojis = ["⬇️", "📉"]
@@ -230,6 +243,9 @@ class BeanstalkMonitor(Monitor):
             f"Converted to {round_token(add_amount, add_decimals, add_token_addr)} {add_token_symbol} "
             f"({round_num(bdv_float, 0)} PDV)"
         )
+
+        if penalty_bonus_str:
+            event_str += f"\n_{penalty_bonus_str}_"
 
         event_str += f"\n> :PINTO:{direction_emojis[1]} _{latest_pool_price_str(bean_client, BEAN_ADDR)}_"
         # If regular convert, identifies the non-bean address
