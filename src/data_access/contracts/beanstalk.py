@@ -125,10 +125,19 @@ class BeanstalkClient(ChainClient):
             retval[silo_tokens[i]] = bean_to_float(total_bdvs[i])
         return retval
 
+    def get_germinating_stalk_total(self, block_number=None):
+        block_number = block_number or self.block_number
+        germinating_stalk = call_contract_function_with_retry(self.contract.functions.getTotalGerminatingStalk(), block_number=block_number)
+        return stalk_to_float(germinating_stalk)
+
+    def get_avg_gs_per_bdv_per_season(self, block_number=None):
+        block_number = block_number or self.block_number
+        agspbdv = call_contract_function_with_retry(self.contract.functions.getAverageGrownStalkPerBdvPerSeason(), block_number=block_number)
+        return stalk_to_float(agspbdv)
+
     def get_gauge_value(self, gauge_id, block_number=None):
         block_number = block_number or self.block_number
-        gauge_value = call_contract_function_with_retry(self.contract.functions.getGaugeValue(gauge_id), block_number=block_number)
-        return gauge_value
+        return call_contract_function_with_retry(self.contract.functions.getGaugeValue(gauge_id), block_number=block_number)
 
     def get_crop_ratio(self, block_number=None):
         block_number = block_number or self.block_number

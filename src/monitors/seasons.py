@@ -235,6 +235,12 @@ class SeasonsMonitor(Monitor):
             prev_crop_ratio = BeanstalkClient.calc_crop_ratio(sg.beanstalks[1].beanToMaxLpGpPerBdvRatio, was_raining)
             crop_ratio_delta = crop_ratio - prev_crop_ratio
 
+            germinating_stalk = self.beanstalk_latest.get_germinating_stalk_total()
+            total_bdvs = self.beanstalk_latest.get_deposited_bdv_totals()
+            sum_bdv = sum(total_bdvs[asset] for asset in total_bdvs)
+            grown_stalk = current_silo_stalk - sum_bdv
+            grown_stalk_per_season = self.beanstalk_latest.get_avg_gs_per_bdv_per_season() * sum_bdv
+
             ret_string += f"\n\n**Silo**"
             ret_string += f"\n🌱 {round_num(current_silo_stalk, 0)} Stalk Supply"
             delta_stalk = current_silo_stalk - prev_silo_stalk
@@ -244,6 +250,12 @@ class SeasonsMonitor(Monitor):
                 ret_string += f"\n> 📊 No change this Season"
             else:
                 ret_string += f"\n> 📈 {round_num(delta_stalk, 0)} increase this Season"
+
+            if germinating_stalk > 0:
+                ret_string += f"\n> 🌱 {round_num(current_silo_stalk, 0)} Stalk is Germinating"
+
+            ret_string += f"\n🌱 {round_num(grown_stalk, 0)} total Mown Stalk ({round_num(100 * grown_stalk / current_silo_stalk, 2)}% of Stalk supply)"
+            ret_string += f"\n> 🌱 +{round_num(grown_stalk_per_season, 0)} claimable Grown Stalk this Season"
 
             ret_string += f"\n🏦 {round_num(current_silo_bdv, 0)} PDV in Silo"
             delta_bdv = current_silo_bdv - prev_silo_bdv
