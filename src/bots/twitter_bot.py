@@ -3,6 +3,7 @@ import logging.handlers
 import os
 import signal
 import time
+from tools.util import noop
 from tools.webhook_alerts import activate_webhook_on_error_logs
 import tweepy
 
@@ -73,7 +74,7 @@ class BeanstalkTwitterBot(TwitterBot):
         activate_webhook_on_error_logs()
 
         self.sunrise_monitor = SeasonsMonitor(
-            self.send_msg, short_msgs=True, prod=prod, dry_run=dry_run
+            self.send_msg, noop, short_msgs=True, prod=prod, dry_run=dry_run
         )
         self.sunrise_monitor.start()
 

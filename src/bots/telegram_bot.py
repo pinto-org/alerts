@@ -58,7 +58,7 @@ class TelegramBot(object):
         self.peg_cross_monitor = PegCrossMonitor(send_main_chat, prod=prod)
         self.peg_cross_monitor.start()
 
-        self.sunrise_monitor = SeasonsMonitor(send_both_chats, prod=prod, dry_run=dry_run)
+        self.sunrise_monitor = SeasonsMonitor(send_both_chats, send_both_chats, prod=prod, dry_run=dry_run)
         self.sunrise_monitor.start()
 
         self.wells_monitor = WellsMonitor(
