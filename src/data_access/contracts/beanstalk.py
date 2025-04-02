@@ -130,6 +130,11 @@ class BeanstalkClient(ChainClient):
         gauge_value = call_contract_function_with_retry(self.contract.functions.getGaugeValue(gauge_id), block_number=block_number)
         return gauge_value
 
+    def get_crop_ratio(self, block_number=None):
+        block_number = block_number or self.block_number
+        crop_ratio = call_contract_function_with_retry(self.contract.functions.getBeanToMaxLpGpPerBdvRatioScaled(), block_number=block_number)
+        return token_to_float(crop_ratio, 18)
+
     @classmethod
     def calc_crop_ratio(cls, beanToMaxLpGpPerBdvRatio, is_raining):
         """

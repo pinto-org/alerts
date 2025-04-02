@@ -30,9 +30,8 @@ def seasonal_gauge_str(sunrise_receipt):
 
     async_values = execute_lambdas(*parallelized)
 
-    # TODO: Add season number, crop ratio
-
     gauge_strs = []
+    gauge_strs.append(f"🌅 Season {seasons_info['current']['season']}\n")
     gauge_strs.append("**Seed Gauge**")
     gauge_strs.append(seed_gauge_str(seasons_info, async_values[:2]))
 
@@ -66,9 +65,11 @@ def seed_gauge_str(seasons_info, asset_bdvs):
     b = seasons_info["current"]["block"]
     b_prev = seasons_info["prev"]["block"]
 
-    # Get seeds/gauge point info for every asset
     assets = [BEAN_ADDR, *WHITELISTED_WELLS]
     parallelized = []
+    parallelized.append(lambda: beanstalk_client.get_crop_ratio(b_prev))
+    parallelized.append(lambda: beanstalk_client.get_crop_ratio(b))
+    # Get seeds/gauge point info for every asset
     for asset in assets:
         parallelized.append(lambda token=asset, block=b_prev: beanstalk_client.get_seeds(token, block))
         parallelized.append(lambda token=asset, block=b: beanstalk_client.get_seeds(token, block))
@@ -76,24 +77,31 @@ def seed_gauge_str(seasons_info, asset_bdvs):
         parallelized.append(lambda token=asset, block=b: beanstalk_client.get_gauge_points(token, block))
 
     async_values = execute_lambdas(*parallelized)
+    crop_ratios = async_values[:2]
+    gauge_values = async_values[2:]
 
     total_lp_bdvs = [sum(season[token] for token in season if token != BEAN_ADDR) for season in asset_bdvs]
 
-    asset_strs = []
+    strs = []
+    strs.append((
+        f"🌾 Crop Ratio: {round_num(crop_ratios[1], precision=1)}%"
+        f"\n> {pct_change_str(crop_ratios[0], crop_ratios[1], precision=1, is_percent=True, use_emoji=True)}"
+    ))
+
     for i in range(len(assets)):
         asset_str = (
             f"{SILO_TOKENS_MAP.get(assets[i].lower())}"
-            f"\n> {round_num(async_values[4 * i + 1], 3)} Seeds ({pct_change_str(async_values[4 * i], async_values[4 * i + 1], precision=3, is_percent=False, use_emoji=False)})"
+            f"\n> {round_num(gauge_values[4 * i + 1], 3)} Seeds ({pct_change_str(gauge_values[4 * i], gauge_values[4 * i + 1], precision=3, is_percent=False, use_emoji=False)})"
         )
         # For LP: add gauge info
         if assets[i] != BEAN_ADDR:
-            bdv_pcts = [100 * (asset_bdvs[0][assets[i]] / total) for total in total_lp_bdvs]
+            bdv_pcts = [100 * (asset_bdvs[j][assets[i]] / total) for j, total in enumerate(total_lp_bdvs)]
             asset_str += (
-                f"\n> {round_num(async_values[4 * i + 3], 0)} Gauge Points ({pct_change_str(async_values[4 * i + 2], async_values[4 * i + 3], precision=0, is_percent=False, use_emoji=False)})"
+                f"\n> {round_num(gauge_values[4 * i + 3], 0)} Gauge Points ({pct_change_str(gauge_values[4 * i + 2], gauge_values[4 * i + 3], precision=0, is_percent=False, use_emoji=False)})"
                 f"\n> {round_num(bdv_pcts[1], 2)}% of Deposited LP PDV ({pct_change_str(bdv_pcts[0], bdv_pcts[1], precision=2, is_percent=True, use_emoji=False)})"
             )
-        asset_strs.append(asset_str)
-    return "\n".join(asset_strs)
+        strs.append(asset_str)
+    return "\n".join(strs)
 
 def cultivation_factor_str(value_bytes):
     percent_factors = [token_to_float(decode_abi(['uint256'], v)[0], 6) for v in value_bytes]
