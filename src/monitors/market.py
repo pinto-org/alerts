@@ -17,7 +17,7 @@ class MarketMonitor(Monitor):
         super().__init__(
             "Market", message_function, BEANSTALK_CHECK_RATE, prod=prod, dry_run=dry_run
         )
-        self._eth_event_client = EthEventsClient(EventClientType.MARKET)
+        self._eth_event_client = EthEventsClient([EventClientType.MARKET])
         self.beanstalk_contract = get_beanstalk_contract()
 
     def _monitor_method(self):

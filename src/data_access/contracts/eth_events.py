@@ -260,59 +260,65 @@ class TxnPair:
         self.logs = logs
 
 class EthEventsClient:
-    # TODO: refactor this to accept a list of client types.
-    def __init__(self, event_client_type, addresses=[]):
+    def __init__(self, client_types, addresses=[]):
+        if not client_types:
+            raise ValueError("Mut specify at least one client type")
+
         # Track recently seen txns to avoid processing same txn multiple times.
         self._recent_processed_txns = OrderedDict()
         self._web3 = get_web3_instance()
-        self._event_client_type = event_client_type
-        if self._event_client_type == EventClientType.AQUIFER:
-            self._contracts = [get_aquifer_contract()]
-            self._contract_addresses = [AQUIFER_ADDR]
-            self._events_dict = AQUIFER_EVENT_MAP
-            self._signature_list = AQUIFER_SIGNATURES_LIST
-        elif self._event_client_type == EventClientType.WELL:
-            self._contracts = [get_well_contract(None)]
-            self._contract_addresses = addresses
-            self._events_dict = WELL_EVENT_MAP
-            self._signature_list = WELL_SIGNATURES_LIST
-        elif self._event_client_type == EventClientType.BEANSTALK:
-            self._contracts = [
-                get_beanstalk_contract()
-                # get_fertilizer_contract(),
-            ]
-            self._contract_addresses = [BEANSTALK_ADDR] #, FERTILIZER_ADDR
-            self._events_dict = BEANSTALK_EVENT_MAP
-            self._signature_list = BEANSTALK_SIGNATURES_LIST
-        elif self._event_client_type == EventClientType.SEASON:
-            self._contracts = [get_beanstalk_contract()]
-            self._contract_addresses = [BEANSTALK_ADDR]
-            self._events_dict = SEASON_EVENT_MAP
-            self._signature_list = SEASON_SIGNATURES_LIST
-        elif self._event_client_type == EventClientType.MARKET:
-            self._contracts = [get_beanstalk_contract()]
-            self._contract_addresses = [BEANSTALK_ADDR]
-            self._events_dict = MARKET_EVENT_MAP
-            self._signature_list = MARKET_SIGNATURES_LIST
-        elif self._event_client_type == EventClientType.BARN_RAISE:
-            self._contracts = [get_fertilizer_contract(), get_beanstalk_contract()]
-            self._contract_addresses = [FERTILIZER_ADDR, BEANSTALK_ADDR]
-            self._events_dict = FERTILIZER_EVENT_MAP
-            self._signature_list = FERTILIZER_SIGNATURES_LIST
-        elif self._event_client_type == EventClientType.CONTRACT_MIGRATED:
-            self._contracts = [get_beanstalk_contract()]
-            self._contract_addresses = [BEANSTALK_ADDR]
-            self._events_dict = CONTRACTS_MIGRATED_EVENT_MAP
-            self._signature_list = CONTRACTS_MIGRATED_SIGNATURES_LIST
-        elif self._event_client_type == EventClientType.INTEGRATIONS:
-            self._contracts = [get_wrapped_silo_contract(SPINTO_ADDR)]
-            self._contracts.extend(get_curve_spectra_contract(s.pool) for s in SPECTRA_SPINTO_POOLS)
-            self._contract_addresses = [SPINTO_ADDR]
-            self._contract_addresses.extend(s.pool for s in SPECTRA_SPINTO_POOLS)
-            self._events_dict = INTEGRATIONS_EVENT_MAP
-            self._signature_list = INTEGRATIONS_SIGNATURES_LIST
-        else:
-            raise ValueError("Unsupported event client type.")
+        self._client_types = client_types
+
+        self._contracts = []
+        self._contract_addresses = []
+        self._signature_list = []
+        self._events_dict = {}
+
+
+        for client_type in client_types:
+            if client_type == EventClientType.AQUIFER:
+                self._contracts.append(get_aquifer_contract())
+                self._contract_addresses.append(AQUIFER_ADDR)
+                self._signature_list.extend(AQUIFER_SIGNATURES_LIST)
+                self._events_dict.update(AQUIFER_EVENT_MAP)
+            elif client_type == EventClientType.WELL:
+                self._contracts.append(get_well_contract(None))
+                self._contract_addresses.extend(addresses)
+                self._signature_list.extend(WELL_SIGNATURES_LIST)
+                self._events_dict.update(WELL_EVENT_MAP)
+            elif client_type == EventClientType.BEANSTALK:
+                self._contracts.append(get_beanstalk_contract())
+                self._contract_addresses.append(BEANSTALK_ADDR)
+                self._signature_list.extend(BEANSTALK_SIGNATURES_LIST)
+                self._events_dict.update(BEANSTALK_EVENT_MAP)
+            elif client_type == EventClientType.SEASON:
+                self._contracts.append(get_beanstalk_contract())
+                self._contract_addresses.append(BEANSTALK_ADDR)
+                self._signature_list.extend(SEASON_SIGNATURES_LIST)
+                self._events_dict.update(SEASON_EVENT_MAP)
+            elif client_type == EventClientType.MARKET:
+                self._contracts.append(get_beanstalk_contract())
+                self._contract_addresses.append(BEANSTALK_ADDR)
+                self._signature_list.extend(MARKET_SIGNATURES_LIST)
+                self._events_dict.update(MARKET_EVENT_MAP)
+            elif client_type == EventClientType.BARN_RAISE:
+                self._contracts.append(get_fertilizer_contract())
+                self._contracts.append(get_beanstalk_contract())
+                self._contract_addresses.extend([FERTILIZER_ADDR, BEANSTALK_ADDR])
+                self._signature_list.extend(FERTILIZER_SIGNATURES_LIST)
+                self._events_dict.update(FERTILIZER_EVENT_MAP)
+            elif client_type == EventClientType.CONTRACT_MIGRATED:
+                self._contracts.append(get_beanstalk_contract())
+                self._contract_addresses.append(BEANSTALK_ADDR)
+                self._signature_list.extend(CONTRACTS_MIGRATED_SIGNATURES_LIST)
+                self._events_dict.update(CONTRACTS_MIGRATED_EVENT_MAP)
+            elif client_type == EventClientType.INTEGRATIONS:
+                self._contracts.append(get_wrapped_silo_contract(SPINTO_ADDR))
+                self._contracts.extend(get_curve_spectra_contract(s.pool) for s in SPECTRA_SPINTO_POOLS)
+                self._contract_addresses.append(SPINTO_ADDR)
+                self._contract_addresses.extend(s.pool for s in SPECTRA_SPINTO_POOLS)
+                self._signature_list.extend(INTEGRATIONS_SIGNATURES_LIST)
+                self._events_dict.update(INTEGRATIONS_EVENT_MAP)
         self._set_filters()
 
     def _set_filters(self):
@@ -415,19 +421,14 @@ class EthEventsClient:
                 if topic_hash not in self._events_dict:
                     logging.warning(
                         f"Unexpected topic ({topic_hash}) seen in "
-                        f"{self._event_client_type.name} EthEventsClient"
+                        f"{', '.join(ct.name for ct in self._client_types)} EthEventsClient"
                     )
                     continue
-
-            # Print out entry.
-            # logging.info(f"{self._event_client_type.name} entry:\n{str(entry)}\n")
 
             # Do not process the same txn multiple times.
             txn_hash = entry["transactionHash"]
             if txn_hash in txn_hash_set:
                 continue
-
-            # logging.info(f"{self._event_client_type.name} processing {txn_hash.hex()} logs.")
 
             # Retrieve the full txn and txn receipt.
             receipt = get_txn_receipt(self._web3, txn_hash)
@@ -436,10 +437,6 @@ class EthEventsClient:
             # Add all remaining txn logs to log map.
             txn_hash_set.add(txn_hash)
             txn_logs_list.append(TxnPair(txn_hash, decoded_logs))
-            # logging.info(
-            #     f"Transaction: {txn_hash}\nAll txn logs of interest:\n"
-            #     f"{NEWLINE_CHAR.join([str(l) for l in decoded_logs])}"
-            # )
 
         txn_logs_list.sort(key=lambda entry: entry.logs[0].receipt.blockNumber if entry.logs else float('inf'))
         return txn_logs_list
@@ -451,7 +448,6 @@ class EthEventsClient:
         of interest this will return multiple entries.
         Catch any exceptions that may arise when attempting to connect to Infura.
         """
-        # logging.info(f"Checking for new {self._event_client_type.name} entries with " f"{filter}.")
 
         if get_all or "DRY_RUN_FROM_BLOCK" in os.environ:
             return filter.get_all_entries()

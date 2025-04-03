@@ -53,9 +53,9 @@ class OtherWellsMonitor(Monitor):
         self.msg_exchange = msg_exchange
         self.msg_arbitrage = msg_arbitrage
         self._ignorelist = ignorelist
-        self._eth_aquifer = EthEventsClient(EventClientType.AQUIFER, AQUIFER_ADDR)
+        self._eth_aquifer = EthEventsClient([EventClientType.AQUIFER], AQUIFER_ADDR)
         # All addresses
-        self._eth_all_wells = EthEventsClient(EventClientType.WELL)
+        self._eth_all_wells = EthEventsClient([EventClientType.WELL])
     
     def _monitor_method(self):
         last_check_time = 0
@@ -119,7 +119,7 @@ class WellsMonitor(Monitor):
         self.msg_arbitrage = msg_arbitrage
         self.pool_addresses = addresses
         self.arbitrage_senders = arbitrage_senders
-        self._eth_event_client = EthEventsClient(EventClientType.WELL, self.pool_addresses)
+        self._eth_event_client = EthEventsClient([EventClientType.WELL], self.pool_addresses)
         self.bean_reporting = bean_reporting
 
     def _monitor_method(self):

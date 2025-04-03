@@ -12,8 +12,8 @@ class WithdrawAndSow:
         self.temperature = 100 * (self.pods_received / self.beans_sown - 1)
 
 def withdraw_sow_info(receipt):
-    beanstalk_evt_client = EthEventsClient(EventClientType.BEANSTALK)
-    # TODO need RemoveLiquidityOneToken
+    beanstalk_evt_client = EthEventsClient([EventClientType.BEANSTALK, EventClientType.WELL])
+
     txn_logs = beanstalk_evt_client.logs_from_receipt(receipt)
     sow_logs = get_logs_by_names("Sow", txn_logs)
     if len(sow_logs) != 1:

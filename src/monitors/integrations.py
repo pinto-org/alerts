@@ -18,7 +18,7 @@ class IntegrationsMonitor(Monitor):
         )
         self.msg_spinto = msg_spinto
         self.msg_spectra = msg_spectra
-        self._eth_event_client = EthEventsClient(EventClientType.INTEGRATIONS)
+        self._eth_event_client = EthEventsClient([EventClientType.INTEGRATIONS])
 
     def _monitor_method(self):
         last_check_time = 0

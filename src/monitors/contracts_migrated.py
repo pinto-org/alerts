@@ -13,7 +13,7 @@ class ContractsMigrated(Monitor):
         super().__init__(
             "Contract Migration", message_function, BEANSTALK_CHECK_RATE, prod=prod, dry_run=dry_run
         )
-        self._eth_event_client = EthEventsClient(EventClientType.CONTRACT_MIGRATED)
+        self._eth_event_client = EthEventsClient([EventClientType.CONTRACT_MIGRATED])
 
     def _monitor_method(self):
         last_check_time = 0

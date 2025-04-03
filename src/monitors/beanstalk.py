@@ -22,7 +22,7 @@ class BeanstalkMonitor(Monitor):
         )
         self.msg_silo = msg_silo
         self.msg_field = msg_field
-        self._eth_event_client = EthEventsClient(EventClientType.BEANSTALK)
+        self._eth_event_client = EthEventsClient([EventClientType.BEANSTALK])
 
     def _monitor_method(self):
         last_check_time = 0
