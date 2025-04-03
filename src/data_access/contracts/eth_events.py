@@ -260,6 +260,7 @@ class TxnPair:
         self.logs = logs
 
 class EthEventsClient:
+    # TODO: refactor this to accept a list of client types.
     def __init__(self, event_client_type, addresses=[]):
         # Track recently seen txns to avoid processing same txn multiple times.
         self._recent_processed_txns = OrderedDict()
