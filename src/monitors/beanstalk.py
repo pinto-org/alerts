@@ -131,6 +131,11 @@ class BeanstalkMonitor(Monitor):
 
         event_str += f"\n_{'. '.join(subinfo)}_"
 
+        sow = withdraw_sow_info(receipt)
+        if sow:
+            # TODO
+            pass
+
         event_str += f"\n{value_to_emojis(value)}"
         event_str += links_footer(receipt)
         return event_str
@@ -168,8 +173,10 @@ class BeanstalkMonitor(Monitor):
                 f"Remaining Soil: {round_num(current_soil, precision=(0 if current_soil > 2 else 2))}_"
             )
 
-            # TODO
-            withdraw_sow_info(event_log.receipt)
+            sow = withdraw_sow_info(event_log.receipt)
+            if sow:
+                # TODO
+                pass
 
             event_str += f"\n{value_to_emojis(beans_value)}"
         elif event_log.event == "Harvest":
