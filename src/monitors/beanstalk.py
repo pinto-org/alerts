@@ -163,7 +163,7 @@ class BeanstalkMonitor(Monitor):
                 f"{round_num(pods_amount, 0, avoid_zero=True)} Pods "
                 f"at {round_num_abbreviated(beanstalk_client.get_podline_length(), precision=3)} in Line "
                 f"({round_num(beans_value, 0, avoid_zero=True, incl_dollar=True)})"
-                f"\n🧑‍🌾 Farmer has {round_num_abbreviated(beanstalk_graph_client.get_farmer_pod_count(event_log.args.account), precision=3)} Pods"
+                f"\n🧑‍🌾 Farmer has {round_num_abbreviated(beanstalk_graph_client.get_farmer_pod_count(event_log.args.account), precision=1)} Pods"
             )
             effective_temp = (pods_amount / beans_amount - 1) * 100
             max_temp = beanstalk_client.get_max_temp()

@@ -274,7 +274,6 @@ class EthEventsClient:
         self._signature_list = []
         self._events_dict = {}
 
-
         for client_type in client_types:
             if client_type == EventClientType.AQUIFER:
                 self._contracts.append(get_aquifer_contract())
