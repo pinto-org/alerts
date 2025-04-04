@@ -1,5 +1,6 @@
 from bots.util import *
 from data_access.contracts.erc20 import get_erc20_info
+from data_access.subgraphs.beanstalk import BeanstalkGraphClient
 from monitors.monitor import Monitor
 from data_access.contracts.util import *
 from data_access.contracts.eth_events import *
@@ -9,8 +10,7 @@ from data_access.util import *
 from constants.addresses import *
 from constants.config import *
 
-from collections import defaultdict
-
+from tools.combined_actions import withdraw_sow_info
 from tools.silo import net_deposit_withdrawal_stalk
 from tools.spinto import has_spinto_action_size
 
@@ -23,7 +23,7 @@ class BeanstalkMonitor(Monitor):
         )
         self.msg_silo = msg_silo
         self.msg_field = msg_field
-        self._eth_event_client = EthEventsClient(EventClientType.BEANSTALK)
+        self._eth_event_client = EthEventsClient([EventClientType.BEANSTALK])
 
     def _monitor_method(self):
         last_check_time = 0
@@ -132,62 +132,67 @@ class BeanstalkMonitor(Monitor):
 
         event_str += f"\n_{'. '.join(subinfo)}_"
 
+        # Extra info if this is withdraw/sow
+        sow = withdraw_sow_info(receipt)
+        if sow:
+            event_str += f"\n> 🌾 Sowed in the Field for {sow.pods_received_str} Pods at {sow.temperature_str} Temperature"
+
         event_str += f"\n{value_to_emojis(value)}"
         event_str += links_footer(receipt)
         return event_str
 
 
     def field_event_str(self, event_log):
-        """Create a string representing a single event log.
+        if event_log.event not in ["Sow", "Harvest"]:
+            return ""
 
-        Events that are from a convert call should not be passed into this function as they
-        should be processed in batch.
-        """
         beanstalk_client = BeanstalkClient(block_number=event_log.blockNumber)
+        beanstalk_graph_client = BeanstalkGraphClient(block_number=event_log.blockNumber)
         bean_client = BeanClient(block_number=event_log.blockNumber)
-
         event_str = ""
+
+        beans_amount = bean_to_float(event_log.args.get("beans"))
+        pods_amount = bean_to_float(event_log.args.get("pods"))
+
         bean_price = bean_client.avg_bean_price()
+        beans_value = beans_amount * bean_price
 
-        # Ignore these events
-        if event_log.event in ["RemoveWithdrawal", "RemoveWithdrawals" "Plant", "Pick", "L1DepositsMigrated"]:
-            return ""
-        # Sow event.
-        elif event_log.event in ["Sow", "Harvest"]:
-            # Pull args from the event log.
-            beans_amount = bean_to_float(event_log.args.get("beans"))
-            beans_value = beans_amount * bean_price
-            pods_amount = bean_to_float(event_log.args.get("pods"))
+        if event_log.event == "Sow":
+            event_str += (
+                f"🚜 {round_num(beans_amount, 0, avoid_zero=True)} Pinto Sown for "
+                f"{round_num(pods_amount, 0, avoid_zero=True)} Pods "
+                f"at {round_num_abbreviated(beanstalk_client.get_podline_length(), precision=3)} in Line "
+                f"({round_num(beans_value, 0, avoid_zero=True, incl_dollar=True)})"
+                f"\n🧑‍🌾 Farmer has {round_num_abbreviated(beanstalk_graph_client.get_farmer_pod_count(event_log.args.account), precision=1)} Pods"
+            )
+            effective_temp = (pods_amount / beans_amount - 1) * 100
+            max_temp = beanstalk_client.get_max_temp()
+            current_soil = beanstalk_client.get_current_soil()
+            if abs(effective_temp - max_temp) < 0.01:
+                effective_temp = max_temp
+            event_str += (
+                f"\n_Sow Temperature: {round_num(effective_temp, precision=2)}% "
+                f"(Max: {round_num(max_temp, precision=2)}%). "
+                f"Remaining Soil: {round_num(current_soil, precision=(0 if current_soil > 2 else 2))}_"
+            )
 
-            if event_log.event == "Sow":
-                event_str += (
-                    f"🚜 {round_num(beans_amount, 0, avoid_zero=True)} Pinto Sown for "
-                    f"{round_num(pods_amount, 0, avoid_zero=True)} Pods "
-                    f"at {round_num_abbreviated(beanstalk_client.get_podline_length(), precision=3)} in Line "
-                    f"({round_num(beans_value, 0, avoid_zero=True, incl_dollar=True)})"
-                )
-                effective_temp = (pods_amount / beans_amount - 1) * 100
-                max_temp = beanstalk_client.get_max_temp()
-                current_soil = beanstalk_client.get_current_soil()
-                if abs(effective_temp - max_temp) < 0.01:
-                    effective_temp = max_temp
-                event_str += (
-                    f"\n_Sow Temperature: {round_num(effective_temp, precision=2)}% "
-                    f"(Max: {round_num(max_temp, precision=2)}%). "
-                    f"Remaining Soil: {round_num(current_soil, precision=(0 if current_soil > 2 else 2))}_"
-                )
-                event_str += f"\n{value_to_emojis(beans_value)}"
-            elif event_log.event == "Harvest":
-                harvest_amt_str = round_num(beans_amount, 0, avoid_zero=True)
-                harvest_amt_str = f"{harvest_amt_str} Pods" if harvest_amt_str != "1" else f"{harvest_amt_str} Pod"
-                event_str += f"👩‍🌾 {harvest_amt_str} Harvested for Pinto ({round_num(beans_value, 0, avoid_zero=True, incl_dollar=True)})"
-                event_str += f"\n{value_to_emojis(beans_value)}"
-        # Unknown event type.
-        else:
-            # logging.warning(
-            #     f"Unexpected event log from Beanstalk contract ({event_log}). Ignoring."
-            # )
-            return ""
+            # Extra info if this is withdraw/sow
+            sow = withdraw_sow_info(event_log.receipt)
+            if sow:
+                withdraw_token = Web3.to_checksum_address(sow.withdraw_token_info.addr)
+                direction = "📈" if withdraw_token != BEAN_ADDR else "📊"
+
+                event_str += f"\n> 📭 Sowed using :{sow.withdraw_token_info.symbol}: {sow.withdraw_amount_str} Deposited !{sow.withdraw_token_info.symbol}"
+                event_str += f"\n> :PINTO:{direction} _{latest_pool_price_str(bean_client, BEAN_ADDR)}_"
+                if withdraw_token != BEAN_ADDR:
+                    event_str += f"\n> :{sow.withdraw_token_info.symbol}:{direction} _{latest_pool_price_str(bean_client, withdraw_token)}_"
+
+            event_str += f"\n{value_to_emojis(beans_value)}"
+        elif event_log.event == "Harvest":
+            harvest_amt_str = round_num(beans_amount, 0, avoid_zero=True)
+            harvest_amt_str = f"{harvest_amt_str} Pods" if harvest_amt_str != "1" else f"{harvest_amt_str} Pod"
+            event_str += f"👩‍🌾 {harvest_amt_str} Harvested for Pinto ({round_num(beans_value, 0, avoid_zero=True, incl_dollar=True)})"
+            event_str += f"\n{value_to_emojis(beans_value)}"
 
         event_str += links_footer(event_log.receipt)
         return event_str

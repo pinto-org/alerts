@@ -165,7 +165,7 @@ if __name__ == "__main__":
     # logging.info(f"season {bs.get_season()}")
     # logging.info(f"bean seeds {bs.get_seeds(BEAN_ADDR)}")
     # logging.info(f"season block {bs.get_season_block()}")
-    client = EthEventsClient(EventClientType.SEASON)
+    client = EthEventsClient([EventClientType.SEASON])
     events = client.get_log_range(22722127, 22722127)
     for i in range(len(events)):
         logging.info(f"found txn: {events[i].txn_hash.hex()}")

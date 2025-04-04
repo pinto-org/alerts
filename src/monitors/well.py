@@ -13,6 +13,8 @@ from constants.addresses import *
 from constants.config import *
 
 from typing import List, Optional
+
+from tools.combined_actions import withdraw_sow_info
 class WellEventData:
     def __init__(
         self,
@@ -53,9 +55,9 @@ class OtherWellsMonitor(Monitor):
         self.msg_exchange = msg_exchange
         self.msg_arbitrage = msg_arbitrage
         self._ignorelist = ignorelist
-        self._eth_aquifer = EthEventsClient(EventClientType.AQUIFER, AQUIFER_ADDR)
+        self._eth_aquifer = EthEventsClient([EventClientType.AQUIFER], AQUIFER_ADDR)
         # All addresses
-        self._eth_all_wells = EthEventsClient(EventClientType.WELL)
+        self._eth_all_wells = EthEventsClient([EventClientType.WELL])
     
     def _monitor_method(self):
         last_check_time = 0
@@ -119,7 +121,7 @@ class WellsMonitor(Monitor):
         self.msg_arbitrage = msg_arbitrage
         self.pool_addresses = addresses
         self.arbitrage_senders = arbitrage_senders
-        self._eth_event_client = EthEventsClient(EventClientType.WELL, self.pool_addresses)
+        self._eth_event_client = EthEventsClient([EventClientType.WELL], self.pool_addresses)
         self.bean_reporting = bean_reporting
 
     def _monitor_method(self):
@@ -403,6 +405,13 @@ def single_event_str(event_data: WellEventData, bean_reporting=False, is_convert
             )
         if is_lpish and not bean_reporting:
             event_str += f"\n_{event_data.well_liquidity_str}_ "
+
+        if bean_reporting:
+            # Extra info if this is withdraw/sow
+            sow = withdraw_sow_info(event_data.receipt)
+            if sow:
+                event_str += f"\n> 🌾 Sowed in the Field for {sow.pods_received_str} Pods at {sow.temperature_str} Temperature"
+
         event_str += f"\n{value_to_emojis(event_data.value)}"
 
     event_str += links_footer(event_data.receipt)

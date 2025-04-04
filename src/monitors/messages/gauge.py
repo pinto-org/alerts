@@ -12,7 +12,7 @@ from web3 import Web3
 
 def seasonal_gauge_str(sunrise_receipt):
     beanstalk_client = BeanstalkClient()
-    season_client = EthEventsClient(EventClientType.SEASON)
+    season_client = EthEventsClient([EventClientType.SEASON])
 
     seasons_info = get_seasons_and_blocks(season_client.logs_from_receipt(sunrise_receipt))
     b = seasons_info["current"]["block"]
@@ -48,7 +48,7 @@ def seasonal_gauge_str(sunrise_receipt):
 
 def get_seasons_and_blocks(current_logs):
     """Gets the season number and block associated with the current and previous season"""
-    season_client = EthEventsClient(EventClientType.SEASON)
+    season_client = EthEventsClient([EventClientType.SEASON])
 
     evt_sunrise = get_logs_by_names(["Sunrise"], current_logs)[0]
     current_season_number = evt_sunrise.args.season

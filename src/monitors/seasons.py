@@ -27,8 +27,8 @@ class SeasonsMonitor(Monitor):
         self.msg_gauges = msg_gauges
         # Toggle shorter messages (must fit into <280 character safely).
         self.short_msgs = short_msgs
-        self._eth_event_client = EthEventsClient(EventClientType.SEASON)
-        self._eth_all_wells = EthEventsClient(EventClientType.WELL, WHITELISTED_WELLS)
+        self._eth_event_client = EthEventsClient([EventClientType.SEASON])
+        self._eth_all_wells = EthEventsClient([EventClientType.WELL], WHITELISTED_WELLS)
         self.beanstalk_latest = BeanstalkClient(block_number="latest")
         self.bean_latest = BeanClient(block_number="latest")
         self.beanstalk_graph_latest = BeanstalkGraphClient(block_number="latest")
