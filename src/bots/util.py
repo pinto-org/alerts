@@ -223,6 +223,7 @@ def value_to_emojis(value):
 
 
 def latest_pool_price_str(bean_client, addr):
+    addr = Web3.to_checksum_address(addr)
     pool_info = bean_client.get_pool_info(addr)
     if addr == BEAN_ADDR:
         type_str = "Pinto"

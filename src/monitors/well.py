@@ -13,6 +13,8 @@ from constants.addresses import *
 from constants.config import *
 
 from typing import List, Optional
+
+from tools.combined_actions import withdraw_sow_info
 class WellEventData:
     def __init__(
         self,
@@ -403,6 +405,13 @@ def single_event_str(event_data: WellEventData, bean_reporting=False, is_convert
             )
         if is_lpish and not bean_reporting:
             event_str += f"\n_{event_data.well_liquidity_str}_ "
+
+        if bean_reporting:
+            # Extra info if this is withdraw/sow
+            sow = withdraw_sow_info(event_data.receipt)
+            if sow:
+                event_str += f"\n> 🌾 Sowed in the Field for {sow.pods_received_str} Pods at {sow.temperature_str} Temperature"
+
         event_str += f"\n{value_to_emojis(event_data.value)}"
 
     event_str += links_footer(event_data.receipt)

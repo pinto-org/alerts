@@ -131,10 +131,10 @@ class BeanstalkMonitor(Monitor):
 
         event_str += f"\n_{'. '.join(subinfo)}_"
 
+        # Extra info if this is withdraw/sow
         sow = withdraw_sow_info(receipt)
         if sow:
-            # TODO
-            pass
+            event_str += f"\n> 🌾 Sowed in the Field for {sow.pods_received_str} Pods at {sow.temperature_str} Temperature"
 
         event_str += f"\n{value_to_emojis(value)}"
         event_str += links_footer(receipt)
@@ -173,10 +173,16 @@ class BeanstalkMonitor(Monitor):
                 f"Remaining Soil: {round_num(current_soil, precision=(0 if current_soil > 2 else 2))}_"
             )
 
+            # Extra info if this is withdraw/sow
             sow = withdraw_sow_info(event_log.receipt)
             if sow:
-                # TODO
-                pass
+                withdraw_token = Web3.to_checksum_address(sow.withdraw_token_info.addr)
+                direction = "📈" if withdraw_token != BEAN_ADDR else "📊"
+
+                event_str += f"\n> 📭 Sowed using :{sow.withdraw_token_info.symbol}: {sow.withdraw_amount_str} Deposited !{sow.withdraw_token_info.symbol}"
+                event_str += f"\n> :PINTO:{direction} _{latest_pool_price_str(bean_client, BEAN_ADDR)}_"
+                if withdraw_token != BEAN_ADDR:
+                    event_str += f"\n> :{sow.withdraw_token_info.symbol}:{direction} _{latest_pool_price_str(bean_client, withdraw_token)}_"
 
             event_str += f"\n{value_to_emojis(beans_value)}"
         elif event_log.event == "Harvest":

@@ -1,4 +1,4 @@
-from bots.util import get_logs_by_names
+from bots.util import get_logs_by_names, round_num, round_token
 from constants.addresses import BEAN_ADDR
 from data_access.contracts.erc20 import get_erc20_info
 from data_access.contracts.eth_events import EthEventsClient, EventClientType
@@ -12,6 +12,10 @@ class WithdrawAndSow:
         self.beans_sown = bean_to_float(beans_sown)
         self.pods_received = pods_to_float(pods_received)
         self.temperature = 100 * (self.pods_received / self.beans_sown - 1)
+
+        self.withdraw_amount_str = round_token(withdraw_amount, self.withdraw_token_info.decimals, self.withdraw_token_info.addr)
+        self.pods_received_str = round_num(self.pods_received, 0, avoid_zero=True)
+        self.temperature_str = f"{round_num(self.temperature, 2)}%"
 
 def withdraw_sow_info(receipt):
     """
