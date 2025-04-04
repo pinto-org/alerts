@@ -26,6 +26,19 @@ class BeanstalkGraphClient(object):
         self.block_number = block_number
         self.client = Client(transport=BeanstalkGraphClient._transport, fetch_schema_from_transport=False, execute_timeout=7)
 
+    def get_farmer_pod_count(self, farmer, block_number=None):
+        query_str = f"""
+            query {{
+                field(
+                    {get_block_query_str(block_number or self.block_number)}
+                    id: "{farmer}"
+                ) {{
+                    unharvestablePods
+                }}
+            }}
+        """
+        return pods_to_float(execute(self.client, query_str)["field"]["unharvestablePods"])
+
     def get_pod_listing(self, id, block_number=None):
         """Get a single pod listing based on id.
 

@@ -1,5 +1,6 @@
 from bots.util import *
 from data_access.contracts.erc20 import get_erc20_info
+from data_access.subgraphs.beanstalk import BeanstalkGraphClient
 from monitors.monitor import Monitor
 from data_access.contracts.util import *
 from data_access.contracts.eth_events import *
@@ -146,6 +147,7 @@ class BeanstalkMonitor(Monitor):
             return ""
 
         beanstalk_client = BeanstalkClient(block_number=event_log.blockNumber)
+        beanstalk_graph_client = BeanstalkGraphClient(block_number=event_log.blockNumber)
         bean_client = BeanClient(block_number=event_log.blockNumber)
         event_str = ""
 
@@ -161,6 +163,7 @@ class BeanstalkMonitor(Monitor):
                 f"{round_num(pods_amount, 0, avoid_zero=True)} Pods "
                 f"at {round_num_abbreviated(beanstalk_client.get_podline_length(), precision=3)} in Line "
                 f"({round_num(beans_value, 0, avoid_zero=True, incl_dollar=True)})"
+                f"\n🧑‍🌾 Farmer has {round_num_abbreviated(beanstalk_graph_client.get_farmer_pod_count(event_log.args.account), precision=3)} Pods"
             )
             effective_temp = (pods_amount / beans_amount - 1) * 100
             max_temp = beanstalk_client.get_max_temp()
