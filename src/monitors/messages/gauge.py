@@ -83,6 +83,7 @@ def seed_gauge_str(seasons_info, asset_bdvs):
     total_lp_bdvs = [sum(season[token] for token in season if token != BEAN_ADDR) for season in asset_bdvs]
 
     strs = []
+    lp_strs = []
     strs.append((
         f"🌾 Crop Ratio: {round_num(crop_ratios[1], precision=1)}%"
         f"\n> {pct_change_str(crop_ratios[0], crop_ratios[1], precision=1, is_percent=True, use_emoji=True)}"
@@ -100,7 +101,15 @@ def seed_gauge_str(seasons_info, asset_bdvs):
                 f"\n> {round_num(gauge_values[4 * i + 3], 0)} Gauge Points ({pct_change_str(gauge_values[4 * i + 2], gauge_values[4 * i + 3], precision=0, is_percent=False, use_emoji=False)})"
                 f"\n> {round_num(bdv_pcts[1], 2)}% of Deposited LP PDV ({pct_change_str(bdv_pcts[0], bdv_pcts[1], precision=2, is_percent=True, use_emoji=False)})"
             )
-        strs.append(asset_str)
+            lp_strs.append(asset_str)
+        else:
+            strs.append(asset_str)
+
+    # Sort lp tokens by highest seeds
+    paired = [(lp_strs[i], gauge_values[4 * (i + 1) + 1]) for i in range(len(lp_strs))]
+    paired.sort(key=lambda x: x[1], reverse=True)
+    strs.extend([item[0] for item in paired])
+
     return "\n".join(strs)
 
 def cultivation_factor_str(value_bytes):
