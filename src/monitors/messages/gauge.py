@@ -126,9 +126,7 @@ def convert_down_penalty_str(value_bytes):
     return (
         f"🔄 Convert Down Penalty: {round_num(percent_penalties[1], precision=2)}%"
         f"\n> {amt_change_str(percent_penalties[0], percent_penalties[1], precision=2, is_percent=True, use_emoji=True)}"
-        + (
-            f"\n> 🥀 Blight Factor: {blight_factors[1]} ({amt_change_str(blight_factors[0], blight_factors[1], precision=0)})" if max(*blight_factors) > 0 else f""
-        )
+        f"\n> 🥀 Blight Factor: {blight_factors[1]} ({amt_change_str(blight_factors[0], blight_factors[1], precision=0)})"
     )
 
 def amt_change_str(before, after, precision=2, is_percent=False, use_emoji=False):
