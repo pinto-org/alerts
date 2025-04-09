@@ -86,20 +86,20 @@ def seed_gauge_str(seasons_info, asset_bdvs):
     lp_strs = []
     strs.append((
         f"🌾 Crop Ratio: {round_num(crop_ratios[1], precision=1)}%"
-        f"\n> {pct_change_str(crop_ratios[0], crop_ratios[1], precision=1, is_percent=True, use_emoji=True)}"
+        f"\n> {amt_change_str(crop_ratios[0], crop_ratios[1], precision=1, is_percent=True, use_emoji=True)}"
     ))
 
     for i in range(len(assets)):
         asset_str = (
             f"{SILO_TOKENS_MAP.get(assets[i].lower())}"
-            f"\n> {round_num(gauge_values[4 * i + 1], 3)} Seeds ({pct_change_str(gauge_values[4 * i], gauge_values[4 * i + 1], precision=3, is_percent=False, use_emoji=False)})"
+            f"\n> {round_num(gauge_values[4 * i + 1], 3)} Seeds ({amt_change_str(gauge_values[4 * i], gauge_values[4 * i + 1], precision=3, is_percent=False, use_emoji=False)})"
         )
         # For LP: add gauge info
         if assets[i] != BEAN_ADDR:
             bdv_pcts = [100 * (asset_bdvs[j][assets[i]] / total) for j, total in enumerate(total_lp_bdvs)]
             asset_str += (
-                f"\n> {round_num(gauge_values[4 * i + 3], 0)} Gauge Points ({pct_change_str(gauge_values[4 * i + 2], gauge_values[4 * i + 3], precision=0, is_percent=False, use_emoji=False)})"
-                f"\n> {round_num(bdv_pcts[1], 2)}% of Deposited LP PDV ({pct_change_str(bdv_pcts[0], bdv_pcts[1], precision=2, is_percent=True, use_emoji=False)})"
+                f"\n> {round_num(gauge_values[4 * i + 3], 0)} Gauge Points ({amt_change_str(gauge_values[4 * i + 2], gauge_values[4 * i + 3], precision=0, is_percent=False, use_emoji=False)})"
+                f"\n> {round_num(bdv_pcts[1], 2)}% of Deposited LP PDV ({amt_change_str(bdv_pcts[0], bdv_pcts[1], precision=2, is_percent=True, use_emoji=False)})"
             )
             lp_strs.append(asset_str)
         else:
@@ -116,17 +116,22 @@ def cultivation_factor_str(value_bytes):
     percent_factors = [token_to_float(decode_abi(['uint256'], v)[0], 6) for v in value_bytes]
     return (
         f"🪱 Cultivation Factor: {round_num(percent_factors[1], precision=2)}%"
-        f"\n> {pct_change_str(percent_factors[0], percent_factors[1], precision=2, is_percent=True, use_emoji=True)}"
+        f"\n> {amt_change_str(percent_factors[0], percent_factors[1], precision=2, is_percent=True, use_emoji=True)}"
     )
 
 def convert_down_penalty_str(value_bytes):
-    percent_penalties = [token_to_float(decode_abi(['uint256', 'uint256'], v)[0], 18 - 2) for v in value_bytes]
+    decoded = [decode_abi(['uint256', 'uint256'], bytes) for bytes in value_bytes]
+    percent_penalties = [token_to_float(v[0], 18 - 2) for v in decoded]
+    blight_factors = [v[1] for v in decoded]
     return (
         f"🔄 Convert Down Penalty: {round_num(percent_penalties[1], precision=2)}%"
-        f"\n> {pct_change_str(percent_penalties[0], percent_penalties[1], precision=2, is_percent=True, use_emoji=True)}"
+        f"\n> {amt_change_str(percent_penalties[0], percent_penalties[1], precision=2, is_percent=True, use_emoji=True)}"
+        + (
+            f"\n> 🥀 Blight Factor: {blight_factors[1]} ({amt_change_str(blight_factors[0], blight_factors[1], precision=0)})" if max(*blight_factors) > 0 else f""
+        )
     )
 
-def pct_change_str(before, after, precision=2, is_percent=False, use_emoji=False):
+def amt_change_str(before, after, precision=2, is_percent=False, use_emoji=False):
     diff = abs(after - before)
     if before < after:
         diff_str = round_num(diff, precision=precision, avoid_zero=True)
