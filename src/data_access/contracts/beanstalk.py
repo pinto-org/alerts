@@ -147,10 +147,10 @@ class BeanstalkClient(ChainClient):
     @classmethod
     def calc_crop_ratio(cls, beanToMaxLpGpPerBdvRatio, is_raining):
         """
-        Calcualtes the current crop ratio. Result value ranges from 33.33% to 150%.
+        Calcualtes the current crop ratio. Result value ranges from 33.33% to 200%.
         beanToMaxLpGpPerBdvRatio ranges from 0 to 100e18
         """
-        upper_bound = 1.5
+        upper_bound = 2
         if is_raining:
             lower_bound = 0.3333
         else:
