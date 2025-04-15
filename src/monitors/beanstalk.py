@@ -218,11 +218,9 @@ class BeanstalkMonitor(Monitor):
                 remove_amount = event_log.args.get("fromAmount")
                 add_amount = event_log.args.get("toAmount")
             elif event_log.event == "ConvertDownPenalty":
-                # TODO: this part is going to need to get updated with PI-8. Per conversation with DefaultJuice and Frijo, it is expected
-                # that the event signature will be updated to include account, the amount of stalk penalized, and the amount of stalk not penalized.
-                stalk_penalized = stalk_to_float(event_log.args.stalkLost)
+                stalk_penalized = stalk_to_float(event_log.args.grownStalkLost)
                 if stalk_penalized > 0:
-                    stalk_not_penalized = stalk_to_float(25 * 10 ** 16) # TODO event_log.args.???
+                    stalk_not_penalized = stalk_to_float(event_log.args.grownStalkKept)
                     penalty_percent = 100 * stalk_penalized / (stalk_penalized + stalk_not_penalized)
 
                     penalty_bonus_str = (

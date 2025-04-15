@@ -91,7 +91,7 @@ add_event_to_dict(
     BEANSTALK_SIGNATURES_LIST,
 )
 add_event_to_dict(
-    "ConvertDownPenalty(uint256)", # TODO: Will need to modify the signature after PI-8, probably (address,uint256,uint256)
+    "ConvertDownPenalty(address,uint256,uint256)",
     BEANSTALK_EVENT_MAP,
     BEANSTALK_SIGNATURES_LIST,
 )
