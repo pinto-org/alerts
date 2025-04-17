@@ -54,7 +54,7 @@ class ChainClient:
 
     def __init__(self, web3=None):
         self._web3 = web3 or get_web3_instance()
-        
+
 web3_instance = Web3(HTTPProvider(RPC_URL))
 def get_web3_instance():
     """Get an instance of web3 lib."""

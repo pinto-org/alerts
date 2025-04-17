@@ -91,6 +91,11 @@ add_event_to_dict(
     BEANSTALK_SIGNATURES_LIST,
 )
 add_event_to_dict(
+    "ConvertDownPenalty(address,uint256,uint256)",
+    BEANSTALK_EVENT_MAP,
+    BEANSTALK_SIGNATURES_LIST,
+)
+add_event_to_dict(
     "Chop(address,address,uint256,uint256)", BEANSTALK_EVENT_MAP, BEANSTALK_SIGNATURES_LIST
 )
 add_event_to_dict("Plant(address,uint256)", BEANSTALK_EVENT_MAP, BEANSTALK_SIGNATURES_LIST)

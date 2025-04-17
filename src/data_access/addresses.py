@@ -1,9 +1,11 @@
 from constants.config import ENS_RPC_URL
+from tools.util import retryable
 from web3 import Web3
 
 # ENS is always eth mainnet, needs separate Web3 instance
 w3 = Web3(Web3.HTTPProvider(ENS_RPC_URL))
 
+@retryable()
 def format_address_ens(address):
     name = w3.ens.name(address)
     if name is None:
