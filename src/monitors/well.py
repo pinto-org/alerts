@@ -1,4 +1,5 @@
 from collections import defaultdict
+import random
 from bots.util import *
 from data_access.contracts.beanstalk import BeanstalkClient
 from data_access.contracts.erc20 import get_erc20_info
@@ -13,6 +14,8 @@ from constants.addresses import *
 from constants.config import *
 
 from typing import List, Optional
+from concurrent.futures import ThreadPoolExecutor, as_completed, wait, ALL_COMPLETED
+from queue import Queue
 
 from tools.combined_actions import withdraw_sow_info
 class WellEventData:
@@ -131,15 +134,49 @@ class WellsMonitor(Monitor):
                 time.sleep(0.5)
                 continue
             last_check_time = time.time()
-            for txn_pair in self._eth_event_client.get_new_logs(dry_run=self._dry_run):
-                try:
-                    self._handle_txn_logs(txn_pair.txn_hash, txn_pair.logs)
-                except Exception as e:
-                    logging.info(f"\n\n=> Exception during processing of txnHash {txn_pair.txn_hash.hex()}\n")
-                    raise
+
+            new_logs = self._eth_event_client.get_new_logs(dry_run=self._dry_run)
+            if new_logs:
+                BATCH_SIZE = 25
+                with ThreadPoolExecutor(max_workers=BATCH_SIZE) as executor:
+                    for i in range(0, len(new_logs), BATCH_SIZE):
+                        batch = new_logs[i:i + BATCH_SIZE]
+
+                        logging.info(f"Processing {len(batch)} logs")
+                        sent = 0
+
+                        # Submit all tasks in the batch
+                        futures = []
+                        future_to_hash = {}
+                        for txn_pair in batch:
+                            future = executor.submit(
+                                self._handle_txn_logs,
+                                txn_pair.txn_hash,
+                                txn_pair.logs
+                            )
+                            futures.append(future)
+                            future_to_hash[future] = txn_pair.txn_hash
+                        # Wait for all futures in this batch to complete
+                        wait(futures, return_when=ALL_COMPLETED)
+
+                        # Process results in original order
+                        for future in futures:
+                            try:
+                                messages = future.result()
+                                # Submit all messages identified for this transaction
+                                for msg_fn, event_str, to_tg in messages:
+                                    msg_fn(event_str, to_tg=to_tg)
+                                    sent += 1
+                            except Exception as e:
+                                # Failure should be isolated to this transaction
+                                logging.error(f"\n\n=> Exception during processing of transaction: {future_to_hash[future].hex()}\n")
+                        logging.info(f"Sent {sent} messages")
 
     def _handle_txn_logs(self, txn_hash, event_logs):
         """Process the well event logs for a single txn."""
+        messages = []
+        if random.random() < 0.1:
+            raise Exception("Random exception thrown for testing")#TODO: remove
 
         # Convert alerts should appear in both exchange + silo event channels, but don't doublepost in telegram
         is_convert = event_sig_in_txn(BEANSTALK_EVENT_MAP["Convert"], txn_hash)
@@ -178,7 +215,7 @@ class WellsMonitor(Monitor):
             trades += 1
 
         if trades > 0 and abs_sum_pinto == 0:
-            return
+            return messages
 
         if trades >= 2:
             # Consolidate into a single message
@@ -186,10 +223,10 @@ class WellsMonitor(Monitor):
             # Is considered full arbitrage even if the pinto amount mismatches by less than .1%. Some traders move
             # light pinto profits into their trading contract.
             if abs(sum_pinto / abs_sum_pinto) < 0.001:
-                self.msg_arbitrage(event_str, to_tg=to_tg)
+                messages.append((self.msg_arbitrage, event_str, to_tg))
             else:
-                self.msg_exchange(event_str, to_tg=to_tg)
-            return
+                messages.append((self.msg_exchange, event_str, to_tg))
+            return messages
 
         # Identify arbitrage trades or LP converts
         i = 0
@@ -207,7 +244,7 @@ class WellsMonitor(Monitor):
                     del individual_evts[j]
                     del individual_evts[i]
                     event_str = arbitrage_event_str(evt1, evt2)
-                    self.msg_arbitrage(event_str, to_tg=to_tg)
+                    messages.append((self.msg_arbitrage, event_str, to_tg))
                     break
                 # Moving LP (LP convert): LP removal that is followed by LP addition
                 elif (
@@ -217,7 +254,7 @@ class WellsMonitor(Monitor):
                     del individual_evts[j]
                     del individual_evts[i]
                     event_str = move_lp_event_str(evt1, evt2, is_convert=is_convert)
-                    self.msg_exchange(event_str, to_tg=to_tg)
+                    messages.append((self.msg_exchange, event_str, to_tg))
                     break
                 else:
                     j += 1
@@ -229,9 +266,11 @@ class WellsMonitor(Monitor):
             event_str = single_event_str(event_data, self.bean_reporting, is_convert=is_convert)
             if event_str:
                 if event_log.receipt["from"] not in self.arbitrage_senders or event_data.bdv > 2000:
-                    self.msg_exchange(event_str, to_tg=to_tg)
+                    messages.append((self.msg_exchange, event_str, to_tg))
                 else:
-                    self.msg_arbitrage(event_str, to_tg=to_tg)
+                    messages.append((self.msg_arbitrage, event_str, to_tg))
+
+        return messages
 
 def parse_event_data(event_log, prev_log_index, web3=get_web3_instance()):
     beanstalk_client = BeanstalkClient(block_number=event_log.blockNumber)

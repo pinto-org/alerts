@@ -7,11 +7,10 @@ from constants.addresses import *
 from constants.config import *
 
 class BasinGraphClient(object):
-    _transport = AIOHTTPTransport(url=BASIN_GRAPH_ENDPOINT)
-
     def __init__(self, block_number="latest"):
         self.block_number = block_number
-        self.client = Client(transport=BasinGraphClient._transport, fetch_schema_from_transport=False, execute_timeout=7)
+        self._transport = AIOHTTPTransport(url=BASIN_GRAPH_ENDPOINT)
+        self.client = Client(transport=self._transport, fetch_schema_from_transport=False, execute_timeout=7)
 
     def get_latest_well_snapshots(self, num_snapshots, block_number=None):
         """Get a single well snapshot."""
