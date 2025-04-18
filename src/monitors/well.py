@@ -1,5 +1,4 @@
 from collections import defaultdict
-import random
 from bots.util import *
 from data_access.contracts.beanstalk import BeanstalkClient
 from data_access.contracts.erc20 import get_erc20_info
@@ -142,9 +141,6 @@ class WellsMonitor(Monitor):
                     for i in range(0, len(new_logs), BATCH_SIZE):
                         batch = new_logs[i:i + BATCH_SIZE]
 
-                        logging.info(f"Processing {len(batch)} logs")
-                        sent = 0
-
                         # Submit all tasks in the batch
                         futures = []
                         future_to_hash = {}
@@ -166,17 +162,13 @@ class WellsMonitor(Monitor):
                                 # Submit all messages identified for this transaction
                                 for msg_fn, event_str, to_tg in messages:
                                     msg_fn(event_str, to_tg=to_tg)
-                                    sent += 1
                             except Exception as e:
                                 # Failure should be isolated to this transaction
                                 logging.error(f"\n\n=> Exception during processing of transaction: {future_to_hash[future].hex()}\n")
-                        logging.info(f"Sent {sent} messages")
 
     def _handle_txn_logs(self, txn_hash, event_logs):
         """Process the well event logs for a single txn."""
         messages = []
-        if random.random() < 0.1:
-            raise Exception("Random exception thrown for testing")#TODO: remove
 
         # Convert alerts should appear in both exchange + silo event channels, but don't doublepost in telegram
         is_convert = event_sig_in_txn(BEANSTALK_EVENT_MAP["Convert"], txn_hash)
