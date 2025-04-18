@@ -320,9 +320,10 @@ class DiscordClient(discord.ext.commands.Bot):
                 # If adding this message would exceed limit, send and start new batch
                 if len(current_batch) + len(msg) > 1950:
 
-                    await self.send_message(channel, current_batch)
-                    for sent_msg in batched_messages:
-                        self.msg_queue.remove((channel, sent_msg))
+                    success = await self.send_message(channel, current_batch)
+                    if success:
+                        for sent_msg in batched_messages:
+                            self.msg_queue.remove((channel, sent_msg))
                     batched_messages.clear()
 
                     current_batch = msg
@@ -332,13 +333,14 @@ class DiscordClient(discord.ext.commands.Bot):
                 batched_messages.append(original_msg)
 
             # Send final message
-            await self.send_message(channel, current_batch)
-            for sent_msg in batched_messages:
-                self.msg_queue.remove((channel, sent_msg))
+            success = await self.send_message(channel, current_batch)
+            if success:
+                for sent_msg in batched_messages:
+                    self.msg_queue.remove((channel, sent_msg))
 
     async def send_message(self, channel, msg):
         if not msg:
-            return
+            return False
         try:
             logging.info(f"Sending message through {channel} channel:\n{msg}\n")
             if channel is Channel.REPORT:
@@ -382,6 +384,8 @@ class DiscordClient(discord.ext.commands.Bot):
         except Exception as e:
             logging.warning(e, exc_info=True)
             logging.warning("Failed to send message to Discord server. Will retry.")
+            return False
+        return True
 
     @send_queued_messages.before_loop
     async def before_send_queued_messages_loop(self):
