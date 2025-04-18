@@ -8,11 +8,10 @@ from constants.addresses import *
 from constants.config import *
 
 class BeanGraphClient(object):
-    _transport = AIOHTTPTransport(url=BEAN_GRAPH_ENDPOINT)
-
     def __init__(self, block_number="latest"):
         self.block_number = block_number
-        self.client = Client(transport=BeanGraphClient._transport, fetch_schema_from_transport=False, execute_timeout=7)
+        self._transport = AIOHTTPTransport(url=BEAN_GRAPH_ENDPOINT)
+        self.client = Client(transport=self._transport, fetch_schema_from_transport=False, execute_timeout=7)
 
     def last_cross(self, block_number=None):
         """Returns a dict containing the most recent peg cross."""

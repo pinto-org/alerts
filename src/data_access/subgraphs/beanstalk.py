@@ -20,11 +20,10 @@ from constants.config import *
 MAX_ASSET_SNAPSHOTS_PER_SEASON = 10
 
 class BeanstalkGraphClient(object):
-    _transport = AIOHTTPTransport(url=BEANSTALK_GRAPH_ENDPOINT)
-
     def __init__(self, block_number="latest"):
         self.block_number = block_number
-        self.client = Client(transport=BeanstalkGraphClient._transport, fetch_schema_from_transport=False, execute_timeout=7)
+        self._transport = AIOHTTPTransport(url=BEANSTALK_GRAPH_ENDPOINT)
+        self.client = Client(transport=self._transport, fetch_schema_from_transport=False, execute_timeout=7)
 
     def get_farmer_pod_count(self, farmer, block_number=None):
         query_str = f"""

@@ -442,7 +442,7 @@ class EthEventsClient:
             txn_hash_set.add(txn_hash)
             txn_logs_list.append(TxnPair(txn_hash, decoded_logs))
 
-        txn_logs_list.sort(key=lambda entry: entry.logs[0].receipt.blockNumber if entry.logs else float('inf'))
+        txn_logs_list.sort(key=lambda entry: (entry.logs[0].receipt.blockNumber if entry.logs else float('inf'), entry.logs[0].logIndex if entry.logs else float('inf')))
         return txn_logs_list
 
     def safe_get_new_entries(self, filter, get_all=False):
