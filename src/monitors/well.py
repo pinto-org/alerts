@@ -161,7 +161,7 @@ class WellsMonitor(Monitor):
                 )
                 prev_log_index[address] = event_log.logIndex
 
-        # Identify a fully arbitrage trade: all are swaps and sum of all bought/sold pinto are equal
+        # Combine trades in multiple pools into a single message
         sum_pinto = 0
         abs_sum_pinto = 0
         trades = 0
@@ -180,12 +180,15 @@ class WellsMonitor(Monitor):
         if trades > 0 and abs_sum_pinto == 0:
             return
 
-        # Is considered full arbitrage even if the pinto amount mismatches by less than .1%. Some traders move
-        # light pinto profits into their trading contract.
-        if trades >= 2 and abs(sum_pinto / abs_sum_pinto) < 0.001:
-            # This trade is pure arbitrage and can be consolidated into a single message
-            event_str = pure_arbitrage_event_str(individual_evts)
-            self.msg_arbitrage(event_str, to_tg=to_tg)
+        if trades >= 2:
+            # Consolidate into a single message
+            event_str = multi_trade_event_str(individual_evts)
+            # Is considered full arbitrage even if the pinto amount mismatches by less than .1%. Some traders move
+            # light pinto profits into their trading contract.
+            if abs(sum_pinto / abs_sum_pinto) < 0.001:
+                self.msg_arbitrage(event_str, to_tg=to_tg)
+            else:
+                self.msg_exchange(event_str, to_tg=to_tg)
             return
 
         # Identify arbitrage trades or LP converts
@@ -417,11 +420,12 @@ def single_event_str(event_data: WellEventData, bean_reporting=False, is_convert
     event_str += links_footer(event_data.receipt)
     return event_str
 
-def pure_arbitrage_event_str(all_events: List[WellEventData]):
+def multi_trade_event_str(all_events: List[WellEventData]):
     event_str = ""
-    from_strs = []
-    to_strs = []
-    sum_bean = 0
+    from_nbt_strs = []
+    to_nbt_strs = []
+    beans_in = 0
+    beans_out = 0
     dollars_in = 0
     dollars_out = 0
 
@@ -436,9 +440,10 @@ def pure_arbitrage_event_str(all_events: List[WellEventData]):
         evt = all_events[i]
         # Identify from/to tokens (non-bean) and profits
         if evt.token_out == BEAN_ADDR:
+            beans_out += evt.amount_out
             from_tokens[evt.token_in] += evt.amount_in
         elif evt.token_in == BEAN_ADDR:
-            sum_bean += evt.amount_in
+            beans_in += evt.amount_in
             to_tokens[evt.token_out] += evt.amount_out
 
         if i == 0:
@@ -452,20 +457,32 @@ def pure_arbitrage_event_str(all_events: List[WellEventData]):
     # Generate strings from totals
     for nbt in from_tokens:
         erc20_info = get_erc20_info(nbt)
-        from_strs.append(f"{round_token(from_tokens[nbt], erc20_info.decimals, erc20_info.addr)} {erc20_info.symbol}")
+        from_nbt_strs.append(f"{round_token(from_tokens[nbt], erc20_info.decimals, erc20_info.addr)} {erc20_info.symbol}")
         dollars_in += from_tokens[nbt] * beanstalk_client.get_token_usd_price(nbt) / 10 ** erc20_info.decimals
 
     for nbt in to_tokens:
         erc20_info = get_erc20_info(nbt)
-        to_strs.append(f"{round_token(to_tokens[nbt], erc20_info.decimals, erc20_info.addr)} {erc20_info.symbol}")
+        to_nbt_strs.append(f"{round_token(to_tokens[nbt], erc20_info.decimals, erc20_info.addr)} {erc20_info.symbol}")
         dollars_out += to_tokens[nbt] * beanstalk_client.get_token_usd_price(nbt) / 10 ** erc20_info.decimals
 
-    bean_amount = round_token(sum_bean, 6, BEAN_ADDR)
+    if len(from_nbt_strs) > 0 and len(to_nbt_strs) > 0:
+        # Arbitrage running through pinto
+        bean_amount = round_token(beans_in, 6, BEAN_ADDR)
+        profit = dollars_out - dollars_in
+        profit_str = f"{'+' if profit >= 0 else '-'}{round_num(abs(profit), 2, avoid_zero=False, incl_dollar=True)}"
+        event_str += f"{', '.join(from_nbt_strs)} exchanged for {', '.join(to_nbt_strs)}, using {bean_amount} PINTO ({profit_str})"
+    else:
+        # Pinto bought or sold into multiple wells (not arbitrage)
+        if len(from_nbt_strs) == 0:
+            from_nbt_strs.append(f"{round_token(beans_in, 6, BEAN_ADDR)} PINTO")
+            value_str = f"{round_num(dollars_out, 2, avoid_zero=False, incl_dollar=True)}"
+        elif len(to_nbt_strs) == 0:
+            to_nbt_strs.append(f"{round_token(beans_out, 6, BEAN_ADDR)} PINTO")
+            value_str = f"{round_num(dollars_in, 2, avoid_zero=False, incl_dollar=True)}"
+        event_str += f"{', '.join(from_nbt_strs)} exchanged for {', '.join(to_nbt_strs)} ({value_str})"
+
     deltas_str = '\n'.join(well_price_strs)
-    profit = dollars_out - dollars_in
-    profit_str = f"{'+' if profit >= 0 else '-'}{round_num(abs(profit), 2, avoid_zero=False, incl_dollar=True)}"
     event_str += (
-        f"{', '.join(from_strs)} exchanged for {', '.join(to_strs)}, using {bean_amount} PINTO ({profit_str})"
         f"\n{deltas_str}"
         f"\n{value_to_emojis(dollars_in + dollars_out)}"
     )
