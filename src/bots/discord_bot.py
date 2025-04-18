@@ -109,9 +109,8 @@ class DiscordClient(discord.ext.commands.Bot):
         discord_report_handler.setFormatter(LOGGING_FORMATTER)
         logging.getLogger().addHandler(discord_report_handler)
 
-        # TODO: revert commented monitors
         self.peg_cross_monitor = PegCrossMonitor(self.send_msg_peg, prod=prod)
-        # self.peg_cross_monitor.start()
+        self.peg_cross_monitor.start()
 
         self.sunrise_monitor = SeasonsMonitor(
             self.send_msg_seasons,
@@ -119,7 +118,7 @@ class DiscordClient(discord.ext.commands.Bot):
             prod=prod,
             dry_run=dry_run,
         )
-        # self.sunrise_monitor.start()
+        self.sunrise_monitor.start()
 
         self.well_monitor_whitelisted = WellsMonitor(
             self.send_msg_exchange, self.send_msg_arbitrage, WHITELISTED_WELLS,
@@ -131,15 +130,15 @@ class DiscordClient(discord.ext.commands.Bot):
         self.beanstalk_monitor = BeanstalkMonitor(
             self.send_msg_silo, self.send_msg_field, prod=prod, dry_run=dry_run
         )
-        # self.beanstalk_monitor.start()
+        self.beanstalk_monitor.start()
 
         self.market_monitor = MarketMonitor(self.send_msg_market, prod=prod, dry_run=dry_run)
-        # self.market_monitor.start()
+        self.market_monitor.start()
 
         self.integrations_monitor = IntegrationsMonitor(
             self.send_msg_silo, self.send_msg_spectra, prod=prod, dry_run=dry_run
         )
-        # self.integrations_monitor.start()
+        self.integrations_monitor.start()
 
         # self.contract_migration_monitor = ContractsMigrated(
         #     self.send_msg_contract_migrated,
