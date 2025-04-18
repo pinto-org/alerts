@@ -1,3 +1,4 @@
+import re
 from constants.config import ENS_RPC_URL
 from tools.util import retryable
 from web3 import Web3
@@ -6,10 +7,13 @@ from web3 import Web3
 w3 = Web3(Web3.HTTPProvider(ENS_RPC_URL))
 
 @retryable()
-def format_address_ens(address):
+def format_address_ens(address, sanitize=False):
     name = w3.ens.name(address)
     if name is None:
         return shorten_hash(address)
+
+    if sanitize:
+        return re.sub(r'[^a-zA-Z0-9._\- ]', '', name)
     return name
 
 def shorten_hash(address: str) -> str:

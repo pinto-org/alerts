@@ -302,7 +302,7 @@ def links_footer(txn_receipt):
     sender = txn_receipt["from"]
     txn_hash = txn_receipt.transactionHash.hex()
     return (
-        f"\n🧑‍🌾 [{format_address_ens(sender)}](<https://basescan.org/address/{sender}>) "
+        f"\n🧑‍🌾 [{format_address_ens(sender, sanitize=True)}](<https://basescan.org/address/{sender}>) "
         f"🔗 [basescan.org/tx/{shorten_hash(txn_hash)}](<https://basescan.org/tx/{txn_hash}>)"
         f"\n_ _"
     )
