@@ -30,6 +30,9 @@ def withdraw_sow_info(receipt):
         return None
     sow_amount = sow_logs[0].args.beans
 
+    # Amount doesnt need to match if its tractor; guaranteed to be withdraw/sow
+    is_tractor = len(get_logs_by_names("Tractor", txn_logs)) > 0
+
     net_withdrawal = net_deposit_withdrawal_stalk(txn_logs)
     if len(net_withdrawal) != 1:
         return None
@@ -38,7 +41,7 @@ def withdraw_sow_info(receipt):
 
     # Verify amount of sow
     if withdrawal_token == BEAN_ADDR:
-        if sow_amount != withdrawal_amount:
+        if not is_tractor and sow_amount != withdrawal_amount:
             return None
     else:
         # Check amount of beans removed on LP removal
@@ -47,7 +50,7 @@ def withdraw_sow_info(receipt):
             len(remove_liq_logs) != 1 or
             remove_liq_logs[0].args.lpAmountIn != withdrawal_amount or
             remove_liq_logs[0].args.tokenOut != BEAN_ADDR or
-            remove_liq_logs[0].args.tokenAmountOut != sow_amount
+            (not is_tractor and remove_liq_logs[0].args.tokenAmountOut != sow_amount)
         ):
             return None
 

@@ -298,11 +298,18 @@ def strip_custom_discord_emojis(text):
     # stripped_type_1 = re.sub(r":[0-z]+:", " ", text)
     return stripped_type_0
 
-def links_footer(txn_receipt):
+def links_footer(txn_receipt, farmer=None):
     sender = txn_receipt["from"]
     txn_hash = txn_receipt.transactionHash.hex()
+
+    operator_str = ""
+    if farmer and farmer != sender:
+        operator_str = f"🤖 [{format_address_ens(sender, sanitize=True)}](<https://basescan.org/address/{sender}>) "
+    else:
+        farmer = sender
     return (
-        f"\n🧑‍🌾 [{format_address_ens(sender, sanitize=True)}](<https://basescan.org/address/{sender}>) "
+        f"\n{operator_str}"
+        f"🧑‍🌾 [{format_address_ens(farmer, sanitize=True)}](<https://basescan.org/address/{farmer}>) "
         f"🔗 [basescan.org/tx/{shorten_hash(txn_hash)}](<https://basescan.org/tx/{txn_hash}>)"
         f"\n_ _"
     )
