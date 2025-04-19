@@ -24,6 +24,7 @@ class BeanstalkMonitor(Monitor):
         self.msg_silo = msg_silo
         self.msg_field = msg_field
         self._eth_event_client = EthEventsClient([EventClientType.BEANSTALK])
+        self.beanstalk_contract = get_beanstalk_contract()
 
     def _monitor_method(self):
         last_check_time = 0
@@ -158,8 +159,10 @@ class BeanstalkMonitor(Monitor):
         beans_value = beans_amount * bean_price
 
         if event_log.event == "Sow":
+            is_tractor = bool(self.beanstalk_contract.events["Tractor"]().processReceipt(event_log.receipt, errors=DISCARD))
+            emoji = "🚜" if is_tractor else "⛏️"
             event_str += (
-                f"🚜 {round_num(beans_amount, 0, avoid_zero=True)} Pinto Sown for "
+                f"{emoji} {round_num(beans_amount, 0, avoid_zero=True)} Pinto Sown for "
                 f"{round_num(pods_amount, 0, avoid_zero=True)} Pods "
                 f"at {round_num_abbreviated(beanstalk_client.get_podline_length(), precision=3)} in Line "
                 f"({round_num(beans_value, 0, avoid_zero=True, incl_dollar=True)})"
@@ -194,7 +197,7 @@ class BeanstalkMonitor(Monitor):
             event_str += f"👩‍🌾 {harvest_amt_str} Harvested for Pinto ({round_num(beans_value, 0, avoid_zero=True, incl_dollar=True)})"
             event_str += f"\n{value_to_emojis(beans_value)}"
 
-        event_str += links_footer(event_log.receipt)
+        event_str += links_footer(event_log.receipt, farmer=event_log.args.account)
         return event_str
 
     def silo_conversion_str(self, event_logs):
@@ -261,7 +264,7 @@ class BeanstalkMonitor(Monitor):
         if not remove_token_addr.startswith(UNRIPE_TOKEN_PREFIX):
             event_str += f"\n{value_to_emojis(value)}"
 
-        event_str += links_footer(event_logs[0].receipt)
+        event_str += links_footer(event_logs[0].receipt, farmer=event_logs[0].args.account)
         # Indicate whether this is lambda convert
         return event_str, add_token_addr == remove_token_addr
 
