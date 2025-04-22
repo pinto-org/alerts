@@ -1,6 +1,7 @@
 from bots.util import *
 from data_access.contracts.erc20 import get_erc20_info
 from data_access.subgraphs.beanstalk import BeanstalkGraphClient
+from monitors.messages.tractor import cancel_blueprint_str, publish_requisition_str, tractor_str
 from monitors.monitor import Monitor
 from data_access.contracts.util import *
 from data_access.contracts.eth_events import *
@@ -17,12 +18,13 @@ from tools.spinto import has_spinto_action_size
 class BeanstalkMonitor(Monitor):
     """Monitor the Beanstalk contract for events."""
 
-    def __init__(self, msg_silo, msg_field, prod=False, dry_run=None):
+    def __init__(self, msg_silo, msg_field, msg_tractor, prod=False, dry_run=None):
         super().__init__(
             "Beanstalk", None, BEANSTALK_CHECK_RATE, prod=prod, dry_run=dry_run
         )
         self.msg_silo = msg_silo
         self.msg_field = msg_field
+        self.msg_tractor = msg_tractor
         self._eth_event_client = EthEventsClient([EventClientType.BEANSTALK])
         self.beanstalk_contract = get_beanstalk_contract()
 
@@ -48,6 +50,14 @@ class BeanstalkMonitor(Monitor):
         """
 
         receipt = event_logs[0].receipt
+
+        for tractor_event_log in get_logs_by_names(["PublishRequisition", "CancelBlueprint", "Tractor"], event_logs):
+            if tractor_event_log.event == "PublishRequisition":
+                self.msg_tractor(publish_requisition_str(tractor_event_log))
+            elif tractor_event_log.event == "CancelBlueprint":
+                self.msg_tractor(cancel_blueprint_str(tractor_event_log))
+            elif tractor_event_log.event == "Tractor":
+                self.msg_tractor(tractor_str(tractor_event_log))
 
         if event_in_logs("L1DepositsMigrated", event_logs):
             # Ignore AddDeposit as a result of contract migrating silo
@@ -82,20 +92,21 @@ class BeanstalkMonitor(Monitor):
             return
         # Else handle txn logs individually using default strings.
 
-        # Determine net deposit/withdraw of each token, removing relevant events from the log list
+        # Determine net deposit/withdraw of each account/token, removing relevant events from the log list
         net_deposits = net_deposit_withdrawal_stalk(event_logs=event_logs, remove_from_logs=True)
 
-        for token in net_deposits:
-            event_str = self.silo_event_str(token, net_deposits[token], receipt)
-            if event_str:
-                self.msg_silo(event_str)
+        for account in net_deposits:
+            for token in net_deposits[account]:
+                event_str = self.silo_event_str(account, token, net_deposits[account][token], receipt)
+                if event_str:
+                    self.msg_silo(event_str)
 
         for event_log in event_logs:
             event_str = self.field_event_str(event_log)
             if event_str:
                 self.msg_field(event_str)
     
-    def silo_event_str(self, token_addr, values, receipt):
+    def silo_event_str(self, account, token_addr, values, receipt):
         """Logs a Silo Deposit/Withdraw"""
         beanstalk_client = BeanstalkClient(block_number=receipt.blockNumber)
         bean_client = BeanClient(block_number=receipt.blockNumber)
@@ -139,7 +150,7 @@ class BeanstalkMonitor(Monitor):
             event_str += f"\n> 🌾 Sowed in the Field for {sow.pods_received_str} Pods at {sow.temperature_str} Temperature"
 
         event_str += f"\n{value_to_emojis(value)}"
-        event_str += links_footer(receipt)
+        event_str += links_footer(receipt, farmer=account)
         return event_str
 
 

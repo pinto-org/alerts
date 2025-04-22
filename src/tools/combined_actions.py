@@ -34,8 +34,11 @@ def withdraw_sow_info(receipt):
     is_tractor = len(get_logs_by_names("Tractor", txn_logs)) > 0
 
     net_withdrawal = net_deposit_withdrawal_stalk(txn_logs)
+    # TODO: handle multiple accounts. Determine which account according to Tractor evt
+    net_withdrawal = next(iter(net_withdrawal.values()))
     if len(net_withdrawal) != 1:
         return None
+
     withdrawal_token = next(iter(net_withdrawal))
     withdrawal_amount = abs(net_withdrawal[withdrawal_token]["amount"])
 

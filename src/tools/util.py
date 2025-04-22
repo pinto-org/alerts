@@ -42,7 +42,7 @@ def format_log_str(log, indent=0):
             ret_str_list.append(item_str)
     return "\n".join(ret_str_list)
 
-def retryable(max_retries=5, retry_delay=10):
+def retryable(max_retries=5, retry_delay=10, show_retry_error=True):
     """Decorator to wrap web3 calls that could fail and gracefully handle retries."""
     def decorator(fn):
         def retry_wrapper(*args, **kwargs):
@@ -53,7 +53,8 @@ def retryable(max_retries=5, retry_delay=10):
                     return fn(*args, **kwargs)
                 except Exception as e:
                     if try_count < max_retries:
-                        logging.warning(f"Failed to get result. Retrying...\n{e}")
+                        if show_retry_error:
+                            logging.warning(f"Failed to get result. Retrying...\n{e}")
                         time.sleep(retry_delay)
                         continue
                     logging.error(
