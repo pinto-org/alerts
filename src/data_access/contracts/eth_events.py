@@ -96,6 +96,16 @@ add_event_to_dict(
     BEANSTALK_SIGNATURES_LIST,
 )
 add_event_to_dict(
+    "PublishRequisition(((address,bytes,bytes32[],uint256,uint256,uint256),bytes32,bytes))",
+    BEANSTALK_EVENT_MAP,
+    BEANSTALK_SIGNATURES_LIST,
+)
+add_event_to_dict(
+    "CancelBlueprint(bytes32)",
+    BEANSTALK_EVENT_MAP,
+    BEANSTALK_SIGNATURES_LIST,
+)
+add_event_to_dict(
     "Tractor(address,address,bytes32,uint256,uint256)",
     BEANSTALK_EVENT_MAP,
     BEANSTALK_SIGNATURES_LIST,

@@ -19,6 +19,7 @@ LOGGING_FORMATTER = logging.Formatter(LOGGING_FORMAT_STR_SUFFIX)
 BEANSTALK_GRAPH_ENDPOINT = "https://graph.pinto.money/pintostalk"
 BEAN_GRAPH_ENDPOINT = "https://graph.pinto.money/pinto"
 BASIN_GRAPH_ENDPOINT = "https://graph.pinto.money/exchange"
+API_ENDPOINT = "https://api.pinto.money"
 
 # The following time values are all provided in seconds.
 SEASON_DURATION = 3600

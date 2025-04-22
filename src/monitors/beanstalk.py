@@ -1,6 +1,7 @@
 from bots.util import *
 from data_access.contracts.erc20 import get_erc20_info
 from data_access.subgraphs.beanstalk import BeanstalkGraphClient
+from monitors.messages.tractor import cancel_blueprint_str, publish_requisition_str, tractor_str
 from monitors.monitor import Monitor
 from data_access.contracts.util import *
 from data_access.contracts.eth_events import *
@@ -49,6 +50,17 @@ class BeanstalkMonitor(Monitor):
 
         receipt = event_logs[0].receipt
 
+        for tractor_event_log in get_logs_by_names(["PublishRequisition", "CancelBlueprint", "Tractor"], event_logs):
+            if tractor_event_log.event == "PublishRequisition":
+                event_str = publish_requisition_str(tractor_event_log)
+                # self.msg_tractor(event_str)
+            elif tractor_event_log.event == "CancelBlueprint":
+                event_str = cancel_blueprint_str(tractor_event_log)
+                # self.msg_tractor(event_str)
+            elif tractor_event_log.event == "Tractor":
+                event_str = tractor_str(tractor_event_log)
+                # self.msg_tractor(event_str)
+
         if event_in_logs("L1DepositsMigrated", event_logs):
             # Ignore AddDeposit as a result of contract migrating silo
             remove_events_from_logs_by_name("AddDeposit", event_logs)
@@ -83,6 +95,7 @@ class BeanstalkMonitor(Monitor):
         # Else handle txn logs individually using default strings.
 
         # Determine net deposit/withdraw of each token, removing relevant events from the log list
+        # TODO: need to separate this by farmer
         net_deposits = net_deposit_withdrawal_stalk(event_logs=event_logs, remove_from_logs=True)
 
         for token in net_deposits:
