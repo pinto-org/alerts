@@ -94,21 +94,21 @@ class BeanstalkMonitor(Monitor):
             return
         # Else handle txn logs individually using default strings.
 
-        # Determine net deposit/withdraw of each token, removing relevant events from the log list
-        # TODO: need to separate this by farmer
+        # Determine net deposit/withdraw of each account/token, removing relevant events from the log list
         net_deposits = net_deposit_withdrawal_stalk(event_logs=event_logs, remove_from_logs=True)
 
-        for token in net_deposits:
-            event_str = self.silo_event_str(token, net_deposits[token], receipt)
-            if event_str:
-                self.msg_silo(event_str)
+        for account in net_deposits:
+            for token in net_deposits[account]:
+                event_str = self.silo_event_str(account, token, net_deposits[account][token], receipt)
+                if event_str:
+                    self.msg_silo(event_str)
 
         for event_log in event_logs:
             event_str = self.field_event_str(event_log)
             if event_str:
                 self.msg_field(event_str)
     
-    def silo_event_str(self, token_addr, values, receipt):
+    def silo_event_str(self, account, token_addr, values, receipt):
         """Logs a Silo Deposit/Withdraw"""
         beanstalk_client = BeanstalkClient(block_number=receipt.blockNumber)
         bean_client = BeanClient(block_number=receipt.blockNumber)
@@ -152,7 +152,7 @@ class BeanstalkMonitor(Monitor):
             event_str += f"\n> 🌾 Sowed in the Field for {sow.pods_received_str} Pods at {sow.temperature_str} Temperature"
 
         event_str += f"\n{value_to_emojis(value)}"
-        event_str += links_footer(receipt)
+        event_str += links_footer(receipt, farmer=account)
         return event_str
 
 

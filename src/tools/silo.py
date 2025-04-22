@@ -17,10 +17,10 @@ class StemTipCache(object):
         return self.stem_tips[token]
 
 def net_deposit_withdrawal_stalk(event_logs, remove_from_logs=False):
-    # Determine net deposit/withdraw of each token
+    # Determine net deposit/withdraw of each token per account
     # Sums total bdv/stalk as well
 
-    net_deposits = defaultdict(lambda: {"amount": 0, "bdv": 0, "stalk": 0})
+    net_deposits = defaultdict(lambda: defaultdict(lambda: {"amount": 0, "bdv": 0, "stalk": 0}))
     if len(event_logs) == 0:
         return net_deposits
 
@@ -30,21 +30,22 @@ def net_deposit_withdrawal_stalk(event_logs, remove_from_logs=False):
     for event_log in silo_deposit_logs:
         sign = 1 if event_log.event == "AddDeposit" else -1
         token = event_log.args.get("token")
+        account = event_log.args.get("account")
         stem_tip = stem_tips.get_stem_tip(token)
 
-        net_deposits[token]["amount"] += sign * event_log.args.get("amount")
+        net_deposits[account][token]["amount"] += sign * event_log.args.get("amount")
         # Sum bdv/stalk. Assumes 1 bdv credits 1 stalk upon deposit.
         if event_log.event != "RemoveDeposits":
             bdv = event_log.args.get("bdv")
             grown_stalk = bdv * (stem_tip - event_log.args.get("stem"))
-            net_deposits[token]["bdv"] += sign * bdv
-            net_deposits[token]["stalk"] += sign * (1 * bdv * 10 ** 10 + grown_stalk)
+            net_deposits[account][token]["bdv"] += sign * bdv
+            net_deposits[account][token]["stalk"] += sign * (1 * bdv * 10 ** 10 + grown_stalk)
         else:
             for i in range(len(event_log.args.get("bdvs"))):
                 bdv = event_log.args.get("bdvs")[i]
                 grown_stalk = bdv * (stem_tip - event_log.args.get("stems")[i])
-                net_deposits[token]["bdv"] += sign * bdv
-                net_deposits[token]["stalk"] += sign * (1 * bdv * 10 ** 10 + grown_stalk)
+                net_deposits[account][token]["bdv"] += sign * bdv
+                net_deposits[account][token]["stalk"] += sign * (1 * bdv * 10 ** 10 + grown_stalk)
 
         if remove_from_logs:
             event_logs.remove(event_log)
