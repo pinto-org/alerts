@@ -40,6 +40,7 @@ class Channel(Enum):
     TELEGRAM_FWD = 11
     SPECTRA = 12
     GAUGES = 13
+    TRACTOR = 14
 
 class DiscordClient(discord.ext.commands.Bot):
     def __init__(self, prod=False, telegram_token=None, dry_run=None):
@@ -62,6 +63,7 @@ class DiscordClient(discord.ext.commands.Bot):
             self._chat_id_contract_migrated = BS_DISCORD_CHANNEL_ID_CONTRACT_MIGRATED
             self._chat_id_spectra = BS_DISCORD_CHANNEL_ID_SPECTRA
             self._chat_id_gauges = BS_DISCORD_CHANNEL_ID_GAUGES
+            self._chat_id_tractor = BS_DISCORD_CHANNEL_ID_TRACTOR
             self._chat_id_everything = BS_DISCORD_CHANNEL_ID_EVERYTHING
             self._chat_id_whale = BS_DISCORD_CHANNEL_ID_WHALE
             self._chat_id_telegram_fwd = BS_TELEGRAM_FWD_CHAT_ID_PRODUCTION
@@ -80,6 +82,7 @@ class DiscordClient(discord.ext.commands.Bot):
             self._chat_id_contract_migrated = BS_DISCORD_CHANNEL_ID_TEST_BOT
             self._chat_id_spectra = BS_DISCORD_CHANNEL_ID_TEST_BOT
             self._chat_id_gauges = BS_DISCORD_CHANNEL_ID_TEST_BOT
+            self._chat_id_tractor = BS_DISCORD_CHANNEL_ID_TEST_BOT
             self._chat_id_everything = BS_DISCORD_CHANNEL_ID_EVERYTHING_TEST
             self._chat_id_whale = BS_DISCORD_CHANNEL_ID_TEST_BOT
             self._chat_id_telegram_fwd = BS_TELEGRAM_FWD_CHAT_ID_TEST
@@ -128,7 +131,7 @@ class DiscordClient(discord.ext.commands.Bot):
         self.well_monitor_whitelisted.start()
 
         self.beanstalk_monitor = BeanstalkMonitor(
-            self.send_msg_silo, self.send_msg_field, prod=prod, dry_run=dry_run
+            self.send_msg_silo, self.send_msg_field, self.send_msg_tractor, prod=prod, dry_run=dry_run
         )
         self.beanstalk_monitor.start()
 
@@ -206,6 +209,9 @@ class DiscordClient(discord.ext.commands.Bot):
     def send_msg_gauges(self, text, to_main=True, to_tg=None):
         self.msg_queue.append((Channel.GAUGES if to_main else Channel.EVERYTHING, text))
 
+    def send_msg_tractor(self, text, to_main=True, to_tg=None):
+        self.msg_queue.append((Channel.TRACTOR if to_main else Channel.EVERYTHING, text))
+
     def send_msg_telegram_fwd(self, text):
         """Forward a message through the Telegram bot in the Beanstalk chat."""
         self.msg_queue.append((Channel.TELEGRAM_FWD, text))
@@ -223,6 +229,7 @@ class DiscordClient(discord.ext.commands.Bot):
         self._channel_contract_migrated = self.get_channel(self._chat_id_contract_migrated)
         self._channel_spectra = self.get_channel(self._chat_id_spectra)
         self._channel_gauges = self.get_channel(self._chat_id_gauges)
+        self._channel_tractor = self.get_channel(self._chat_id_tractor)
         if self._chat_id_everything:
             self._channel_everything = self.get_channel(self._chat_id_everything)
         if self._chat_id_whale:
@@ -236,7 +243,7 @@ class DiscordClient(discord.ext.commands.Bot):
             f"Discord channels are {self._channel_report}, {self._channel_peg}, {self._channel_seasons}, "
             f"{self._channel_exchange}, {self._channel_arbitrage}, {self._channel_silo}, {self._channel_field}, "
             f"{self._channel_market}, {self._channel_barn_raise}, {self._channel_contract_migrated}, "
-            f"{self._channel_spectra}, {self._channel_gauges}"
+            f"{self._channel_spectra}, {self._channel_gauges}, {self._channel_tractor}"
         )
 
         # Guild IDs for all servers this bot is in.
@@ -366,6 +373,8 @@ class DiscordClient(discord.ext.commands.Bot):
                 await self._channel_spectra.send(msg)
             elif channel is Channel.GAUGES:
                 await self._channel_gauges.send(msg)
+            elif channel is Channel.TRACTOR:
+                await self._channel_tractor.send(msg)
             elif type(channel) == str:
                 await self.send_dm(channel, msg)
             elif not channel in Channel:

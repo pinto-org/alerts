@@ -30,7 +30,7 @@ def publish_sow_v0_str(order):
     min_temp = bean_to_float(int(order['blueprintData']['minTemp']))
     event_str = (
         f"🖋️🚜 Published Sow Order"
-        f"\n> Sow {round_num(total_sow, precision=0, avoid_zero=True)} Pinto at {round_num(min_temp, precision=2, avoid_zero=True)}% Temperature"
+        f"\n> 🌱 Sow {round_num(total_sow, precision=0, avoid_zero=True)} Pinto at {round_num(min_temp, precision=2, avoid_zero=True)}% Temperature"
         f"\n> {round_num(amount_funded, precision=0, avoid_zero=True)} Pinto are currently funding this order"
     )
     return event_str
@@ -40,8 +40,8 @@ def cancel_sow_v0_str(order):
     min_temp = bean_to_float(int(order['blueprintData']['minTemp']))
     event_str = (
         f"❌🚜 Cancelled Sow Order"
-        f"\n> Sow {round_num(total_sow, precision=0, avoid_zero=True)} Pinto at {round_num(min_temp, precision=2, avoid_zero=True)}% Temperature"
-        f"\n> Order was executed {order['executionStats']['executionCount']} time{'' if order['executionStats']['executionCount'] == 1 else 's'}"
+        f"\n> 🌱 Sow {round_num(total_sow, precision=0, avoid_zero=True)} Pinto at {round_num(min_temp, precision=2, avoid_zero=True)}% Temperature"
+        f"\n> 🤖 Order was executed {order['executionStats']['executionCount']} time{'' if order['executionStats']['executionCount'] == 1 else 's'}"
     )
     return event_str
 
@@ -50,20 +50,20 @@ def execute_sow_v0_str(execution, order):
     pods = pods_to_float(int(execution['blueprintData']['pods']))
     temperature = (pods / beans - 1) * 100
     event_str = (
-        f"💥🖋️ Executed Sow Order"
+        f"💥🚜 Executed Sow Order"
         f"\n> {round_num(beans, precision=0, avoid_zero=True)} Pinto Sown at {round_num(temperature, precision=2, avoid_zero=True)}% Temperature for {round_num(pods, precision=0, avoid_zero=True)} Pods"
     )
     if not order['blueprintData']['orderComplete']:
         remaining_sow = bean_to_float(int(order['blueprintData']['totalAmountToSow']) - int(order['blueprintData']['pintoSownCounter']))
         amount_funded = bean_to_float(int(order['blueprintData']['cascadeAmountFunded']))
         event_str += (
-            f"\n> Order can sow {round_num(remaining_sow, precision=0, avoid_zero=True)} more Pinto"
+            f"\n> 🌱 Order can sow :PINTO: {round_num(remaining_sow, precision=0, avoid_zero=True)} more !Pinto"
             f"\n> {round_num(amount_funded, precision=0, avoid_zero=True)} Pinto are currently funding this order"
         )
     else:
         pinto_sown = bean_to_float(int(order['blueprintData']['pintoSownCounter']))
-        event_str += f"\n> Order is fulfilled after sowing {round_num(pinto_sown, precision=0, avoid_zero=True)} Pinto"
-    event_str += f"\n> Order has been executed {int(execution['nonce']) + 1} time{'' if int(execution['nonce']) + 1 == 1 else 's'}"
+        event_str += f"\n> ✅ Order is fulfilled after sowing {round_num(pinto_sown, precision=0, avoid_zero=True)} Pinto"
+    event_str += f"\n> 🤖 Order has been executed {int(execution['nonce']) + 1} time{'' if int(execution['nonce']) + 1 == 1 else 's'}"
     return event_str
 
 @retryable(max_retries=12, retry_delay=10, show_retry_error=False)

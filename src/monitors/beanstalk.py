@@ -18,12 +18,13 @@ from tools.spinto import has_spinto_action_size
 class BeanstalkMonitor(Monitor):
     """Monitor the Beanstalk contract for events."""
 
-    def __init__(self, msg_silo, msg_field, prod=False, dry_run=None):
+    def __init__(self, msg_silo, msg_field, msg_tractor, prod=False, dry_run=None):
         super().__init__(
             "Beanstalk", None, BEANSTALK_CHECK_RATE, prod=prod, dry_run=dry_run
         )
         self.msg_silo = msg_silo
         self.msg_field = msg_field
+        self.msg_tractor = msg_tractor
         self._eth_event_client = EthEventsClient([EventClientType.BEANSTALK])
         self.beanstalk_contract = get_beanstalk_contract()
 
@@ -52,14 +53,11 @@ class BeanstalkMonitor(Monitor):
 
         for tractor_event_log in get_logs_by_names(["PublishRequisition", "CancelBlueprint", "Tractor"], event_logs):
             if tractor_event_log.event == "PublishRequisition":
-                event_str = publish_requisition_str(tractor_event_log)
-                # self.msg_tractor(event_str)
+                self.msg_tractor(publish_requisition_str(tractor_event_log))
             elif tractor_event_log.event == "CancelBlueprint":
-                event_str = cancel_blueprint_str(tractor_event_log)
-                # self.msg_tractor(event_str)
+                self.msg_tractor(cancel_blueprint_str(tractor_event_log))
             elif tractor_event_log.event == "Tractor":
-                event_str = tractor_str(tractor_event_log)
-                # self.msg_tractor(event_str)
+                self.msg_tractor(tractor_str(tractor_event_log))
 
         if event_in_logs("L1DepositsMigrated", event_logs):
             # Ignore AddDeposit as a result of contract migrating silo
