@@ -306,6 +306,7 @@ def links_footer(txn_receipt, farmer=None):
     sender = txn_receipt["from"]
     txn_hash = txn_receipt.transactionHash.hex()
 
+    # This approach is correct if we assume one tractor operator per txn
     evt_tractor = beanstalk_contract.events["Tractor"]().processReceipt(txn_receipt, errors=DISCARD)
     operator = evt_tractor[0].args.operator if bool(evt_tractor) else None
 

@@ -14,6 +14,9 @@ from constants.config import *
 from tools.combined_actions import withdraw_sow_info
 from tools.silo import net_deposit_withdrawal_stalk
 from tools.spinto import has_spinto_action_size
+from concurrent.futures import ThreadPoolExecutor
+
+from tools.util import detached_future_done
 
 class BeanstalkMonitor(Monitor):
     """Monitor the Beanstalk contract for events."""
@@ -27,6 +30,7 @@ class BeanstalkMonitor(Monitor):
         self.msg_tractor = msg_tractor
         self._eth_event_client = EthEventsClient([EventClientType.BEANSTALK])
         self.beanstalk_contract = get_beanstalk_contract()
+        self.tractor_executor = ThreadPoolExecutor(max_workers=30)
 
     def _monitor_method(self):
         last_check_time = 0
@@ -51,13 +55,11 @@ class BeanstalkMonitor(Monitor):
 
         receipt = event_logs[0].receipt
 
-        for tractor_event_log in get_logs_by_names(["PublishRequisition", "CancelBlueprint", "Tractor"], event_logs):
-            if tractor_event_log.event == "PublishRequisition":
-                self.msg_tractor(publish_requisition_str(tractor_event_log))
-            elif tractor_event_log.event == "CancelBlueprint":
-                self.msg_tractor(cancel_blueprint_str(tractor_event_log))
-            elif tractor_event_log.event == "Tractor":
-                self.msg_tractor(tractor_str(tractor_event_log))
+        # Handle tractor logs in a separate thread. API access can have a significant delay.
+        tractor_logs = get_logs_by_names(["PublishRequisition", "CancelBlueprint", "Tractor"], event_logs)
+        if tractor_logs:
+            future = self.tractor_executor.submit(self.handle_tractor_logs, tractor_logs)
+            future.add_done_callback(detached_future_done(receipt.transactionHash.hex()))
 
         if event_in_logs("L1DepositsMigrated", event_logs):
             # Ignore AddDeposit as a result of contract migrating silo
@@ -105,6 +107,15 @@ class BeanstalkMonitor(Monitor):
             event_str = self.field_event_str(event_log)
             if event_str:
                 self.msg_field(event_str)
+
+    def handle_tractor_logs(self, tractor_logs):
+        for evt in tractor_logs:
+            if evt.event == "PublishRequisition":
+                self.msg_tractor(publish_requisition_str(evt))
+            elif evt.event == "CancelBlueprint":
+                self.msg_tractor(cancel_blueprint_str(evt))
+            elif evt.event == "Tractor":
+                self.msg_tractor(tractor_str(evt))
     
     def silo_event_str(self, account, token_addr, values, receipt):
         """Logs a Silo Deposit/Withdraw"""
