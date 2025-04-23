@@ -12,6 +12,10 @@ from data_access.contracts.util import *
 from data_access.addresses import format_address_ens, shorten_hash
 from tools.util import get_txn_receipt
 
+from web3.logs import DISCARD
+
+beanstalk_contract = get_beanstalk_contract()
+
 class DiscordSidebarClient(discord.ext.commands.Bot):
     def __init__(self, monitor, prod=False):
         super().__init__(command_prefix=commands.when_mentioned_or("!"))
@@ -302,14 +306,21 @@ def links_footer(txn_receipt, farmer=None):
     sender = txn_receipt["from"]
     txn_hash = txn_receipt.transactionHash.hex()
 
+    evt_tractor = beanstalk_contract.events["Tractor"]().processReceipt(txn_receipt, errors=DISCARD)
+    operator = evt_tractor[0].args.operator if bool(evt_tractor) else None
+
     operator_str = ""
-    if farmer and farmer != sender:
+    if operator or (farmer and farmer != sender):
         operator_str = f"🤖 [{format_address_ens(sender, sanitize=True)}](<https://basescan.org/address/{sender}>) "
     else:
         farmer = sender
+
+    farmer_str = ""
+    if farmer:
+        farmer_str = f"🧑‍🌾 [{format_address_ens(farmer, sanitize=True)}](<https://basescan.org/address/{farmer}>) "
+
     return (
-        f"\n{operator_str}"
-        f"🧑‍🌾 [{format_address_ens(farmer, sanitize=True)}](<https://basescan.org/address/{farmer}>) "
+        f"\n{operator_str}{farmer_str}"
         f"🔗 [basescan.org/tx/{shorten_hash(txn_hash)}](<https://basescan.org/tx/{txn_hash}>)"
         f"\n_ _"
     )
