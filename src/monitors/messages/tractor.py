@@ -1,6 +1,6 @@
 import requests
 
-from bots.util import round_num
+from bots.util import links_footer, round_num
 from constants.config import API_ENDPOINT
 from data_access.addresses import shorten_hash
 from data_access.contracts.util import bean_to_float, pods_to_float
@@ -10,20 +10,32 @@ def publish_requisition_str(event_log):
     blueprint_hash = f"0x{event_log.args.requisition[1].hex()}"
     order = find_tractor_order(blueprint_hash, event_log.blockNumber)
     if order['orderType'] == "SOW_V0":
-        return publish_sow_v0_str(order)
+        event_str = publish_sow_v0_str(order)
+    else:
+        event_str = f"🖋️🚜 Published unknown order {shorten_hash(order['blueprintHash'])}"
+    event_str += links_footer(event_log.receipt, farmer=order['publisher'])
+    return event_str
 
 def cancel_blueprint_str(event_log):
     blueprint_hash = f"0x{event_log.args.blueprintHash.hex()}"
     order = find_tractor_order(blueprint_hash, event_log.blockNumber)
     if order['orderType'] == "SOW_V0":
-        return cancel_sow_v0_str(order)
+        event_str = cancel_sow_v0_str(order)
+    else:
+        event_str = f"❌🚜 Cancelled unknown order {shorten_hash(order['blueprintHash'])}"
+    event_str += links_footer(event_log.receipt, farmer=order['publisher'])
+    return event_str
 
 def tractor_str(event_log):
     blueprint_hash = f"0x{event_log.args.blueprintHash.hex()}"
     execution = find_tractor_execution(blueprint_hash, event_log.args.nonce, event_log.blockNumber)
     order = find_tractor_order(blueprint_hash, event_log.blockNumber)
     if order['orderType'] == "SOW_V0":
-        return execute_sow_v0_str(execution, order)
+        event_str = execute_sow_v0_str(execution, order)
+    else:
+        event_str = f"💥🚜 Executed unknown order {shorten_hash(order['blueprintHash'])}"
+    event_str += links_footer(event_log.receipt, farmer=order['publisher'])
+    return event_str
 
 def publish_sow_v0_str(order):
     total_sow = bean_to_float(int(order['blueprintData']['totalAmountToSow']))

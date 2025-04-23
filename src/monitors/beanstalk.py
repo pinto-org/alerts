@@ -14,6 +14,9 @@ from constants.config import *
 from tools.combined_actions import withdraw_sow_info
 from tools.silo import net_deposit_withdrawal_stalk
 from tools.spinto import has_spinto_action_size
+from concurrent.futures import ThreadPoolExecutor
+
+from tools.util import detached_future_done
 
 class BeanstalkMonitor(Monitor):
     """Monitor the Beanstalk contract for events."""
@@ -27,6 +30,7 @@ class BeanstalkMonitor(Monitor):
         self.msg_tractor = msg_tractor
         self._eth_event_client = EthEventsClient([EventClientType.BEANSTALK])
         self.beanstalk_contract = get_beanstalk_contract()
+        self.tractor_executor = ThreadPoolExecutor(max_workers=30)
 
     def _monitor_method(self):
         last_check_time = 0
@@ -51,13 +55,11 @@ class BeanstalkMonitor(Monitor):
 
         receipt = event_logs[0].receipt
 
-        for tractor_event_log in get_logs_by_names(["PublishRequisition", "CancelBlueprint", "Tractor"], event_logs):
-            if tractor_event_log.event == "PublishRequisition":
-                self.msg_tractor(publish_requisition_str(tractor_event_log))
-            elif tractor_event_log.event == "CancelBlueprint":
-                self.msg_tractor(cancel_blueprint_str(tractor_event_log))
-            elif tractor_event_log.event == "Tractor":
-                self.msg_tractor(tractor_str(tractor_event_log))
+        # Handle tractor logs in a separate thread. API access can have a significant delay.
+        tractor_logs = get_logs_by_names(["PublishRequisition", "CancelBlueprint", "Tractor"], event_logs)
+        if tractor_logs:
+            future = self.tractor_executor.submit(self.handle_tractor_logs, tractor_logs)
+            future.add_done_callback(detached_future_done(receipt.transactionHash.hex()))
 
         if event_in_logs("L1DepositsMigrated", event_logs):
             # Ignore AddDeposit as a result of contract migrating silo
@@ -105,6 +107,15 @@ class BeanstalkMonitor(Monitor):
             event_str = self.field_event_str(event_log)
             if event_str:
                 self.msg_field(event_str)
+
+    def handle_tractor_logs(self, tractor_logs):
+        for evt in tractor_logs:
+            if evt.event == "PublishRequisition":
+                self.msg_tractor(publish_requisition_str(evt))
+            elif evt.event == "CancelBlueprint":
+                self.msg_tractor(cancel_blueprint_str(evt))
+            elif evt.event == "Tractor":
+                self.msg_tractor(tractor_str(evt))
     
     def silo_event_str(self, account, token_addr, values, receipt):
         """Logs a Silo Deposit/Withdraw"""
@@ -170,22 +181,25 @@ class BeanstalkMonitor(Monitor):
         beans_value = beans_amount * bean_price
 
         if event_log.event == "Sow":
+            effective_temp = (pods_amount / beans_amount - 1) * 100
+            max_temp = beanstalk_client.get_max_temp()
+            current_soil = beanstalk_client.get_current_soil()
+            is_morning = True
+            if abs(effective_temp - max_temp) < 0.01:
+                effective_temp = max_temp
+                is_morning = False
             is_tractor = bool(self.beanstalk_contract.events["Tractor"]().processReceipt(event_log.receipt, errors=DISCARD))
-            emoji = "🚜" if is_tractor else "⛏️"
+
+            emojis = ["🚜" if is_tractor else "⛏️", "🌅 " if is_morning else ""]
             event_str += (
-                f"{emoji} {round_num(beans_amount, 0, avoid_zero=True)} Pinto Sown for "
+                f"{emojis[0]} {round_num(beans_amount, 0, avoid_zero=True)} Pinto Sown for "
                 f"{round_num(pods_amount, 0, avoid_zero=True)} Pods "
                 f"at {round_num_abbreviated(beanstalk_client.get_podline_length(), precision=3)} in Line "
                 f"({round_num(beans_value, 0, avoid_zero=True, incl_dollar=True)})"
                 f"\n🧑‍🌾 Farmer has {round_num_abbreviated(beanstalk_graph_client.get_farmer_pod_count(event_log.args.account), precision=1)} Pods"
             )
-            effective_temp = (pods_amount / beans_amount - 1) * 100
-            max_temp = beanstalk_client.get_max_temp()
-            current_soil = beanstalk_client.get_current_soil()
-            if abs(effective_temp - max_temp) < 0.01:
-                effective_temp = max_temp
             event_str += (
-                f"\n_Sow Temperature: {round_num(effective_temp, precision=2)}% "
+                f"\n{emojis[1]}_Sow Temperature: {round_num(effective_temp, precision=2)}% "
                 f"(Max: {round_num(max_temp, precision=2)}%). "
                 f"Remaining Soil: {round_num(current_soil, precision=(0 if current_soil > 2 else 2))}_"
             )

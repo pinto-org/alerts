@@ -140,6 +140,14 @@ def embellish_token_emojis(text, mapping):
 
     return text
 
+def detached_future_done(txn_hash):
+    def inner(future):
+        try:
+            future.result()
+        except Exception as e:
+            logging.error(f"Background task failed for {txn_hash}", exc_info=e)
+    return inner
+
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
     # logging.info(f"With discord emoji {embellish_token_emojis('100 PINTO sold for <0.1 cbETH (extra :PINTO:)', DISCORD_TOKEN_EMOJIS)}")
