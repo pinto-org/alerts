@@ -50,6 +50,33 @@ def net_deposit_withdrawal_stalk(event_logs, remove_from_logs=False):
         if remove_from_logs:
             event_logs.remove(event_log)
 
+    # Remove occurrences of asset transfer; this is simpler than checking TransferSingle/Batch events
+    accounts = list(net_deposits.keys())
+    for i in range(len(accounts)):
+        for j in range(i + 1, len(accounts)):
+            account1, account2 = accounts[i], accounts[j]
+            tokens_to_remove = []
+
+            # Check each token that both accounts have
+            common_tokens = set(net_deposits[account1].keys()) & set(net_deposits[account2].keys())
+            for token in common_tokens:
+                deposit1 = net_deposits[account1][token]
+                deposit2 = net_deposits[account2][token]
+
+                # Check if bdv and stalk negate each other
+                if (deposit1["bdv"] == -deposit2["bdv"] and deposit1["stalk"] == -deposit2["stalk"]):
+                    tokens_to_remove.append(token)
+
+            # Remove the matching tokens from both accounts
+            for token in tokens_to_remove:
+                del net_deposits[account1][token]
+                del net_deposits[account2][token]
+
+            # Remove accounts if they have no tokens left
+            for account in [account1, account2]:
+                if not net_deposits[account]:
+                    del net_deposits[account]
+
     return net_deposits
 
 
