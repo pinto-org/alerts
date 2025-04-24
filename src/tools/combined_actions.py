@@ -2,6 +2,7 @@ from bots.util import get_logs_by_names, round_num, round_token
 from constants.addresses import BEAN_ADDR
 from data_access.contracts.erc20 import get_erc20_info
 from data_access.contracts.eth_events import EthEventsClient, EventClientType
+from data_access.contracts.tractor_events import TractorEvents
 from data_access.contracts.util import bean_to_float, pods_to_float, token_to_float
 from tools.silo import net_deposit_withdrawal_stalk
 
@@ -17,32 +18,36 @@ class WithdrawAndSow:
         self.pods_received_str = round_num(self.pods_received, 0, avoid_zero=True)
         self.temperature_str = f"{round_num(self.temperature, 2)}%"
 
-def withdraw_sow_info(receipt):
+# logIndex can be any logIndex within the execution context
+def withdraw_sow_info(receipt, logIndex):
     """
     Identifies whether this transaction contains a simple withdrawal/sow. Does not match
     multiple withdrawaled tokens, multiple sows, or sowing from both a withdraw and external capital
     """
     beanstalk_evt_client = EthEventsClient([EventClientType.BEANSTALK, EventClientType.WELL])
 
+    # Identify all logs within the execution context
     txn_logs = beanstalk_evt_client.logs_from_receipt(receipt)
-    sow_logs = get_logs_by_names("Sow", txn_logs)
+    ctx_logs = TractorEvents(receipt, txn_logs).events_matching_index(logIndex)
+
+    sow_logs = get_logs_by_names("Sow", ctx_logs)
     if len(sow_logs) != 1:
         return None
     sow_amount = sow_logs[0].args.beans
 
-    # Amount doesnt need to match if its tractor; guaranteed to be withdraw/sow
-    is_tractor = len(get_logs_by_names("Tractor", txn_logs)) > 0
-
-    net_withdrawal = net_deposit_withdrawal_stalk(txn_logs)
-    # TODO: handle multiple accounts. Determine which account according to Tractor evt
-    if len(net_withdrawal) == 0:
+    withdrawal_accounts = net_deposit_withdrawal_stalk(ctx_logs)
+    # In practice there should only be one account per context
+    if len(withdrawal_accounts) != 1:
         return None
-    net_withdrawal = next(iter(net_withdrawal.values()))
+    net_withdrawal = next(iter(withdrawal_accounts.values()))
     if len(net_withdrawal) != 1:
         return None
 
     withdrawal_token = next(iter(net_withdrawal))
     withdrawal_amount = abs(net_withdrawal[withdrawal_token]["amount"])
+
+    # Sow amount doesn't need to match withdrawal amount if its tractor; withdraw amount includes the tip
+    is_tractor = len(get_logs_by_names("Tractor", ctx_logs)) > 0
 
     # Verify amount of sow
     if withdrawal_token == BEAN_ADDR:
@@ -50,7 +55,7 @@ def withdraw_sow_info(receipt):
             return None
     else:
         # Check amount of beans removed on LP removal
-        remove_liq_logs = get_logs_by_names("RemoveLiquidityOneToken", txn_logs)
+        remove_liq_logs = get_logs_by_names("RemoveLiquidityOneToken", ctx_logs)
         if (
             len(remove_liq_logs) != 1 or
             remove_liq_logs[0].args.lpAmountIn != withdrawal_amount or

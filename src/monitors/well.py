@@ -13,14 +13,14 @@ from constants.addresses import *
 from constants.config import *
 
 from typing import List, Optional
-from concurrent.futures import ThreadPoolExecutor, as_completed, wait, ALL_COMPLETED
-from queue import Queue
+from concurrent.futures import ThreadPoolExecutor, wait, ALL_COMPLETED
 
 from tools.combined_actions import withdraw_sow_info
 class WellEventData:
     def __init__(
         self,
         receipt = None,
+        logIndex = None,
         event_type: Optional[str] = None,
         well_address: Optional[str] = None,
         well_tokens: Optional[List[str]] = None,
@@ -36,6 +36,7 @@ class WellEventData:
         well_liquidity_str: Optional[str] = None
     ):
         self.receipt = receipt
+        self.logIndex = logIndex
         self.event_type = event_type
         self.well_address = well_address
         self.well_tokens = well_tokens
@@ -272,6 +273,7 @@ def parse_event_data(event_log, prev_log_index, web3=get_web3_instance()):
 
     retval = WellEventData()
     retval.receipt = event_log.receipt
+    retval.logIndex = event_log.logIndex
     retval.well_address = event_log.address
 
     # Parse possible values of interest from the event log. Not all will be populated.
@@ -442,7 +444,7 @@ def single_event_str(event_data: WellEventData, bean_reporting=False, is_convert
 
         if bean_reporting:
             # Extra info if this is withdraw/sow
-            sow = withdraw_sow_info(event_data.receipt)
+            sow = withdraw_sow_info(event_data.receipt, event_data.logIndex)
             if sow:
                 event_str += f"\n> 🌾 Sowed in the Field for {sow.pods_received_str} Pods at {sow.temperature_str} Temperature"
 

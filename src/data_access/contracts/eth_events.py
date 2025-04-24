@@ -4,6 +4,7 @@ from collections import OrderedDict
 from enum import IntEnum
 
 from constants.spectra import SPECTRA_SPINTO_POOLS
+from data_access.contracts.tractor_events import TractorEvents
 from tools.util import get_txn_receipt
 from web3 import Web3
 from web3 import exceptions as web3_exceptions
@@ -107,6 +108,11 @@ add_event_to_dict(
 )
 add_event_to_dict(
     "Tractor(address,address,bytes32,uint256,uint256)",
+    BEANSTALK_EVENT_MAP,
+    BEANSTALK_SIGNATURES_LIST,
+)
+add_event_to_dict(
+    "TractorExecutionBegan(address,address,bytes32,uint256,uint256)",
     BEANSTALK_EVENT_MAP,
     BEANSTALK_SIGNATURES_LIST,
 )
@@ -455,7 +461,10 @@ class EthEventsClient:
 
             # Add all remaining txn logs to log map.
             txn_hash_set.add(txn_hash)
-            txn_logs_list.append(TxnPair(txn_hash, decoded_logs))
+            tractor_separated = TractorEvents(receipt, decoded_logs)
+            # If tractor logs are present, this inserts multiple entries for each tractor bound.
+            for logs in tractor_separated.all_separated_events():
+                txn_logs_list.append(TxnPair(txn_hash, logs))
 
         txn_logs_list.sort(key=lambda entry: (entry.logs[0].receipt.blockNumber if entry.logs else float('inf'), entry.logs[0].logIndex if entry.logs else float('inf')))
         return txn_logs_list
