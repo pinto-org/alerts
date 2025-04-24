@@ -55,6 +55,7 @@ class BeanstalkMonitor(Monitor):
         """
 
         receipt = event_logs[0].receipt
+        logIndex = event_logs[0].logIndex
 
         # Handle tractor logs in a separate thread. API access can have a significant delay.
         tractor_logs = get_logs_by_names(["PublishRequisition", "CancelBlueprint", "Tractor"], event_logs)
@@ -100,7 +101,7 @@ class BeanstalkMonitor(Monitor):
 
         for account in net_deposits:
             for token in net_deposits[account]:
-                event_str = self.silo_event_str(account, token, net_deposits[account][token], receipt, event_logs[0].logIndex)
+                event_str = self.silo_event_str(account, token, net_deposits[account][token], receipt, logIndex)
                 if event_str:
                     self.msg_silo(event_str)
 
