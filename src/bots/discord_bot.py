@@ -125,7 +125,7 @@ class DiscordClient(discord.ext.commands.Bot):
 
         self.well_monitor_whitelisted = WellsMonitor(
             self.send_msg_exchange, self.send_msg_arbitrage, WHITELISTED_WELLS,
-            arbitrage_senders=['0x711AD32A36f8EbF621fD3bB602Bd3B13724e2AC5'],
+            arbitrage_senders=[],
             bean_reporting=True, prod=prod, dry_run=dry_run
         )
         self.well_monitor_whitelisted.start()
@@ -338,6 +338,12 @@ class DiscordClient(discord.ext.commands.Bot):
                     current_batch = f"{current_batch}\n\n{msg}" if current_batch else msg
                 batched_messages.append(original_msg)
 
+                # Repeat all large events into a separate channel, if configured
+                if hasattr(self, '_channel_whale') and msg and channel not in {Channel.REPORT, Channel.TELEGRAM_FWD}:
+                    if ("🦈" in msg or "🐳" in msg) and channel is not Channel.EVERYTHING:
+                        logging.info("Forwarding to whale channel")
+                        await self._channel_whale.send(msg)
+
             # Send final message
             success = await self.send_message(channel, current_batch)
             if success:
@@ -384,11 +390,6 @@ class DiscordClient(discord.ext.commands.Bot):
             if hasattr(self, '_channel_everything') and msg and channel not in {Channel.REPORT, Channel.TELEGRAM_FWD}:
                 await self._channel_everything.send(msg)
 
-            # Repeat all large events into a separate channel, if configured
-            if hasattr(self, '_channel_whale') and msg and channel not in {Channel.REPORT, Channel.TELEGRAM_FWD}:
-                if ("🦈" in msg or "🐳" in msg) and channel is not Channel.EVERYTHING:
-                    logging.info("Forwarding to whale channel")
-                    await self._channel_whale.send(msg)
         except Exception as e:
             logging.warning(e, exc_info=True)
             logging.warning("Failed to send message to Discord server. Will retry.")

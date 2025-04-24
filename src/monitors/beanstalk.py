@@ -1,3 +1,4 @@
+from math import log
 from bots.util import *
 from data_access.contracts.erc20 import get_erc20_info
 from data_access.subgraphs.beanstalk import BeanstalkGraphClient
@@ -99,7 +100,7 @@ class BeanstalkMonitor(Monitor):
 
         for account in net_deposits:
             for token in net_deposits[account]:
-                event_str = self.silo_event_str(account, token, net_deposits[account][token], receipt)
+                event_str = self.silo_event_str(account, token, net_deposits[account][token], receipt, event_logs[0].logIndex)
                 if event_str:
                     self.msg_silo(event_str)
 
@@ -117,7 +118,7 @@ class BeanstalkMonitor(Monitor):
             elif evt.event == "Tractor":
                 self.msg_tractor(tractor_str(evt))
     
-    def silo_event_str(self, account, token_addr, values, receipt):
+    def silo_event_str(self, account, token_addr, values, receipt, logIndex):
         """Logs a Silo Deposit/Withdraw"""
         beanstalk_client = BeanstalkClient(block_number=receipt.blockNumber)
         bean_client = BeanClient(block_number=receipt.blockNumber)
@@ -156,7 +157,7 @@ class BeanstalkMonitor(Monitor):
         event_str += f"\n_{'. '.join(subinfo)}_"
 
         # Extra info if this is withdraw/sow
-        sow = withdraw_sow_info(receipt)
+        sow = withdraw_sow_info(receipt, logIndex)
         if sow:
             event_str += f"\n> 🌾 Sowed in the Field for {sow.pods_received_str} Pods at {sow.temperature_str} Temperature"
 
@@ -205,7 +206,7 @@ class BeanstalkMonitor(Monitor):
             )
 
             # Extra info if this is withdraw/sow
-            sow = withdraw_sow_info(event_log.receipt)
+            sow = withdraw_sow_info(event_log.receipt, event_log.logIndex)
             if sow:
                 withdraw_token = Web3.to_checksum_address(sow.withdraw_token_info.addr)
                 direction = "📈" if withdraw_token != BEAN_ADDR else "📊"
