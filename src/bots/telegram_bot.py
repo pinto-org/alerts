@@ -63,7 +63,7 @@ class TelegramBot(object):
 
         self.wells_monitor = WellsMonitor(
             send_main_chat, noop, WHITELISTED_WELLS,
-            arbitrage_senders=['0x711AD32A36f8EbF621fD3bB602Bd3B13724e2AC5'],
+            arbitrage_senders=[],
             bean_reporting=True, prod=prod, dry_run=dry_run
         )
         self.wells_monitor.start()
