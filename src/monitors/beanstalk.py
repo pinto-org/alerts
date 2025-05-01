@@ -192,19 +192,22 @@ class BeanstalkMonitor(Monitor):
                 is_morning = False
             is_tractor = bool(self.beanstalk_contract.events["Tractor"]().processReceipt(event_log.receipt, errors=DISCARD))
 
-            emojis = ["🚜" if is_tractor else "⛏️", "🌅 " if is_morning else ""]
+            emoji = "🚜" if is_tractor else "⛏️"
             event_str += (
-                f"{emojis[0]} {round_num(beans_amount, 0, avoid_zero=True)} Pinto Sown for "
+                f"{emoji} {round_num(beans_amount, 0, avoid_zero=True)} Pinto Sown for "
                 f"{round_num(pods_amount, 0, avoid_zero=True)} Pods "
                 f"at {round_num_abbreviated(beanstalk_client.get_podline_length(), precision=3)} in Line "
                 f"({round_num(beans_value, 0, avoid_zero=True, incl_dollar=True)})"
                 f"\n🧑‍🌾 Farmer has {round_num_abbreviated(beanstalk_graph_client.get_farmer_pod_count(event_log.args.account), precision=1)} Pods"
             )
             event_str += (
-                f"\n{emojis[1]}_Sow Temperature: {round_num(effective_temp, precision=2)}% "
+                f"\n_Sow Temperature: {round_num(effective_temp, precision=2)}% "
                 f"(Max: {round_num(max_temp, precision=2)}%). "
                 f"Remaining Soil: {round_num(current_soil, precision=(0 if current_soil > 2 else 2))}_"
             )
+            if is_morning:
+                pods_saved = beans_amount * (max_temp - effective_temp) / 100
+                event_str += f"\n> 🌅 {round_num(pods_saved, 0, avoid_zero=True)} fewer Pods minted due to Morning sow"
 
             # Extra info if this is withdraw/sow
             sow = withdraw_sow_info(event_log.receipt, event_log.logIndex)
