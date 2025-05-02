@@ -287,68 +287,71 @@ class DiscordClient(discord.ext.commands.Bot):
         The Discord.py lib allows us to ignore an exception and restart, or die on the exception.
         We want to log it _and_ not die.
         """
-        # Group messages by channel
-        channel_messages = {}
-        for channel, msg in self.msg_queue:
-            if channel not in channel_messages:
-                channel_messages[channel] = []
-            channel_messages[channel].append(msg)
+        try:
+            # Group messages by channel
+            channel_messages = {}
+            for channel, msg in self.msg_queue:
+                if channel not in channel_messages:
+                    channel_messages[channel] = []
+                channel_messages[channel].append(msg)
 
-        # Process each channel's messages
-        for channel, messages in channel_messages.items():
-            batched_messages = []
-            current_batch = ""
+            # Process each channel's messages
+            for channel, messages in channel_messages.items():
+                batched_messages = []
+                current_batch = ""
 
-            # Batch messages together up to character limit
-            for msg in messages:
-                # Discord has limit of 2k but sometimes it still fails with 2k
-                # Keep small buffer by limiting to 1950
-                if len(msg) > 1950:
-                    msg = msg[-1950:]
-                    logging.error(f"Clipping message length down to 1950.")
+                # Batch messages together up to character limit
+                for msg in messages:
+                    # Discord has limit of 2k but sometimes it still fails with 2k
+                    # Keep small buffer by limiting to 1950
+                    if len(msg) > 1950:
+                        msg = msg[-1950:]
+                        logging.error(f"Clipping message length down to 1950.")
 
-                if channel is Channel.TELEGRAM_FWD:
-                    if self.tele_bot is not None:
-                        try:
-                            self.tele_bot.send_message(chat_id=self._chat_id_telegram_fwd, text=msg)
-                        except Exception as e:
-                            logging.warning(e, exc_info=True)
-                            logging.warning("Failed to send message to Telegram bot. Will ~not~ retry.")
-                        self.msg_queue.remove((channel, msg))
+                    if channel is Channel.TELEGRAM_FWD:
+                        if self.tele_bot is not None:
+                            try:
+                                self.tele_bot.send_message(chat_id=self._chat_id_telegram_fwd, text=msg)
+                            except Exception as e:
+                                logging.warning(e, exc_info=True)
+                                logging.warning("Failed to send message to Telegram bot. Will ~not~ retry.")
+                            self.msg_queue.remove((channel, msg))
+                        else:
+                            logging.warning("Discord tele_bot not configured to forward. Ignoring...")
+                        continue
+
+                    # Add token emoji
+                    original_msg = msg
+                    msg = embellish_token_emojis(msg, DISCORD_TOKEN_EMOJIS) if channel != Channel.TELEGRAM_FWD else msg
+
+                    # If adding this message would exceed limit, send and start new batch
+                    if len(current_batch) + len(msg) > 1950:
+
+                        success = await self.send_message(channel, current_batch)
+                        if success:
+                            for sent_msg in batched_messages:
+                                self.msg_queue.remove((channel, sent_msg))
+                        batched_messages.clear()
+
+                        current_batch = msg
                     else:
-                        logging.warning("Discord tele_bot not configured to forward. Ignoring...")
-                    continue
+                        # Append message to running batch
+                        current_batch = f"{current_batch}\n\n{msg}" if current_batch else msg
+                    batched_messages.append(original_msg)
 
-                # Add token emoji
-                original_msg = msg
-                msg = embellish_token_emojis(msg, DISCORD_TOKEN_EMOJIS) if channel != Channel.TELEGRAM_FWD else msg
+                    # Repeat all large events into a separate channel, if configured
+                    if hasattr(self, '_channel_whale') and msg and channel not in {Channel.REPORT, Channel.TELEGRAM_FWD}:
+                        if ("🦈" in msg or "🐳" in msg) and channel is not Channel.EVERYTHING:
+                            logging.info("Forwarding to whale channel")
+                            await self._channel_whale.send(msg)
 
-                # If adding this message would exceed limit, send and start new batch
-                if len(current_batch) + len(msg) > 1950:
-
-                    success = await self.send_message(channel, current_batch)
-                    if success:
-                        for sent_msg in batched_messages:
-                            self.msg_queue.remove((channel, sent_msg))
-                    batched_messages.clear()
-
-                    current_batch = msg
-                else:
-                    # Append message to running batch
-                    current_batch = f"{current_batch}\n\n{msg}" if current_batch else msg
-                batched_messages.append(original_msg)
-
-                # Repeat all large events into a separate channel, if configured
-                if hasattr(self, '_channel_whale') and msg and channel not in {Channel.REPORT, Channel.TELEGRAM_FWD}:
-                    if ("🦈" in msg or "🐳" in msg) and channel is not Channel.EVERYTHING:
-                        logging.info("Forwarding to whale channel")
-                        await self._channel_whale.send(msg)
-
-            # Send final message
-            success = await self.send_message(channel, current_batch)
-            if success:
-                for sent_msg in batched_messages:
-                    self.msg_queue.remove((channel, sent_msg))
+                # Send final message
+                success = await self.send_message(channel, current_batch)
+                if success:
+                    for sent_msg in batched_messages:
+                        self.msg_queue.remove((channel, sent_msg))
+        except Exception as e:
+            logging.error("Exception in send_queued_messages", exc_info=True)
 
     async def send_message(self, channel, msg):
         if not msg:
