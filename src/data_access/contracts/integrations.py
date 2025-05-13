@@ -1,3 +1,4 @@
+import math
 from constants.morpho import MORPHO, MORPHO_MARKETS
 from data_access.contracts.erc20 import get_erc20_info
 from data_access.contracts.util import *
@@ -56,6 +57,26 @@ class CurveSpectraClient(ChainClient):
             pt_erc20_info.decimals
         )
 
+class MorphoMarketData():
+    def __init__(self, market_config, market_data):
+        self.market_config = market_config
+        self.raw_data = market_data
+        self.total_supply_assets = market_data[0]
+        self.total_supply_shares = market_data[1]
+        self.total_borrow_assets = market_data[2]
+        self.total_borrow_shares = market_data[3]
+        self.last_update = market_data[4]
+        self.fee = market_data[5]
+
+    def get_available_liquidity(self):
+        return self.total_supply_assets - self.total_borrow_assets
+
+    def get_utilization_rate(self):
+        return self.total_borrow_assets / self.total_supply_assets
+
+    def fee_float(self):
+        return token_to_float(self.fee, 18)
+
 class MorphoClient(ChainClient):
 
     def __init__(self, morpho_market, block_number="latest", web3=get_web3_instance()):
@@ -66,14 +87,17 @@ class MorphoClient(ChainClient):
         self.irm_contract = get_morpho_irm_contract(morpho_market.irm, web3=web3)
 
     def get_market_data(self, block_number=None):
-        """Get the current market data"""
+        """Get the current market data as MorphoMarketData object"""
         block_number = block_number or self.block_number
-        return call_contract_function_with_retry(
-            self.contract.functions.market(self.morpho_market.id),
-            block_number=block_number
+        return MorphoMarketData(
+            self.morpho_market,
+            call_contract_function_with_retry(
+                self.contract.functions.market(self.morpho_market.id),
+                block_number=block_number
+            )
         )
 
-    def get_borrow_rate(self, market_data=None, block_number=None):
+    def get_inst_rates(self, market_data=None, block_number=None):
         """Get the current borrow rate"""
         block_number = block_number or self.block_number
         market_data = market_data or self.get_market_data(block_number=block_number)
@@ -86,14 +110,19 @@ class MorphoClient(ChainClient):
                     self.morpho_market.irm,
                     int(self.morpho_market.lltv * 10**18)
                 ),
-                market_data
+                market_data.raw_data
             ),
             block_number=block_number
         )
 
+        borrow_apy = math.exp(token_to_float(borrow_rate_result * 31536000, 18)) - 1
+        supply_apy = borrow_apy * market_data.get_utilization_rate() * (1 - market_data.fee_float())
+        return (borrow_apy, supply_apy)
+
+        # I think this is correct for the APR, which could also calculate as borrow_rate_result * 31536000
         # Morpho irm defines 4% as the following in Solidity: 0.04 ether / int256(365 days)
         # This is 1268391679
-        return 0.04 * borrow_rate_result / 1268391679
+        # return 0.04 * borrow_rate_result / 1268391679
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
@@ -106,6 +135,11 @@ if __name__ == '__main__':
     # logging.info(ibt_to_pt_rate)
 
     morpho_client = MorphoClient(MORPHO_MARKETS[0])
-    # market_data = morpho_client.get_market_data()
-    borrow_rate = morpho_client.get_borrow_rate()
-    logging.info(borrow_rate)
+    market_data = morpho_client.get_market_data()
+    rates = morpho_client.get_inst_rates(market_data=market_data)
+
+    logging.info(market_data)
+    logging.info(market_data.get_available_liquidity())
+    logging.info(market_data.get_utilization_rate())
+    logging.info(rates[0])
+    logging.info(rates[1])
