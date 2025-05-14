@@ -8,6 +8,7 @@ class MorphoMarket(NamedTuple):
     irm: str
     lltv: float
 
+# TODO: Replace this with the details of the (currently undeployed) sPinto/USDC market
 CBETH_USDC = MorphoMarket(
     "0x1c21c59df9db44bf6f645d854ee710a8ca17b479451447e9f56758aee10a2fad",
     "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
