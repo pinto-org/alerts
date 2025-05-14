@@ -18,7 +18,10 @@ class IntegrationsMonitor(Monitor):
         )
         self.msg_spinto = msg_spinto
         self.msg_spectra = msg_spectra
-        self._eth_event_client = EthEventsClient([EventClientType.INTEGRATIONS])
+        self._eth_event_clients = [
+            EthEventsClient([EventClientType.SPINTO_SPECTRA]),
+            EthEventsClient([EventClientType.MORPHO]),
+        ]
 
     def _monitor_method(self):
         last_check_time = 0
@@ -27,12 +30,13 @@ class IntegrationsMonitor(Monitor):
                 time.sleep(0.5)
                 continue
             last_check_time = time.time()
-            for txn_pair in self._eth_event_client.get_new_logs(dry_run=self._dry_run):
-                try:
-                    self._handle_txn_logs(txn_pair.logs)
-                except Exception as e:
-                    logging.info(f"\n\n=> Exception during processing of txnHash {txn_pair.txn_hash.hex()}\n")
-                    raise
+            for client in self._eth_event_clients:
+                for txn_pair in client.get_new_logs(dry_run=self._dry_run):
+                    try:
+                        self._handle_txn_logs(txn_pair.logs)
+                    except Exception as e:
+                        logging.info(f"\n\n=> Exception during processing of txnHash {txn_pair.txn_hash.hex()}\n")
+                        raise
 
     def _handle_txn_logs(self, event_logs):
         for event_log in event_logs:

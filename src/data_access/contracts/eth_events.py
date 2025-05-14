@@ -3,6 +3,7 @@ import os
 from collections import OrderedDict
 from enum import IntEnum
 
+from constants.morpho import MORPHO, MORPHO_MARKETS
 from constants.spectra import SPECTRA_SPINTO_POOLS
 from data_access.contracts.tractor_events import TractorEvents
 from tools.util import get_txn_receipt
@@ -31,238 +32,279 @@ def add_event_to_dict(signature, sig_dict, sig_list):
     event_signature_hash = Web3.keccak(text=signature).hex()
     sig_dict[event_name] = event_signature_hash
     sig_dict[event_signature_hash] = event_name
-    sig_list.append(event_signature_hash)
+    sig_list[0].append(event_signature_hash)
     # NOTE Must config prior to logs otherwise all logging breaks
     # logging.basicConfig(level=logging.INFO)
     # logging.info(f'event signature: {signature}  -  hash: {event_signature_hash}')
 
 AQUIFER_EVENT_MAP = {}
-AQUIFER_SIGNATURES_LIST = []
+AQUIFER_TOPIC_LIST = [[]]
 # IERC20 types will just be addresses.
 add_event_to_dict(
     "BoreWell(address,address,address[],(address,bytes),(address,bytes)[],bytes)",  # IERC == address
     AQUIFER_EVENT_MAP,
-    AQUIFER_SIGNATURES_LIST,
+    AQUIFER_TOPIC_LIST,
 )
 
 
 WELL_EVENT_MAP = {}
-WELL_SIGNATURES_LIST = []
+WELL_TOPIC_LIST = [[]]
 # IERC20 types will just be addresses.
 add_event_to_dict(
-    "Swap(address,address,uint256,uint256,address)", WELL_EVENT_MAP, WELL_SIGNATURES_LIST
+    "Swap(address,address,uint256,uint256,address)", WELL_EVENT_MAP, WELL_TOPIC_LIST
 )
-add_event_to_dict("AddLiquidity(uint256[],uint256,address)", WELL_EVENT_MAP, WELL_SIGNATURES_LIST)
+add_event_to_dict("AddLiquidity(uint256[],uint256,address)", WELL_EVENT_MAP, WELL_TOPIC_LIST)
 add_event_to_dict(
-    "RemoveLiquidity(uint256,uint256[],address)", WELL_EVENT_MAP, WELL_SIGNATURES_LIST
+    "RemoveLiquidity(uint256,uint256[],address)", WELL_EVENT_MAP, WELL_TOPIC_LIST
 )
 add_event_to_dict(
-    "RemoveLiquidityOneToken(uint256,address,uint256,address)", WELL_EVENT_MAP, WELL_SIGNATURES_LIST
+    "RemoveLiquidityOneToken(uint256,address,uint256,address)", WELL_EVENT_MAP, WELL_TOPIC_LIST
 )
-add_event_to_dict("Shift(uint256[],address,uint256,address)", WELL_EVENT_MAP, WELL_SIGNATURES_LIST)
-add_event_to_dict("Sync(uint256[],uint256,address)", WELL_EVENT_MAP, WELL_SIGNATURES_LIST)
+add_event_to_dict("Shift(uint256[],address,uint256,address)", WELL_EVENT_MAP, WELL_TOPIC_LIST)
+add_event_to_dict("Sync(uint256[],uint256,address)", WELL_EVENT_MAP, WELL_TOPIC_LIST)
 
 
 BEANSTALK_EVENT_MAP = {}
-BEANSTALK_SIGNATURES_LIST = []
+BEANSTALK_TOPIC_LIST = [[]]
 add_event_to_dict(
-    "Sow(address,uint256,uint256,uint256,uint256)", BEANSTALK_EVENT_MAP, BEANSTALK_SIGNATURES_LIST
+    "Sow(address,uint256,uint256,uint256,uint256)", BEANSTALK_EVENT_MAP, BEANSTALK_TOPIC_LIST
 )
 add_event_to_dict(
-    "Harvest(address,uint256,uint256[],uint256)", BEANSTALK_EVENT_MAP, BEANSTALK_SIGNATURES_LIST
+    "Harvest(address,uint256,uint256[],uint256)", BEANSTALK_EVENT_MAP, BEANSTALK_TOPIC_LIST
 )
 add_event_to_dict(
     "AddDeposit(address,address,int96,uint256,uint256)",
     BEANSTALK_EVENT_MAP,
-    BEANSTALK_SIGNATURES_LIST,
+    BEANSTALK_TOPIC_LIST,
 )
 add_event_to_dict(
     "RemoveDeposit(address,address,int96,uint256,uint256)",
     BEANSTALK_EVENT_MAP,
-    BEANSTALK_SIGNATURES_LIST,
+    BEANSTALK_TOPIC_LIST,
 )
 add_event_to_dict(
     "RemoveDeposits(address,address,int96[],uint256[],uint256,uint256[])",
     BEANSTALK_EVENT_MAP,
-    BEANSTALK_SIGNATURES_LIST,
+    BEANSTALK_TOPIC_LIST,
 )
 add_event_to_dict(
     "Convert(address,address,address,uint256,uint256)",
     BEANSTALK_EVENT_MAP,
-    BEANSTALK_SIGNATURES_LIST,
+    BEANSTALK_TOPIC_LIST,
 )
 add_event_to_dict(
     "ConvertDownPenalty(address,uint256,uint256)",
     BEANSTALK_EVENT_MAP,
-    BEANSTALK_SIGNATURES_LIST,
+    BEANSTALK_TOPIC_LIST,
 )
 add_event_to_dict(
     "PublishRequisition(((address,bytes,bytes32[],uint256,uint256,uint256),bytes32,bytes))",
     BEANSTALK_EVENT_MAP,
-    BEANSTALK_SIGNATURES_LIST,
+    BEANSTALK_TOPIC_LIST,
 )
 add_event_to_dict(
     "CancelBlueprint(bytes32)",
     BEANSTALK_EVENT_MAP,
-    BEANSTALK_SIGNATURES_LIST,
+    BEANSTALK_TOPIC_LIST,
 )
 add_event_to_dict(
     "Tractor(address,address,bytes32,uint256,uint256)",
     BEANSTALK_EVENT_MAP,
-    BEANSTALK_SIGNATURES_LIST,
+    BEANSTALK_TOPIC_LIST,
 )
 add_event_to_dict(
     "TractorExecutionBegan(address,address,bytes32,uint256,uint256)",
     BEANSTALK_EVENT_MAP,
-    BEANSTALK_SIGNATURES_LIST,
+    BEANSTALK_TOPIC_LIST,
 )
 add_event_to_dict(
-    "Chop(address,address,uint256,uint256)", BEANSTALK_EVENT_MAP, BEANSTALK_SIGNATURES_LIST
+    "Chop(address,address,uint256,uint256)", BEANSTALK_EVENT_MAP, BEANSTALK_TOPIC_LIST
 )
-add_event_to_dict("Plant(address,uint256)", BEANSTALK_EVENT_MAP, BEANSTALK_SIGNATURES_LIST)
-add_event_to_dict("Pick(address,address,uint256)", BEANSTALK_EVENT_MAP, BEANSTALK_SIGNATURES_LIST)
+add_event_to_dict("Plant(address,uint256)", BEANSTALK_EVENT_MAP, BEANSTALK_TOPIC_LIST)
+add_event_to_dict("Pick(address,address,uint256)", BEANSTALK_EVENT_MAP, BEANSTALK_TOPIC_LIST)
 # On Fertilizer contract.
 add_event_to_dict(
-    "ClaimFertilizer(uint256[],uint256)", BEANSTALK_EVENT_MAP, BEANSTALK_SIGNATURES_LIST
+    "ClaimFertilizer(uint256[],uint256)", BEANSTALK_EVENT_MAP, BEANSTALK_TOPIC_LIST
 )
 # Needed to identify cases where AddDeposit should be ignored
 add_event_to_dict(
     "L1DepositsMigrated(address,address,uint256[],uint256[],uint256[])",
     BEANSTALK_EVENT_MAP,
-    BEANSTALK_SIGNATURES_LIST,
+    BEANSTALK_TOPIC_LIST,
 )
 
 # Season/sunrise events
 SEASON_EVENT_MAP = {}
-SEASON_SIGNATURES_LIST = []
+SEASON_TOPIC_LIST = [[]]
 add_event_to_dict(
     "Sunrise(uint256)",
     SEASON_EVENT_MAP,
-    SEASON_SIGNATURES_LIST,
+    SEASON_TOPIC_LIST,
 )
 add_event_to_dict(
     "SeasonOfPlentyWell(uint256,address,address,uint256)",
     SEASON_EVENT_MAP,
-    SEASON_SIGNATURES_LIST,
+    SEASON_TOPIC_LIST,
 )
 add_event_to_dict(
     "SeasonOfPlentyField(uint256)",
     SEASON_EVENT_MAP,
-    SEASON_SIGNATURES_LIST,
+    SEASON_TOPIC_LIST,
 )
 
 # Farmer's market events.
 MARKET_EVENT_MAP = {}
-MARKET_SIGNATURES_LIST = []
+MARKET_TOPIC_LIST = [[]]
 add_event_to_dict(
     "PodListingCreated(address,uint256,uint256,uint256,uint256,uint24,uint256,uint256,uint8)",
     MARKET_EVENT_MAP,
-    MARKET_SIGNATURES_LIST,
+    MARKET_TOPIC_LIST,
 )
 add_event_to_dict(
     "PodListingFilled(address,address,uint256,uint256,uint256,uint256,uint256)",
     MARKET_EVENT_MAP,
-    MARKET_SIGNATURES_LIST,
+    MARKET_TOPIC_LIST,
 )
-add_event_to_dict("PodListingCancelled(address,uint256,uint256)", MARKET_EVENT_MAP, MARKET_SIGNATURES_LIST)
+add_event_to_dict("PodListingCancelled(address,uint256,uint256)", MARKET_EVENT_MAP, MARKET_TOPIC_LIST)
 add_event_to_dict(
     "PodOrderCreated(address,bytes32,uint256,uint256,uint24,uint256,uint256)",
     MARKET_EVENT_MAP,
-    MARKET_SIGNATURES_LIST,
+    MARKET_TOPIC_LIST,
 )
 add_event_to_dict(
     "PodOrderFilled(address,address,bytes32,uint256,uint256,uint256,uint256,uint256)",
     MARKET_EVENT_MAP,
-    MARKET_SIGNATURES_LIST,
+    MARKET_TOPIC_LIST,
 )
-add_event_to_dict("PodOrderCancelled(address,bytes32)", MARKET_EVENT_MAP, MARKET_SIGNATURES_LIST)
+add_event_to_dict("PodOrderCancelled(address,bytes32)", MARKET_EVENT_MAP, MARKET_TOPIC_LIST)
 
 # Barn Raise events.
 FERTILIZER_EVENT_MAP = {}
-FERTILIZER_SIGNATURES_LIST = []
+FERTILIZER_TOPIC_LIST = [[]]
 add_event_to_dict(
     "TransferSingle(address,address,address,uint256,uint256)",
     FERTILIZER_EVENT_MAP,
-    FERTILIZER_SIGNATURES_LIST,
+    FERTILIZER_TOPIC_LIST,
 )
 add_event_to_dict(
     "TransferBatch(address,address,address,uint256[],uint256[])",
     FERTILIZER_EVENT_MAP,
-    FERTILIZER_SIGNATURES_LIST,
+    FERTILIZER_TOPIC_LIST,
 )
 # Needed to identify when fert mints should be ignored
 add_event_to_dict(
     "L1FertilizerMigrated(address,address,uint256[],uint128[],uint128)",
     FERTILIZER_EVENT_MAP,
-    FERTILIZER_SIGNATURES_LIST,
+    FERTILIZER_TOPIC_LIST,
 )
 
 # L2 Migration events
 CONTRACTS_MIGRATED_EVENT_MAP = {}
-CONTRACTS_MIGRATED_SIGNATURES_LIST = []
+CONTRACTS_MIGRATED_TOPIC_LIST = [[]]
 add_event_to_dict(
     "L1BeansMigrated(address,uint256,uint8)",
     CONTRACTS_MIGRATED_EVENT_MAP,
-    CONTRACTS_MIGRATED_SIGNATURES_LIST,
+    CONTRACTS_MIGRATED_TOPIC_LIST,
 )
 add_event_to_dict(
     "L1DepositsMigrated(address,address,uint256[],uint256[],uint256[])",
     CONTRACTS_MIGRATED_EVENT_MAP,
-    CONTRACTS_MIGRATED_SIGNATURES_LIST,
+    CONTRACTS_MIGRATED_TOPIC_LIST,
 )
 add_event_to_dict(
     "L1PlotsMigrated(address,address,uint256[],uint256[])",
     CONTRACTS_MIGRATED_EVENT_MAP,
-    CONTRACTS_MIGRATED_SIGNATURES_LIST,
+    CONTRACTS_MIGRATED_TOPIC_LIST,
 )
 add_event_to_dict(
     "L1InternalBalancesMigrated(address,address,address[],uint256[])",
     CONTRACTS_MIGRATED_EVENT_MAP,
-    CONTRACTS_MIGRATED_SIGNATURES_LIST,
+    CONTRACTS_MIGRATED_TOPIC_LIST,
 )
 add_event_to_dict(
     "L1FertilizerMigrated(address,address,uint256[],uint128[],uint128)",
     CONTRACTS_MIGRATED_EVENT_MAP,
-    CONTRACTS_MIGRATED_SIGNATURES_LIST,
+    CONTRACTS_MIGRATED_TOPIC_LIST,
 )
 add_event_to_dict(
     "ReceiverApproved(address,address)",
     CONTRACTS_MIGRATED_EVENT_MAP,
-    CONTRACTS_MIGRATED_SIGNATURES_LIST,
+    CONTRACTS_MIGRATED_TOPIC_LIST,
 )
 
-# Integrations (sPinto)
-INTEGRATIONS_EVENT_MAP = {}
-INTEGRATIONS_SIGNATURES_LIST = []
+# sPinto/Spectra
+SPINTO_SPECTRA_EVENT_MAP = {}
+SPINTO_SPECTRA_TOPIC_LIST = [[]]
+# sPinto
 add_event_to_dict(
     "Deposit(address,address,uint256,uint256)",
-    INTEGRATIONS_EVENT_MAP,
-    INTEGRATIONS_SIGNATURES_LIST,
+    SPINTO_SPECTRA_EVENT_MAP,
+    SPINTO_SPECTRA_TOPIC_LIST,
 )
 add_event_to_dict(
     "Withdraw(address,address,address,uint256,uint256)",
-    INTEGRATIONS_EVENT_MAP,
-    INTEGRATIONS_SIGNATURES_LIST,
+    SPINTO_SPECTRA_EVENT_MAP,
+    SPINTO_SPECTRA_TOPIC_LIST,
 )
+# Spectra
 add_event_to_dict(
     "TokenExchange(address,uint256,uint256,uint256,uint256)",
-    INTEGRATIONS_EVENT_MAP,
-    INTEGRATIONS_SIGNATURES_LIST,
+    SPINTO_SPECTRA_EVENT_MAP,
+    SPINTO_SPECTRA_TOPIC_LIST,
 )
 add_event_to_dict(
     "AddLiquidity(address,uint256[2],uint256,uint256)",
-    INTEGRATIONS_EVENT_MAP,
-    INTEGRATIONS_SIGNATURES_LIST,
+    SPINTO_SPECTRA_EVENT_MAP,
+    SPINTO_SPECTRA_TOPIC_LIST,
 )
 add_event_to_dict(
     "RemoveLiquidity(address,uint256[2],uint256)",
-    INTEGRATIONS_EVENT_MAP,
-    INTEGRATIONS_SIGNATURES_LIST,
+    SPINTO_SPECTRA_EVENT_MAP,
+    SPINTO_SPECTRA_TOPIC_LIST,
 )
 add_event_to_dict(
     "RemoveLiquidityOne(address,uint256,uint256,uint256)",
-    INTEGRATIONS_EVENT_MAP,
-    INTEGRATIONS_SIGNATURES_LIST,
+    SPINTO_SPECTRA_EVENT_MAP,
+    SPINTO_SPECTRA_TOPIC_LIST,
+)
+
+# Morpho events include the market id as the first indexed topic
+MORPHO_EVENT_MAP = {}
+MORPHO_TOPIC_LIST = [[], [market.id for market in MORPHO_MARKETS]]
+add_event_to_dict(
+    "Supply(bytes32,address,address,uint256,uint256)",
+    MORPHO_EVENT_MAP,
+    MORPHO_TOPIC_LIST,
+)
+add_event_to_dict(
+    "Withdraw(bytes32,address,address,address,uint256,uint256)",
+    MORPHO_EVENT_MAP,
+    MORPHO_TOPIC_LIST,
+)
+add_event_to_dict(
+    "SupplyCollateral(bytes32,address,address,uint256)",
+    MORPHO_EVENT_MAP,
+    MORPHO_TOPIC_LIST,
+)
+add_event_to_dict(
+    "WithdrawCollateral(bytes32,address,address,address,uint256)",
+    MORPHO_EVENT_MAP,
+    MORPHO_TOPIC_LIST,
+)
+add_event_to_dict(
+    "Borrow(bytes32,address,address,address,uint256,uint256)",
+    MORPHO_EVENT_MAP,
+    MORPHO_TOPIC_LIST,
+)
+add_event_to_dict(
+    "Repay(bytes32,address,address,uint256,uint256)",
+    MORPHO_EVENT_MAP,
+    MORPHO_TOPIC_LIST,
+)
+add_event_to_dict(
+    "Liquidate(bytes32,address,address,uint256,uint256,uint256,uint256,uint256)",
+    MORPHO_EVENT_MAP,
+    MORPHO_TOPIC_LIST,
 )
 
 class EventClientType(IntEnum):
@@ -273,7 +315,8 @@ class EventClientType(IntEnum):
     WELL = 4
     AQUIFER = 5
     CONTRACT_MIGRATED = 6
-    INTEGRATIONS = 7
+    SPINTO_SPECTRA = 7
+    MORPHO = 8
 
 class TxnPair:
     """The logs, in order, associated with a transaction."""
@@ -288,7 +331,7 @@ class TxnPair:
 class EthEventsClient:
     def __init__(self, client_types, addresses=[]):
         if not client_types:
-            raise ValueError("Mut specify at least one client type")
+            raise ValueError("Must specify at least one client type")
 
         # Track recently seen txns to avoid processing same txn multiple times.
         self._recent_processed_txns = OrderedDict()
@@ -297,53 +340,62 @@ class EthEventsClient:
 
         self._contracts = []
         self._contract_addresses = []
-        self._signature_list = []
         self._events_dict = {}
+        self._filter_topics = [[]]
 
         for client_type in client_types:
+            if len(self._filter_topics) > 1:
+                raise ValueError("Unsupported combination of client types. One of the requested clients requires custom topics.")
+
             if client_type == EventClientType.AQUIFER:
                 self._contracts.append(get_aquifer_contract())
                 self._contract_addresses.append(AQUIFER_ADDR)
-                self._signature_list.extend(AQUIFER_SIGNATURES_LIST)
+                self._filter_topics[0].extend(AQUIFER_TOPIC_LIST[0])
                 self._events_dict.update(AQUIFER_EVENT_MAP)
             elif client_type == EventClientType.WELL:
                 self._contracts.append(get_well_contract(None))
                 self._contract_addresses.extend(addresses)
-                self._signature_list.extend(WELL_SIGNATURES_LIST)
+                self._filter_topics[0].extend(WELL_TOPIC_LIST[0])
                 self._events_dict.update(WELL_EVENT_MAP)
             elif client_type == EventClientType.BEANSTALK:
                 self._contracts.append(get_beanstalk_contract())
                 self._contract_addresses.append(BEANSTALK_ADDR)
-                self._signature_list.extend(BEANSTALK_SIGNATURES_LIST)
+                self._filter_topics[0].extend(BEANSTALK_TOPIC_LIST[0])
                 self._events_dict.update(BEANSTALK_EVENT_MAP)
             elif client_type == EventClientType.SEASON:
                 self._contracts.append(get_beanstalk_contract())
                 self._contract_addresses.append(BEANSTALK_ADDR)
-                self._signature_list.extend(SEASON_SIGNATURES_LIST)
+                self._filter_topics[0].extend(SEASON_TOPIC_LIST[0])
                 self._events_dict.update(SEASON_EVENT_MAP)
             elif client_type == EventClientType.MARKET:
                 self._contracts.append(get_beanstalk_contract())
                 self._contract_addresses.append(BEANSTALK_ADDR)
-                self._signature_list.extend(MARKET_SIGNATURES_LIST)
+                self._filter_topics[0].extend(MARKET_TOPIC_LIST[0])
                 self._events_dict.update(MARKET_EVENT_MAP)
             elif client_type == EventClientType.BARN_RAISE:
                 self._contracts.append(get_fertilizer_contract())
                 self._contracts.append(get_beanstalk_contract())
                 self._contract_addresses.extend([FERTILIZER_ADDR, BEANSTALK_ADDR])
-                self._signature_list.extend(FERTILIZER_SIGNATURES_LIST)
+                self._filter_topics[0].extend(FERTILIZER_TOPIC_LIST[0])
                 self._events_dict.update(FERTILIZER_EVENT_MAP)
             elif client_type == EventClientType.CONTRACT_MIGRATED:
                 self._contracts.append(get_beanstalk_contract())
                 self._contract_addresses.append(BEANSTALK_ADDR)
-                self._signature_list.extend(CONTRACTS_MIGRATED_SIGNATURES_LIST)
+                self._filter_topics[0].extend(CONTRACTS_MIGRATED_TOPIC_LIST[0])
                 self._events_dict.update(CONTRACTS_MIGRATED_EVENT_MAP)
-            elif client_type == EventClientType.INTEGRATIONS:
+            elif client_type == EventClientType.SPINTO_SPECTRA:
                 self._contracts.append(get_wrapped_silo_contract(SPINTO_ADDR))
                 self._contracts.extend(get_curve_spectra_contract(s.pool) for s in SPECTRA_SPINTO_POOLS)
                 self._contract_addresses.append(SPINTO_ADDR)
                 self._contract_addresses.extend(s.pool for s in SPECTRA_SPINTO_POOLS)
-                self._signature_list.extend(INTEGRATIONS_SIGNATURES_LIST)
-                self._events_dict.update(INTEGRATIONS_EVENT_MAP)
+                self._filter_topics[0].extend(SPINTO_SPECTRA_TOPIC_LIST[0])
+                self._events_dict.update(SPINTO_SPECTRA_EVENT_MAP)
+            elif client_type == EventClientType.MORPHO:
+                self._contracts.append(get_morpho_contract())
+                self._contract_addresses.append(MORPHO)
+                self._filter_topics[0].extend(MORPHO_TOPIC_LIST[0])
+                self._filter_topics.append(MORPHO_TOPIC_LIST[1])
+                self._events_dict.update(MORPHO_EVENT_MAP)
         self._set_filters()
 
     def _set_filters(self):
@@ -354,7 +406,7 @@ class EthEventsClient:
                 safe_create_filter(
                     self._web3,
                     address=address,
-                    topics=[self._signature_list],
+                    topics=self._filter_topics,
                     from_block=os.environ.get("DRY_RUN_FROM_BLOCK", "latest"),
                     to_block=os.environ.get("DRY_RUN_TO_BLOCK", "latest"),
                 )
@@ -367,7 +419,7 @@ class EthEventsClient:
                 safe_create_filter(
                     self._web3,
                     address=address,
-                    topics=[self._signature_list],
+                    topics=self._filter_topics,
                     from_block=from_block,
                     to_block=to_block,
                 )
@@ -508,7 +560,7 @@ class EthEventsClient:
     def logs_from_receipt(self, receipt):
         """Decode and return all logs of interest from the given receipt"""
         decoded_logs = []
-        for signature in self._signature_list:
+        for signature in self._filter_topics[0]:
             for contract in self._contracts:
                 try:
                     decoded_type_logs = contract.events[
@@ -517,6 +569,17 @@ class EthEventsClient:
                 except web3_exceptions.ABIEventFunctionNotFound:
                     continue
                 for log in decoded_type_logs:
+                    matches_topics = True
+                    if len(self._filter_topics) > 1:
+                        # Get the raw log from the receipt to access topics
+                        raw_log = next((l for l in receipt.logs if l.logIndex == log.logIndex), None)
+                        for i in range(1, min(len(self._filter_topics), len(raw_log.topics))):
+                            if self._filter_topics[i] is not None and raw_log.topics[i].hex() not in self._filter_topics[i]:
+                                matches_topics = False
+                                break
+                    if not matches_topics:
+                        continue
+
                     # Attach the full receipt
                     updated_log = AttributeDict({**dict(log), "receipt": receipt})
                     decoded_logs.append(updated_log)
@@ -548,7 +611,7 @@ if __name__ == "__main__":
     filter = safe_create_filter(
         get_web3_instance(),
         address=BEANSTALK_ADDR,
-        topics=[BEANSTALK_SIGNATURES_LIST],
+        topics=[BEANSTALK_TOPIC_LIST],
         from_block="256715188",
         to_block="256715781",
     )

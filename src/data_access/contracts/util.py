@@ -2,6 +2,7 @@ import logging
 import json
 import os
 import time
+from constants.morpho import MORPHO
 from tools.util import topic_is_address
 import websockets
 
@@ -111,10 +112,9 @@ def get_curve_spectra_contract(address, web3=get_web3_instance()):
     address = web3.toChecksumAddress(address.lower())
     return web3.eth.contract(address=address, abi=curve_spectra_abi)
 
-def get_morpho_contract(address, web3=get_web3_instance()):
+def get_morpho_contract(web3=get_web3_instance()):
     """Get a web3.eth.contract object for a morpho amm."""
-    address = web3.toChecksumAddress(address.lower())
-    return web3.eth.contract(address=address, abi=morpho_abi)
+    return web3.eth.contract(address=MORPHO, abi=morpho_abi)
 
 def get_morpho_irm_contract(address, web3=get_web3_instance()):
     """Get a web3.eth.contract object for a morpho irm."""

@@ -1,5 +1,5 @@
 import math
-from constants.morpho import MORPHO, MORPHO_MARKETS
+from constants.morpho import MORPHO_MARKETS
 from data_access.contracts.erc20 import get_erc20_info
 from data_access.contracts.util import *
 from data_access.contracts.eth_events import *
@@ -83,7 +83,7 @@ class MorphoClient(ChainClient):
         super().__init__(web3)
         self.morpho_market = morpho_market
         self.block_number = block_number
-        self.contract = get_morpho_contract(MORPHO, web3=web3)
+        self.contract = get_morpho_contract(web3=web3)
         self.irm_contract = get_morpho_irm_contract(morpho_market.irm, web3=web3)
 
     def get_market_data(self, block_number=None):
