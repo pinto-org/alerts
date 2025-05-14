@@ -57,13 +57,15 @@ class IntegrationsMonitor(Monitor):
             if event_str:
                 event_str += links_footer(event_logs[0].receipt)
                 msg_fn(event_str)
-                return
 
-            # morpho
-            if event_log.address == MORPHO:
-                morpho_market = next((m for m in MORPHO_MARKETS if cmp_hex(event_log.args.id, m.id)), None)
-                if not morpho_market:
-                    raise Exception(f"Unexpected unknown morpho market encountered: {event_log.args.id.hex()}")
-                event_str, farmer = morpho_market_str(event_log, morpho_market)
-                event_str += links_footer(event_logs[0].receipt, farmer)
-                self.msg_morpho(event_str)
+        # morpho
+        morpho_logs = [log for log in event_logs if log.address == MORPHO]
+        if morpho_logs:
+            # In practice, complicated txns interacting with multiple markets don't need special handling,
+            # since we only have a single morpho market.
+            morpho_market = next((m for m in MORPHO_MARKETS if cmp_hex(morpho_logs[0].args.id, m.id)), None)
+            if not morpho_market:
+                raise Exception(f"Unexpected unknown morpho market encountered: {morpho_logs[0].args.id.hex()}")
+            event_str, farmer = morpho_market_str(morpho_logs, morpho_market)
+            event_str += links_footer(morpho_logs[0].receipt, farmer)
+            self.msg_morpho(event_str)
