@@ -1,3 +1,4 @@
+from typing import Union
 import re
 from constants.config import DISCORD_TOKEN_EMOJIS
 from hexbytes.main import HexBytes
@@ -17,6 +18,19 @@ web3 = Web3(WebsocketProvider(URL, websocket_timeout=60))
 
 def noop(*args, **kwargs):
     pass
+
+def normalize_hex(value: Union[bytes, str, int]) -> str:
+    if isinstance(value, str):
+        return value.lower() if value.startswith('0x') else '0x' + value.lower()
+    elif isinstance(value, (bytes, bytearray)):
+        return '0x' + value.hex()
+    elif isinstance(value, int):
+        return hex(value)
+    else:
+        raise TypeError(f"Unsupported type: {type(value)}")
+
+def cmp_hex(a: Union[bytes, str, int], b: Union[bytes, str, int]) -> bool:
+    return normalize_hex(a) == normalize_hex(b)
 
 # Compares a topic (which has leading zeros) with an ethereum address
 def topic_is_address(topic, address):

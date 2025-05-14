@@ -2,6 +2,7 @@ import logging
 
 from constants.config import ERC20_TRANSFER_EVENT_SIG, SILO_TOKENS_MAP
 from data_access.contracts.util import call_contract_function_with_retry, get_erc20_contract, token_to_float
+from tools.util import cmp_hex
 
 # Global cache for erc20 info that is static.
 erc20_info_cache = {}
@@ -49,7 +50,7 @@ def _get_transfer_null_logs(token, receipt, null_topic_index):
     """Gets the total amount of token which was transferred from or to the null address in the given transaction receipt"""
     logs = []
     for log in receipt.logs:
-        if log.address == token and log.topics[0].hex() == ERC20_TRANSFER_EVENT_SIG:
+        if log.address == token and cmp_hex(log.topics[0], ERC20_TRANSFER_EVENT_SIG):
             if log.topics[null_topic_index].hex().replace("0", "") == "x":
                 logs.append(log)
     return logs

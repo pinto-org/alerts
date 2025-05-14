@@ -10,7 +10,7 @@ from discord.ext import tasks, commands
 
 from data_access.contracts.util import *
 from data_access.addresses import format_address_ens, shorten_hash
-from tools.util import get_txn_receipt
+from tools.util import cmp_hex, get_txn_receipt
 
 from web3.logs import DISCARD
 
@@ -137,7 +137,7 @@ def event_sig_in_txn(event_sig, txn_hash, web3=None):
     receipt = get_txn_receipt(web3, txn_hash)
     for log in receipt.logs:
         try:
-            if log.topics[0].hex() == event_sig:
+            if cmp_hex(log.topics[0].hex(), event_sig):
                 return True
         # Ignore anonymous events (logs without topics).
         except IndexError:

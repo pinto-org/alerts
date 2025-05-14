@@ -3,7 +3,7 @@ import json
 import os
 import time
 from constants.morpho import MORPHO
-from tools.util import topic_is_address
+from tools.util import cmp_hex, topic_is_address
 import websockets
 
 from web3 import HTTPProvider
@@ -177,7 +177,7 @@ def get_erc20_transfer_logs(token, receipt, sender=None, recipient=None, log_ind
             try:
                 match_sender = sender is None or topic_is_address(log.topics[1], sender)
                 match_recipient = recipient is None or topic_is_address(log.topics[2], recipient)
-                if log.address == token and log.topics[0].hex() == ERC20_TRANSFER_EVENT_SIG and match_sender and match_recipient:
+                if log.address == token and cmp_hex(log.topics[0], ERC20_TRANSFER_EVENT_SIG) and match_sender and match_recipient:
                     retval.append(log)
             # Ignore anonymous events (logs without topics).
             except IndexError:

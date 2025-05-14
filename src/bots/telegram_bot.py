@@ -75,7 +75,7 @@ class TelegramBot(object):
         self.market_monitor.start()
 
         self.integrations_monitor = IntegrationsMonitor(
-            send_main_chat, send_main_chat, prod=prod, dry_run=dry_run
+            send_main_chat, send_main_chat, send_main_chat, prod=prod, dry_run=dry_run
         )
         self.integrations_monitor.start()
 
