@@ -54,14 +54,16 @@ class IntegrationsMonitor(Monitor):
                 event_str = spectra_pool_str(event_log, spectra_pool)
                 msg_fn = self.msg_spectra
 
+            if event_str:
+                event_str += links_footer(event_logs[0].receipt)
+                msg_fn(event_str)
+                return
+
             # morpho
             if event_log.address == MORPHO:
                 morpho_market = next((m for m in MORPHO_MARKETS if cmp_hex(event_log.args.id, m.id)), None)
                 if not morpho_market:
                     raise Exception(f"Unexpected unknown morpho market encountered: {event_log.args.id.hex()}")
-                event_str = morpho_market_str(event_log, morpho_market)
-                msg_fn = self.msg_morpho
-
-            if event_str:
-                event_str += links_footer(event_logs[0].receipt)
-                msg_fn(event_str)
+                event_str, farmer = morpho_market_str(event_log, morpho_market)
+                event_str += links_footer(event_logs[0].receipt, farmer)
+                self.msg_morpho(event_str)

@@ -94,6 +94,7 @@ class BeanstalkClient(ChainClient):
 
     def get_token_usd_price(self, token_addr, block_number=None):
         block_number = block_number or self.block_number
+        token_addr = Web3.to_checksum_address(token_addr)
         response = call_contract_function_with_retry(self.contract.functions.getTokenUsdPrice(token_addr), block_number=block_number)
         return float(response / 10**6)
     
