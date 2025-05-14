@@ -80,12 +80,15 @@ def morpho_market_str(event_logs, market):
 # Gets detailed info about this account's position
 def get_position_info(morpho_client, market_data, account):
     position = morpho_client.get_account_position(account)
-    oracle_price = morpho_client.get_oracle_price()
 
     supply_amount = int(position.supply_shares * market_data.total_supply_assets / market_data.total_supply_shares)
     borrowed_amount = int(position.borrow_shares * market_data.total_borrow_assets / market_data.total_borrow_shares)
-    collateral_value_in_loan_token = position.collateral * oracle_price / 10**36
-    ltv = borrowed_amount / collateral_value_in_loan_token
+    if borrowed_amount > 0:
+        oracle_price = morpho_client.get_oracle_price()
+        collateral_value_in_loan_token = position.collateral * oracle_price / 10**36
+        ltv = borrowed_amount / collateral_value_in_loan_token
+    else:
+        ltv = 0
 
     return {
         "supplied": supply_amount,
