@@ -68,6 +68,9 @@ class MorphoMarketData():
         self.last_update = market_data[4]
         self.fee = market_data[5]
 
+    def __str__(self):
+        return f"{self.raw_data}"
+
     def get_available_liquidity(self):
         return self.total_supply_assets - self.total_borrow_assets
 
@@ -77,6 +80,14 @@ class MorphoMarketData():
     def fee_float(self):
         return token_to_float(self.fee, 18)
 
+class MorphoAccountPosition():
+    def __init__(self, market, account, position_data):
+        self.market = market
+        self.account = account
+        self.supply_shares = position_data[0]
+        self.borrow_shares = position_data[1]
+        self.collateral = position_data[2]
+
 class MorphoClient(ChainClient):
 
     def __init__(self, morpho_market, block_number="latest", web3=get_web3_instance()):
@@ -85,7 +96,7 @@ class MorphoClient(ChainClient):
         self.block_number = block_number
         self.contract = get_morpho_contract(web3=web3)
         self.irm_contract = get_morpho_irm_contract(morpho_market.irm, web3=web3)
-
+        self.oracle_contract = get_morpho_oracle_contract(morpho_market.oracle, web3=web3)
     def get_market_data(self, block_number=None):
         """Get the current market data as MorphoMarketData object"""
         block_number = block_number or self.block_number
@@ -124,6 +135,25 @@ class MorphoClient(ChainClient):
         # This is 1268391679
         # return 0.04 * borrow_rate_result / 1268391679
 
+    def get_account_position(self, account, block_number=None):
+        """Get the current account position as MorphoAccountPosition object"""
+        block_number = block_number or self.block_number
+        return MorphoAccountPosition(
+            self.morpho_market,
+            account,
+            call_contract_function_with_retry(
+                self.contract.functions.position(self.morpho_market.id, account),
+                block_number=block_number
+            )
+        )
+
+    def get_oracle_price(self, block_number=None):
+        """Get the current oracle price"""
+        block_number = block_number or self.block_number
+        return call_contract_function_with_retry(
+            self.oracle_contract.functions.price(), block_number=block_number
+        )
+
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
     # client = WrappedDepositClient('0x00b174d66adA7d63789087F50A9b9e0e48446dc1', '0xb170000aeefa790fa61d6e837d1035906839a3c8')
@@ -134,12 +164,29 @@ if __name__ == '__main__':
     # ibt_to_pt_rate = spectra_client.get_ibt_to_pt_rate()
     # logging.info(ibt_to_pt_rate)
 
-    morpho_client = MorphoClient(MORPHO_MARKETS[0])
-    market_data = morpho_client.get_market_data()
-    rates = morpho_client.get_inst_rates(market_data=market_data)
+    # morpho_client = MorphoClient(MORPHO_MARKETS[0])
+    # market_data = morpho_client.get_market_data()
+    # rates = morpho_client.get_inst_rates(market_data=market_data)
 
-    logging.info(market_data)
-    logging.info(market_data.get_available_liquidity())
-    logging.info(market_data.get_utilization_rate())
-    logging.info(rates[0])
-    logging.info(rates[1])
+    # logging.info(market_data)
+    # logging.info(market_data.get_available_liquidity())
+    # logging.info(market_data.get_utilization_rate())
+    # logging.info(rates[0])
+    # logging.info(rates[1])
+
+    market_data = morpho_client.get_market_data(block_number=30227874)
+    position = morpho_client.get_account_position('0x1AD90720f34D199EBc5afdD882B00B173925450e', block_number=30227874)
+    oracle_price = morpho_client.get_oracle_price(block_number=30227874)
+
+    logging.info(f"Market data: {market_data}")
+    logging.info(f"Position: {position.supply_shares}, {position.borrow_shares}, {position.collateral}")
+    logging.info(f"Oracle price: {oracle_price}")
+    borrowed_amount = position.borrow_shares * market_data.total_borrow_assets / market_data.total_borrow_shares
+    collateral_value_in_loan_token = position.collateral * oracle_price / 10**36
+    ltv = borrowed_amount / collateral_value_in_loan_token
+    ltv_pct = ltv * 100
+    logging.info(f"Borrowed amount: {borrowed_amount}")
+    logging.info(f"Collateral amount: {position.collateral}")
+    logging.info(f"Collateral value in loan token: {collateral_value_in_loan_token}")
+    logging.info(f"LTV: {ltv}")
+    logging.info(f"LTV %: {ltv_pct}")

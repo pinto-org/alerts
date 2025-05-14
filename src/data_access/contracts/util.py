@@ -57,6 +57,10 @@ with open(
     os.path.join(os.path.dirname(__file__), "../../constants/abi/morpho_irm_abi.json")
 ) as morpho_irm_abi_file:
     morpho_irm_abi = json.load(morpho_irm_abi_file)
+with open(
+    os.path.join(os.path.dirname(__file__), "../../constants/abi/morpho_oracle_abi.json")
+) as morpho_oracle_abi_file:
+    morpho_oracle_abi = json.load(morpho_oracle_abi_file)
 
 class ChainClient:
     """Base class for clients of Eth chain data."""
@@ -120,6 +124,11 @@ def get_morpho_irm_contract(address, web3=get_web3_instance()):
     """Get a web3.eth.contract object for a morpho irm."""
     address = web3.toChecksumAddress(address.lower())
     return web3.eth.contract(address=address, abi=morpho_irm_abi)
+
+def get_morpho_oracle_contract(address, web3=get_web3_instance()):
+    """Get a web3.eth.contract object for a morpho oracle."""
+    address = web3.toChecksumAddress(address.lower())
+    return web3.eth.contract(address=address, abi=morpho_oracle_abi)
 
 def get_tokens_sent(token, receipt, recipient, log_index_bounds):
     """Return the amount (as a float) of token sent in a transaction to the given recipient, within the log index bounds"""
