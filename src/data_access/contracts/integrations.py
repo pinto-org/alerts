@@ -97,6 +97,7 @@ class MorphoClient(ChainClient):
         self.contract = get_morpho_contract(web3=web3)
         self.irm_contract = get_morpho_irm_contract(morpho_market.irm, web3=web3)
         self.oracle_contract = get_morpho_oracle_contract(morpho_market.oracle, web3=web3)
+
     def get_market_data(self, block_number=None):
         """Get the current market data as MorphoMarketData object"""
         block_number = block_number or self.block_number
@@ -164,7 +165,7 @@ if __name__ == '__main__':
     # ibt_to_pt_rate = spectra_client.get_ibt_to_pt_rate()
     # logging.info(ibt_to_pt_rate)
 
-    # morpho_client = MorphoClient(MORPHO_MARKETS[0])
+    morpho_client = MorphoClient(MORPHO_MARKETS[0])
     # market_data = morpho_client.get_market_data()
     # rates = morpho_client.get_inst_rates(market_data=market_data)
 
@@ -174,17 +175,19 @@ if __name__ == '__main__':
     # logging.info(rates[0])
     # logging.info(rates[1])
 
-    market_data = morpho_client.get_market_data(block_number=30227874)
-    position = morpho_client.get_account_position('0x1AD90720f34D199EBc5afdD882B00B173925450e', block_number=30227874)
-    oracle_price = morpho_client.get_oracle_price(block_number=30227874)
+    market_data = morpho_client.get_market_data(block_number=30229210)
+    position = morpho_client.get_account_position('0x1AD90720f34D199EBc5afdD882B00B173925450e', block_number=30229210)
+    oracle_price = morpho_client.get_oracle_price(block_number=30229210)
 
     logging.info(f"Market data: {market_data}")
     logging.info(f"Position: {position.supply_shares}, {position.borrow_shares}, {position.collateral}")
     logging.info(f"Oracle price: {oracle_price}")
+    supply_amount = position.supply_shares * market_data.total_supply_assets / market_data.total_supply_shares
     borrowed_amount = position.borrow_shares * market_data.total_borrow_assets / market_data.total_borrow_shares
     collateral_value_in_loan_token = position.collateral * oracle_price / 10**36
     ltv = borrowed_amount / collateral_value_in_loan_token
     ltv_pct = ltv * 100
+    logging.info(f"Supply amount: {supply_amount}")
     logging.info(f"Borrowed amount: {borrowed_amount}")
     logging.info(f"Collateral amount: {position.collateral}")
     logging.info(f"Collateral value in loan token: {collateral_value_in_loan_token}")
