@@ -169,6 +169,3 @@ if __name__ == "__main__":
     events = client.get_log_range(22722127, 22722127)
     for i in range(len(events)):
         logging.info(f"found txn: {events[i].txn_hash.hex()}")
-    # logging.info(f"lp bdv {bs.get_bdv(get_erc20_info(PINTO_CBETH_ADDR), 20566115)}")
-    logging.info(f"Crop ratio: {BeanstalkClient.calc_crop_ratio(int(69e18), False)}")
-    # logging.info(f"Crop ratio: {BeanstalkClient.calc_crop_ratio(int(50e18), True)}")
