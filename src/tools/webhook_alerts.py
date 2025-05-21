@@ -1,3 +1,4 @@
+import threading
 import requests
 import os
 import logging
@@ -15,11 +16,14 @@ def activate_webhook_on_error_logs():
     logging.getLogger().addHandler(webhook_report_handler)
 
 def send_webhook_alert(text):
-    logging.info(f"Sending webhook error alert")
-    try:
-        _send_webhook_alert(text)
-    except Exception as e:
-        logging.error(f"Error sending webhook alert: {e}")
+    def task():
+        logging.info("Sending webhook error alert")
+        try:
+            _send_webhook_alert(text)
+        except Exception as e:
+            logging.error(f"Error sending webhook alert: {e}")
+
+    threading.Thread(target=task, daemon=True).start()
 
 @retryable(max_retries=10, retry_delay=60, show_retry_error=True)
 def _send_webhook_alert(text):
