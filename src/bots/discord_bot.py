@@ -1,10 +1,13 @@
 import abc
+import datetime
 from enum import Enum
 import json
 import logging
 import logging.handlers
 import os
 import signal
+import threading
+import time
 from monitors.integrations import IntegrationsMonitor
 import telebot
 
@@ -143,6 +146,9 @@ class DiscordClient(discord.ext.commands.Bot):
         )
         self.integrations_monitor.start()
 
+        # Start monitor status logging
+        threading.Thread(target=self.log_monitor_status).start()
+
         # self.contract_migration_monitor = ContractsMigrated(
         #     self.send_msg_contract_migrated,
         #     prod=prod,
@@ -160,6 +166,20 @@ class DiscordClient(discord.ext.commands.Bot):
         self.send_queued_messages.add_exception_type(discord.errors.DiscordServerError)
         # Start the message queue sending task in the background.
         self.send_queued_messages.start()
+
+    def log_monitor_status(self):
+        """Log the status of all monitors every 60 seconds."""
+        while True:
+            try:
+                logging.info(f"Sunrise Monitor last update: Season {self.sunrise_monitor.current_season_id}")
+                logging.info(f"Well Monitor last update:           {datetime.datetime.fromtimestamp(self.well_monitor_whitelisted.last_check_time)}")
+                logging.info(f"Beanstalk Monitor last update:      {datetime.datetime.fromtimestamp(self.beanstalk_monitor.last_check_time)}")
+                logging.info(f"Market Monitor last update:         {datetime.datetime.fromtimestamp(self.market_monitor.last_check_time)}")
+                logging.info(f"Integrations Monitor last update:   {datetime.datetime.fromtimestamp(self.integrations_monitor.last_check_time)}")
+                logging.info(f"Peg Monitor last update:            {datetime.datetime.fromtimestamp(self.peg_cross_monitor.last_check_time)}")
+            except Exception as e:
+                logging.error("Error in monitor status logging", exc_info=True)
+            time.sleep(60)
 
     def stop(self):
         # self.upload_channel_to_wallets()

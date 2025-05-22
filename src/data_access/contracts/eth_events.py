@@ -419,6 +419,7 @@ class EthEventsClient:
                     try_count += 1
                     try:
                         new_entries.extend(self.safe_get_new_entries(filters[i], get_all=get_all))
+                        break
                     except (
                         ValueError,
                         asyncio.TimeoutError,
