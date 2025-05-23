@@ -23,7 +23,7 @@ def string_inject_fields(string, fields):
     # Stringify array and inject it into query string.
     return string[:fields_index_start] + " ".join(fields) + string[fields_index_end:]
 
-def execute(client, query_str, max_tries=10):
+def execute(client, query_str, max_tries=3):
     """Convert query string into a gql query and execute query."""
     query = gql(query_str)
 
@@ -50,6 +50,11 @@ def execute(client, query_str, max_tries=10):
                 logging.info(f"Failing GraphQL query: {query_str}")
             else:
                 logging.warning(f"Error on {client_subgraph_name(client)} subgraph access. Retrying...")
+
+            if e.code == 503:
+                # Subgraph has fallen behind; insist on retrying for longer to give time for recovery
+                max_tries = 20
+                retry_delay = 15
         time.sleep(retry_delay)
     logging.error("Unable to access subgraph data")
     raise GraphAccessException
