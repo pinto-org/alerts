@@ -181,7 +181,7 @@ class WellsMonitor(Monitor):
             address = event_log.get("address")
             if address in self.pool_addresses:
                 if address not in prev_log_index:
-                    prev_log_index[address] = 0
+                    prev_log_index[address] = -1
                 individual_evts.append(
                     parse_event_data(
                         event_log,
