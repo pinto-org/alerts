@@ -23,11 +23,10 @@ API_ENDPOINT = "https://api.pinto.money"
 
 # The following time values are all provided in seconds.
 SEASON_DURATION = 3600
-PREVIEW_CHECK_PERIOD = 5
-BEANSTALK_CHECK_RATE = 5
-PEG_CHECK_PERIOD = 5
-WELL_CHECK_RATE = 5
-BARN_RAISE_CHECK_RATE = 10
+PREVIEW_CHECK_PERIOD = 10
+BEANSTALK_CHECK_RATE = 10
+PEG_CHECK_PERIOD = 10
+WELL_CHECK_RATE = 10
 # Initial time to wait before reseting dead monitor.
 RESET_MONITOR_DELAY_INIT = 15
 

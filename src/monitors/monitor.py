@@ -51,13 +51,13 @@ class Monitor:
             if time.time() < retry_time:
                 logging.info(
                     f"Waiting {retry_time - time.time()} more seconds before restarting "
-                    f" monitor on {self.name} thread."
+                    f"monitor on {self.name} thread."
                 )
                 time.sleep(1)
                 continue
             logging.info(f"Starting monitor on {self.name} thread.")
-            self._web3 = get_web3_instance()
             try:
+                self._web3 = get_web3_instance()
                 self._monitor_method()
             # Websocket disconnects are expected occasionally.
             except websockets.exceptions.ConnectionClosedError as e:

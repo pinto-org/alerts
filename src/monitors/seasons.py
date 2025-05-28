@@ -64,7 +64,9 @@ class SeasonsMonitor(Monitor):
                             sunrise_tx_logs = next(txn.logs for txn in sunrise_swap_logs if cmp_hex(txn.txn_hash, seasonal_sg.beanstalks[0].sunrise_hash))
                             seasonal_sg.beanstalks[0].flood_swap_logs = get_logs_by_names(["Swap"], sunrise_tx_logs)
 
-                self.msg_seasons(self.season_summary_string(seasonal_sg))
+                # Only even seasons go to twitter
+                if not self.short_msgs or seasonal_sg.beanstalks[0].season % 2 == 0:
+                    self.msg_seasons(self.season_summary_string(seasonal_sg))
 
     def _wait_until_expected_sunrise(self):
         """Wait until the top of the hour where a sunrise call is expected"""
@@ -135,11 +137,7 @@ class SeasonsMonitor(Monitor):
 
         new_season = sg.beanstalks[0].season
         ret_string = f"⏱ Season {new_season} has started!"
-        if not self.short_msgs:
-            ret_string += f"\n💵 Pinto price is ${round_num(price, 4)}"
-        else:
-            ret_string += f" — Pinto price is ${round_num(price, 4)}"
-
+        ret_string += f"\n💵 Pinto price is ${round_num(price, 4)}"
         ret_string += f'\n⚖️ {"+" if delta_b >= 0 else ""}{round_num(delta_b, 0)} TWAΔP'
 
         supply = get_erc20_total_supply(BEAN_ADDR)
@@ -344,8 +342,8 @@ class SeasonsMonitor(Monitor):
             # Display total liquidity only
             ret_string += f"\n\n🌊 Total Liquidity: {total_liquidity}"
 
-            if wells_volume > 0:
-                ret_string += f"\n📊 Hourly volume: {round_num(wells_volume, 0, incl_dollar=True)}"
+            # if wells_volume > 0:
+            #     ret_string += f"\n📊 Hourly volume: {round_num(wells_volume, 0, incl_dollar=True)}"
 
             ret_string += f"\n"
             if reward_beans > 0:

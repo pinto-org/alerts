@@ -63,12 +63,12 @@ class OtherWellsMonitor(Monitor):
         self._eth_all_wells = EthEventsClient([EventClientType.WELL])
     
     def _monitor_method(self):
-        last_check_time = 0
+        self.last_check_time = 0
         while self._thread_active:
-            if time.time() < last_check_time + self.query_rate:
+            if time.time() < self.last_check_time + self.query_rate:
                 time.sleep(0.5)
                 continue
-            last_check_time = time.time()
+            self.last_check_time = time.time()
             for txn_pair in self._eth_aquifer.get_new_logs(dry_run=self._dry_run):
                 for event_log in txn_pair.logs:
                     event_str = self.aquifer_event_str(event_log)
@@ -128,12 +128,12 @@ class WellsMonitor(Monitor):
         self.bean_reporting = bean_reporting
 
     def _monitor_method(self):
-        last_check_time = 0
+        self.last_check_time = 0
         while self._thread_active:
-            if time.time() < last_check_time + self.query_rate:
+            if time.time() < self.last_check_time + self.query_rate:
                 time.sleep(0.5)
                 continue
-            last_check_time = time.time()
+            self.last_check_time = time.time()
 
             new_logs = self._eth_event_client.get_new_logs(dry_run=self._dry_run)
             if new_logs:
@@ -181,7 +181,7 @@ class WellsMonitor(Monitor):
             address = event_log.get("address")
             if address in self.pool_addresses:
                 if address not in prev_log_index:
-                    prev_log_index[address] = 0
+                    prev_log_index[address] = -1
                 individual_evts.append(
                     parse_event_data(
                         event_log,

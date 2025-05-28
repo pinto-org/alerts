@@ -1,7 +1,10 @@
+import datetime
 import logging
 import logging.handlers
 import os
 import signal
+import threading
+import time
 
 from monitors.integrations import IntegrationsMonitor
 import telebot
@@ -79,6 +82,9 @@ class TelegramBot(object):
         )
         self.integrations_monitor.start()
 
+        # Start monitor status logging
+        threading.Thread(target=self.log_monitor_status).start()
+
     def send_msg_factory(self, aggregators):
         def send_msg(msg, to_main=True, to_tg=True):
 
@@ -98,6 +104,20 @@ class TelegramBot(object):
 
         return send_msg
 
+    def log_monitor_status(self):
+        """Log the status of all monitors every 60 seconds."""
+        while True:
+            try:
+                logging.info(f"Sunrise Monitor last update: Season {self.sunrise_monitor.current_season_id}")
+                logging.info(f"Well Monitor last update:           {datetime.datetime.fromtimestamp(self.wells_monitor.last_check_time)}")
+                logging.info(f"Beanstalk Monitor last update:      {datetime.datetime.fromtimestamp(self.beanstalk_monitor.last_check_time)}")
+                logging.info(f"Market Monitor last update:         {datetime.datetime.fromtimestamp(self.market_monitor.last_check_time)}")
+                logging.info(f"Integrations Monitor last update:   {datetime.datetime.fromtimestamp(self.integrations_monitor.last_check_time)}")
+                logging.info(f"Peg Monitor last update:            {datetime.datetime.fromtimestamp(self.peg_cross_monitor.last_check_time)}")
+            except Exception as e:
+                logging.error("Error in monitor status logging", exc_info=True)
+            time.sleep(60)
+
     def stop(self):
         self.peg_cross_monitor.stop()
         self.sunrise_monitor.stop()
@@ -107,7 +127,6 @@ class TelegramBot(object):
         self.integrations_monitor.stop()
         self.msg_main_agg.stop()
         self.msg_seasons_agg.stop()
-
 
 if __name__ == "__main__":
     """Quick test and demonstrate functionality."""

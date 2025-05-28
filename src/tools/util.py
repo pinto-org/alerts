@@ -57,7 +57,7 @@ def format_log_str(log, indent=0):
     return "\n".join(ret_str_list)
 
 def retryable(max_retries=5, retry_delay=10, show_retry_error=True):
-    """Decorator to wrap web3 calls that could fail and gracefully handle retries."""
+    """Decorator to wrap calls that could fail and gracefully handle retries."""
     def decorator(fn):
         def retry_wrapper(*args, **kwargs):
             try_count = 0

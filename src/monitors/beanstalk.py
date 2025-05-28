@@ -34,12 +34,12 @@ class BeanstalkMonitor(Monitor):
         self.tractor_executor = ThreadPoolExecutor(max_workers=30)
 
     def _monitor_method(self):
-        last_check_time = 0
+        self.last_check_time = 0
         while self._thread_active:
-            if time.time() < last_check_time + self.query_rate:
+            if time.time() < self.last_check_time + self.query_rate:
                 time.sleep(0.5)
                 continue
-            last_check_time = time.time()
+            self.last_check_time = time.time()
             for txn_pair in self._eth_event_client.get_new_logs(dry_run=self._dry_run):
                 if len(txn_pair.logs):
                     try:

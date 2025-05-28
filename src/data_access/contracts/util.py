@@ -5,6 +5,7 @@ import time
 from constants.morpho import MORPHO
 from tools.util import cmp_hex, topic_is_address
 import websockets
+import threading
 
 from web3 import HTTPProvider
 
@@ -68,10 +69,13 @@ class ChainClient:
     def __init__(self, web3=None):
         self._web3 = web3 or get_web3_instance()
 
-web3_instance = Web3(HTTPProvider(RPC_URL))
+# Thread-local storage for web3 instances
+_thread_local = threading.local()
 def get_web3_instance():
-    """Get an instance of web3 lib."""
-    return web3_instance
+    """Get an instance of web3 lib. Creates a new instance per thread if one doesn't exist."""
+    if not hasattr(_thread_local, 'web3_instance'):
+        _thread_local.web3_instance = Web3(HTTPProvider(RPC_URL))
+    return _thread_local.web3_instance
 
 def get_well_contract(address, web3=get_web3_instance()):
     """Get a web.eth.contract object for a well. Contract is not thread safe."""

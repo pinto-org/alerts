@@ -26,14 +26,12 @@ class PegCrossMonitor(Monitor):
 
         Note that this assumes that block time > period of graph checks.
         """
-        # Delay startup to protect against crash loops.
-        min_update_time = time.time() + 1
+        self.last_check_time = 0
         while self._thread_active:
-            # Attempt to check as quickly as the graph allows, but no faster than set frequency.
-            if not time.time() > min_update_time:
+            if time.time() < self.last_check_time + self.query_rate:
                 time.sleep(1)
                 continue
-            min_update_time = time.time() + self.query_rate
+            self.last_check_time = time.time()
 
             try:
                 crosses = self._check_for_peg_crosses()
