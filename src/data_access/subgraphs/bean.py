@@ -11,7 +11,7 @@ class BeanGraphClient(object):
     def __init__(self, block_number="latest"):
         self.block_number = block_number
         self._transport = AIOHTTPTransport(url=BEAN_GRAPH_ENDPOINT)
-        self.client = Client(transport=self._transport, fetch_schema_from_transport=False, execute_timeout=7)
+        self.client = Client(transport=self._transport, fetch_schema_from_transport=False, execute_timeout=15)
 
     def last_cross(self, block_number=None):
         """Returns a dict containing the most recent peg cross."""
