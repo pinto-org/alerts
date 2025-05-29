@@ -51,8 +51,8 @@ def execute(client, query_str, max_tries=3):
             else:
                 logging.warning(f"Error on {client_subgraph_name(client)} subgraph access. Retrying...")
 
-            if e.code == 503:
-                # Subgraph has fallen behind; insist on retrying for longer to give time for recovery
+            if e.code in [502, 503]:
+                # Subgraph has fallen behind OR bad gateway; insist on retrying for longer to give time for recovery
                 max_tries = 20
                 retry_delay = 15
         time.sleep(retry_delay)
