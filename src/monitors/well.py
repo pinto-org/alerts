@@ -213,12 +213,13 @@ class WellsMonitor(Monitor):
         if trades >= 2:
             # Consolidate into a single message
             event_str = multi_trade_event_str(individual_evts)
-            # Is considered full arbitrage even if the pinto amount mismatches by less than .1%. Some traders move
-            # light pinto profits into their trading contract.
-            if abs(sum_pinto / abs_sum_pinto) < 0.001:
-                messages.append((self.msg_arbitrage, event_str, to_tg))
-            else:
-                messages.append((self.msg_exchange, event_str, to_tg))
+            if event_str:
+                # Is considered full arbitrage even if the pinto amount mismatches by less than .1%. Some traders move
+                # light pinto profits into their trading contract.
+                if abs(sum_pinto / abs_sum_pinto) < 0.001:
+                    messages.append((self.msg_arbitrage, event_str, to_tg))
+                else:
+                    messages.append((self.msg_exchange, event_str, to_tg))
             return messages
 
         # Identify arbitrage trades or LP converts
@@ -500,6 +501,9 @@ def multi_trade_event_str(all_events: List[WellEventData]):
 
     if len(from_nbt_strs) > 0 and len(to_nbt_strs) > 0:
         # Arbitrage running through pinto
+        if beans_in < 100 * 10 ** BEAN_DECIMALS:
+            # Ignore small arbitrage trades
+            return None
         bean_amount = round_token(beans_in, 6, BEAN_ADDR)
         profit = dollars_out - dollars_in
         profit_str = f"{'+' if profit >= 0 else '-'}{round_num(abs(profit), 2, avoid_zero=False, incl_dollar=True)}"
