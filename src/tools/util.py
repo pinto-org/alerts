@@ -120,11 +120,16 @@ def embellish_token_emojis(text, mapping):
         emoji = mapping[word.upper()]  # Retrieve emoji based on uppercase word
         return f"{pre_whitespace}{emoji} {sign}{number}{word}"
 
+    # Normalize text to guarantee some whitespace before any leading < prior to regex operations
+    text = f" {text}"
+
     # For each word in the mapping, replace in a case-insensitive way
     for word in mapping:
         # Use re.IGNORECASE to match the word regardless of case
         pattern = rf'(?<!-)(\b|\s)([<])?(\d[\d,\.]*\s)?(?<!!)({re.escape(word)})\b(?!\.\w|:\d)'
         text = re.sub(pattern, replacer, text, flags=re.IGNORECASE)
+
+    text = text.strip()
 
     # Ignore/strip occurrences where an emoji was explicitly rejected
     def retain_casing(match):
@@ -156,5 +161,6 @@ if __name__ == '__main__':
     # logging.info(f"With rejection {embellish_token_emojis(':PINTO: 500 Deposited !PINTO', DISCORD_TOKEN_EMOJIS)}")
     logging.info(f"Normal {embellish_token_emojis('2500 sPinto', DISCORD_TOKEN_EMOJIS)}")
     logging.info(f"With nested word {embellish_token_emojis('500 PT-sPinto and :SPECTRA_LP: 1700 LP', DISCORD_TOKEN_EMOJIS)}")
+    logging.info(f"With leading < {embellish_token_emojis('<1 PINTO exchanged for <0.01 WETH, 1 PINTO', DISCORD_TOKEN_EMOJIS)}")
     # receipt = get_txn_receipt(web3, '0x9e810260341f174b8596c8acd7c6230ed06e90174de2d8c660faf8f71c437c63')
     # logging.info(f"got receipt {receipt}")
