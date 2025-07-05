@@ -1,0 +1,213 @@
+name: Claude PR Review & Fix
+
+on:
+  pull_request_review_comment:
+    types: [created]
+  issue_comment:
+    types: [created]
+
+jobs:
+  check-permissions:
+    runs-on: ubuntu-latest
+    outputs:
+      has-write-permission: ${{ steps.check.outputs.has-write-permission }}
+    steps:
+      - name: Check user permissions
+        id: check
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: permission } = await github.rest.repos.getCollaboratorPermissionLevel({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              username: context.actor
+            });
+            
+            const hasWritePermission = ['admin', 'maintain', 'write'].includes(permission.permission);
+            console.log(`User ${context.actor} has permission: ${permission.permission}`);
+            console.log(`Has write permission: ${hasWritePermission}`);
+            
+            core.setOutput('has-write-permission', hasWritePermission);
+
+  detect-pr-comment:
+    needs: check-permissions
+    if: needs.check-permissions.outputs.has-write-permission == 'true'
+    runs-on: ubuntu-latest
+    outputs:
+      should-run: ${{ steps.classify.outputs.should-run }}
+      pr-number: ${{ steps.classify.outputs.pr-number }}
+      comment-body: ${{ steps.classify.outputs.comment-body }}
+    steps:
+      - name: Classify PR comment
+        id: classify
+        uses: actions/github-script@v7
+        with:
+          script: |
+            let shouldRun = false;
+            let prNumber = null;
+            let commentBody = '';
+            
+            // Check if this is a PR comment with @claude mention
+            if (context.eventName === 'pull_request_review_comment') {
+              commentBody = context.payload.comment.body;
+              shouldRun = commentBody.includes('@claude');
+              prNumber = context.payload.pull_request.number;
+              
+              console.log(`PR review comment on PR #${prNumber}`);
+              console.log(`Comment body: ${commentBody}`);
+              
+            } else if (context.eventName === 'issue_comment' && context.payload.issue.pull_request) {
+              commentBody = context.payload.comment.body;
+              shouldRun = commentBody.includes('@claude');
+              prNumber = context.payload.issue.number;
+              
+              console.log(`Issue comment on PR #${prNumber}`);
+              console.log(`Comment body: ${commentBody}`);
+            }
+            
+            console.log(`Should run: ${shouldRun}, PR number: ${prNumber}`);
+            
+            core.setOutput('should-run', shouldRun);
+            core.setOutput('pr-number', prNumber);
+            core.setOutput('comment-body', commentBody);
+
+  claude-pr-review-fix:
+    needs: [check-permissions, detect-pr-comment]
+    if: |
+      needs.check-permissions.outputs.has-write-permission == 'true' &&
+      needs.detect-pr-comment.outputs.should-run == 'true' &&
+      needs.detect-pr-comment.outputs.pr-number != null
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      id-token: write
+    steps:
+      - name: Get PR details
+        id: pr-details
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = ${{ needs.detect-pr-comment.outputs.pr-number }};
+            
+            const { data: pr } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber
+            });
+            
+            console.log(`PR #${prNumber}: ${pr.title}`);
+            console.log(`Head branch: ${pr.head.ref}`);
+            console.log(`Base branch: ${pr.base.ref}`);
+            
+            core.setOutput('head-ref', pr.head.ref);
+            core.setOutput('base-ref', pr.base.ref);
+            core.setOutput('pr-title', pr.title);
+            core.setOutput('pr-body', pr.body || '');
+
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.pr-details.outputs.head-ref }}
+          fetch-depth: 0
+
+      - name: Configure git
+        run: |
+          git config --global user.name 'claude-code[bot]'
+          git config --global user.email 'claude-code[bot]@users.noreply.github.com'
+
+      - name: Run Claude PR Review & Fix
+        uses: anthropics/claude-code-action@beta
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          timeout_minutes: "25"
+          initial_prompt: |
+            You are tasked with reviewing and fixing a Pull Request based on feedback from a privileged user. Please:
+
+            **Context:**
+            - PR #${{ needs.detect-pr-comment.outputs.pr-number }}: ${{ steps.pr-details.outputs.pr-title }}
+            - User Comment: ${{ needs.detect-pr-comment.outputs.comment-body }}
+            - Base Branch: ${{ steps.pr-details.outputs.base-ref }}
+            - Current Branch: ${{ steps.pr-details.outputs.head-ref }}
+
+            **Your Tasks:**
+
+            1. **Analyze the Feedback**: 
+               - Carefully read the user's comment to understand what needs to be addressed
+               - Identify specific issues mentioned (bugs, improvements, code quality, etc.)
+               - Understand the requested changes or fixes
+
+            2. **Review the Current PR**:
+               - Examine the existing changes in this PR
+               - Compare with the base branch to understand what was modified
+               - Look for the issues mentioned in the comment
+               - Check for any obvious problems (linting errors, type issues, etc.)
+
+            3. **Implement the Requested Changes**:
+               - Make the specific changes requested by the user
+               - Fix any bugs or issues identified in the feedback
+               - Improve code quality if requested (refactoring, better patterns, etc.)
+               - Ensure changes follow the project's coding conventions
+               - Add or update tests if mentioned in the feedback
+
+            4. **Verify the Changes**:
+               - Run linting and type checking to ensure code quality
+               - Test that the changes work as expected
+               - Ensure no existing functionality is broken
+               - Verify the changes address all points in the user's feedback
+
+            5. **Commit and Update**:
+               - Make clear, descriptive commits explaining what was fixed
+               - Push the changes to the current PR branch
+               - The changes will automatically update the existing PR
+
+            **Important Guidelines:**
+            - Focus specifically on addressing the user's feedback
+            - Don't make unrelated changes unless they're necessary for the fix
+            - Follow the existing code patterns and project structure
+            - Assume the reviewer is already familiar with the project structure and architecture
+            - Ensure all changes maintain type safety and proper error handling
+            - If you can't address something in the feedback, explain why in your commit message
+
+            The goal is to address the reviewer's concerns and improve the PR based on their expert feedback.
+
+  unauthorized-user:
+    needs: check-permissions
+    if: |
+      needs.check-permissions.outputs.has-write-permission == 'false' &&
+      (
+        (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
+        (github.event_name == 'issue_comment' && github.event.issue.pull_request && contains(github.event.comment.body, '@claude'))
+      )
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      issues: write
+    steps:
+      - name: Comment on unauthorized access
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const message = `🚫 Sorry @${context.actor}, you need write permissions to this repository to trigger Claude PR reviews and fixes. Please contact a repository maintainer for access.
+            
+            **How to use this workflow:**
+            - Comment on any PR with \`@claude\` and describe what needs to be fixed or improved
+            - Claude will analyze your feedback and make the requested changes
+            - Only users with write permissions can trigger this workflow for security reasons`;
+            
+            let issueNumber;
+            if (context.eventName === 'pull_request_review_comment') {
+              issueNumber = context.payload.pull_request.number;
+            } else if (context.eventName === 'issue_comment') {
+              issueNumber = context.payload.issue.number;
+            }
+            
+            if (issueNumber) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issueNumber,
+                body: message
+              });
+            }
