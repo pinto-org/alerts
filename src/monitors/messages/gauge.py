@@ -126,7 +126,7 @@ def cultivation_gauge_str(data_bytes):
         decode_abi(['uint256', 'uint256', 'uint256', 'uint256', 'uint256', 'uint256'], bytes)[4], 6
     ) for bytes in data_bytes]
     return (
-        f"🪱 Cultivation Temperature: {round_num(cultivation_temperatures[1], precision=2)}%"
+        f"☀️ Cultivation Temperature: {round_num(cultivation_temperatures[1], precision=2)}%"
         f"\n> {amt_change_str(cultivation_temperatures[0], cultivation_temperatures[1], precision=2, is_percent=True, use_emoji=True)}"
     )
 cultivation_gauge_str.gauge_id = 0
