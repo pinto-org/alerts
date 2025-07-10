@@ -23,10 +23,10 @@ def seasonal_gauge_str(sunrise_receipt):
     parallelized.append(lambda: beanstalk_client.get_deposited_bdv_totals(b_prev))
     parallelized.append(lambda: beanstalk_client.get_deposited_bdv_totals(b))
 
-    gauge_str_methods = [cultivation_factor_str, convert_down_penalty_str]
+    gauge_str_methods = [cultivation_factor_str, cultivation_gauge_str, convert_down_penalty_str]
     for i in range(len(gauge_str_methods)):
-        parallelized.append(lambda gauge_id=i, block=b_prev: beanstalk_client.get_gauge_value(gauge_id, block))
-        parallelized.append(lambda gauge_id=i, block=b: beanstalk_client.get_gauge_value(gauge_id, block))
+        parallelized.append(lambda gauge_id=gauge_str_methods[i].gauge_id, fn=gauge_str_methods[i].data_getter, block=b_prev: getattr(beanstalk_client, fn)(gauge_id, block))
+        parallelized.append(lambda gauge_id=gauge_str_methods[i].gauge_id, fn=gauge_str_methods[i].data_getter, block=b: getattr(beanstalk_client, fn)(gauge_id, block))
 
     async_values = execute_lambdas(*parallelized)
 
@@ -36,12 +36,12 @@ def seasonal_gauge_str(sunrise_receipt):
     gauge_strs.append(seed_gauge_str(seasons_info, async_values[:2]))
 
     gauge_strs.append("\n**Other Gauges**")
-    gen_gauge_values = async_values[2:]
-    for i in range(len(gen_gauge_values) // 2):
+    gen_gauge_results = async_values[2:]
+    for i in range(len(gen_gauge_results) // 2):
         gauge_strs.append(
             gauge_str_methods[i]([
-                gen_gauge_values[2 * i],
-                gen_gauge_values[2 * i + 1]
+                gen_gauge_results[2 * i],
+                gen_gauge_results[2 * i + 1]
             ])
         )
     return "\n".join(gauge_strs)
@@ -118,6 +118,19 @@ def cultivation_factor_str(value_bytes):
         f"🪱 Cultivation Factor: {round_num(percent_factors[1], precision=2)}%"
         f"\n> {amt_change_str(percent_factors[0], percent_factors[1], precision=2, is_percent=True, use_emoji=True)}"
     )
+cultivation_factor_str.gauge_id = 0
+cultivation_factor_str.data_getter = 'get_gauge_value'
+
+def cultivation_gauge_str(data_bytes):
+    cultivation_temperatures = [token_to_float(
+        decode_abi(['uint256', 'uint256', 'uint256', 'uint256', 'uint256', 'uint256'], bytes)[4], 6
+    ) for bytes in data_bytes]
+    return (
+        f"☀️ Cultivation Temperature: {round_num(cultivation_temperatures[1], precision=2)}%"
+        f"\n> {amt_change_str(cultivation_temperatures[0], cultivation_temperatures[1], precision=2, is_percent=True, use_emoji=True)}"
+    )
+cultivation_gauge_str.gauge_id = 0
+cultivation_gauge_str.data_getter = 'get_gauge_data'
 
 def convert_down_penalty_str(value_bytes):
     decoded = [decode_abi(['uint256', 'uint256'], bytes) for bytes in value_bytes]
@@ -128,6 +141,8 @@ def convert_down_penalty_str(value_bytes):
         f"\n> {amt_change_str(percent_penalties[0], percent_penalties[1], precision=2, is_percent=True, use_emoji=True)}"
         f"\n> 🥀 Blight Factor: {blight_factors[1]} ({amt_change_str(blight_factors[0], blight_factors[1], precision=0)})"
     )
+convert_down_penalty_str.gauge_id = 1
+convert_down_penalty_str.data_getter = 'get_gauge_value'
 
 def amt_change_str(before, after, precision=2, is_percent=False, use_emoji=False):
     diff = abs(after - before)
