@@ -139,6 +139,10 @@ class BeanstalkClient(ChainClient):
         block_number = block_number or self.block_number
         return call_contract_function_with_retry(self.contract.functions.getGaugeValue(gauge_id), block_number=block_number)
 
+    def get_gauge_data(self, gauge_id, block_number=None):
+        block_number = block_number or self.block_number
+        return call_contract_function_with_retry(self.contract.functions.getGaugeData(gauge_id), block_number=block_number)
+
     def get_crop_ratio(self, block_number=None):
         block_number = block_number or self.block_number
         crop_ratio = call_contract_function_with_retry(self.contract.functions.getBeanToMaxLpGpPerBdvRatioScaled(), block_number=block_number)
