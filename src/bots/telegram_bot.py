@@ -55,32 +55,33 @@ class TelegramBot(object):
         self.msg_main_agg = MsgAggregator(send_msg_main, RATE_LIMIT)
         self.msg_seasons_agg = MsgAggregator(send_msg_seasons, RATE_LIMIT)
 
-        send_main_chat = self.send_msg_factory([self.msg_main_agg])
-        send_both_chats = self.send_msg_factory([self.msg_main_agg, self.msg_seasons_agg])
+        # send_main_chat = self.send_msg_factory([self.msg_main_agg])
+        # send_both_chats = self.send_msg_factory([self.msg_main_agg, self.msg_seasons_agg])
+        send_seasons_chat = self.send_msg_factory([self.msg_seasons_agg])
 
-        self.peg_cross_monitor = PegCrossMonitor(send_main_chat, prod=prod)
-        self.peg_cross_monitor.start()
+        # self.peg_cross_monitor = PegCrossMonitor(send_main_chat, prod=prod)
+        # self.peg_cross_monitor.start()
 
-        self.sunrise_monitor = SeasonsMonitor(send_both_chats, send_both_chats, prod=prod, dry_run=dry_run)
+        self.sunrise_monitor = SeasonsMonitor(send_seasons_chat, send_seasons_chat, prod=prod, dry_run=dry_run)
         self.sunrise_monitor.start()
 
-        self.wells_monitor = WellsMonitor(
-            send_main_chat, noop, WHITELISTED_WELLS,
-            arbitrage_senders=[],
-            bean_reporting=True, prod=prod, dry_run=dry_run
-        )
-        self.wells_monitor.start()
+        # self.wells_monitor = WellsMonitor(
+        #     send_main_chat, noop, WHITELISTED_WELLS,
+        #     arbitrage_senders=[],
+        #     bean_reporting=True, prod=prod, dry_run=dry_run
+        # )
+        # self.wells_monitor.start()
 
-        self.beanstalk_monitor = BeanstalkMonitor(send_main_chat, send_main_chat, send_main_chat, prod=prod, dry_run=dry_run)
-        self.beanstalk_monitor.start()
+        # self.beanstalk_monitor = BeanstalkMonitor(send_main_chat, send_main_chat, send_main_chat, prod=prod, dry_run=dry_run)
+        # self.beanstalk_monitor.start()
 
-        self.market_monitor = MarketMonitor(send_main_chat, prod=prod, dry_run=dry_run)
-        self.market_monitor.start()
+        # self.market_monitor = MarketMonitor(send_main_chat, prod=prod, dry_run=dry_run)
+        # self.market_monitor.start()
 
-        self.integrations_monitor = IntegrationsMonitor(
-            send_main_chat, send_main_chat, prod=prod, dry_run=dry_run
-        )
-        self.integrations_monitor.start()
+        # self.integrations_monitor = IntegrationsMonitor(
+        #     send_main_chat, send_main_chat, prod=prod, dry_run=dry_run
+        # )
+        # self.integrations_monitor.start()
 
         # Start monitor status logging
         threading.Thread(target=self.log_monitor_status).start()
@@ -109,23 +110,23 @@ class TelegramBot(object):
         while True:
             try:
                 logging.info(f"Sunrise Monitor last update: Season {self.sunrise_monitor.current_season_id}")
-                logging.info(f"Well Monitor last update:           {datetime.datetime.fromtimestamp(self.wells_monitor.last_check_time)}")
-                logging.info(f"Beanstalk Monitor last update:      {datetime.datetime.fromtimestamp(self.beanstalk_monitor.last_check_time)}")
-                logging.info(f"Market Monitor last update:         {datetime.datetime.fromtimestamp(self.market_monitor.last_check_time)}")
-                logging.info(f"Integrations Monitor last update:   {datetime.datetime.fromtimestamp(self.integrations_monitor.last_check_time)}")
-                logging.info(f"Peg Monitor last update:            {datetime.datetime.fromtimestamp(self.peg_cross_monitor.last_check_time)}")
+                # logging.info(f"Well Monitor last update:           {datetime.datetime.fromtimestamp(self.wells_monitor.last_check_time)}")
+                # logging.info(f"Beanstalk Monitor last update:      {datetime.datetime.fromtimestamp(self.beanstalk_monitor.last_check_time)}")
+                # logging.info(f"Market Monitor last update:         {datetime.datetime.fromtimestamp(self.market_monitor.last_check_time)}")
+                # logging.info(f"Integrations Monitor last update:   {datetime.datetime.fromtimestamp(self.integrations_monitor.last_check_time)}")
+                # logging.info(f"Peg Monitor last update:            {datetime.datetime.fromtimestamp(self.peg_cross_monitor.last_check_time)}")
             except Exception as e:
                 logging.error("Error in monitor status logging", exc_info=True)
             time.sleep(60)
 
     def stop(self):
-        self.peg_cross_monitor.stop()
+        # self.peg_cross_monitor.stop()
         self.sunrise_monitor.stop()
-        self.wells_monitor.stop()
-        self.beanstalk_monitor.stop()
-        self.market_monitor.stop()
-        self.integrations_monitor.stop()
-        self.msg_main_agg.stop()
+        # self.wells_monitor.stop()
+        # self.beanstalk_monitor.stop()
+        # self.market_monitor.stop()
+        # self.integrations_monitor.stop()
+        # self.msg_main_agg.stop()
         self.msg_seasons_agg.stop()
 
 if __name__ == "__main__":
