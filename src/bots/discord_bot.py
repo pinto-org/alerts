@@ -410,7 +410,7 @@ class DiscordClient(discord.ext.commands.Bot):
                 logging.error(f"Unknown channel seen in msg queue: {channel}")
 
             # Repeat all notifications into a separate channel, if configured
-            if hasattr(self, '_channel_everything') and msg and channel not in {Channel.REPORT, Channel.TELEGRAM_FWD}:
+            if hasattr(self, '_channel_everything') and msg and channel not in {Channel.REPORT, Channel.ARBITRAGE, Channel.TELEGRAM_FWD}:
                 await self._channel_everything.send(msg)
 
         except Exception as e:
