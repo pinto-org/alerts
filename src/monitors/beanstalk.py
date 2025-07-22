@@ -92,7 +92,8 @@ class BeanstalkMonitor(Monitor):
         # Process conversion logs as a batch.
         if event_in_logs("Convert", event_logs):
             msg, is_lambda = self.silo_conversion_str(event_logs)
-            self.msg_silo(msg, to_main=not is_lambda)
+            if not is_lambda:
+                self.msg_silo(msg)
             return
         # Else handle txn logs individually using default strings.
 
