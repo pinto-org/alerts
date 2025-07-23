@@ -63,7 +63,7 @@ def spectra_pool_str(event_log, spectra_pool):
             pt_underlying_str = round_token(pt_underlying, token_infos[bought_id].decimals, token_infos[bought_id].addr)
             value = ibt_price * token_to_float(tokens_sold, token_infos[0].decimals)
             event_str = (
-                f"🔒📥 Fixed yield {round_num((pt_underlying / ibt_underlying - 1) * 100, 2)}%: :{underlying_erc20_info.symbol}: {ibt_underlying_str} -> {pt_underlying_str} {underlying_erc20_info.symbol} "
+                f"🔒📥 Fixed yield {round_num((pt_underlying / ibt_underlying - 1) * 100, 2)}%: :{underlying_erc20_info.symbol.upper()}: {ibt_underlying_str} -> {pt_underlying_str} {underlying_erc20_info.symbol} "
                 f"(bought {tokens_bought_str} with {tokens_sold_str})"
             )
         elif msg_case == 1:
