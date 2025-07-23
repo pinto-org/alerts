@@ -83,6 +83,8 @@ class OtherWellsMonitor(Monitor):
                         if address not in prev_log_index:
                             prev_log_index[address] = 0
                         event_data = parse_event_data(event_log, prev_log_index[address], web3=self._web3)
+                        if event_data is None:
+                            continue
                         event_str = single_event_str(event_data)
                         if event_str:
                             self.msg_exchange(event_str)
@@ -182,13 +184,14 @@ class WellsMonitor(Monitor):
             if address in self.pool_addresses:
                 if address not in prev_log_index:
                     prev_log_index[address] = -1
-                individual_evts.append(
-                    parse_event_data(
-                        event_log,
-                        prev_log_index[address],
-                        web3=self._web3
-                    )
+                event_data = parse_event_data(
+                    event_log,
+                    prev_log_index[address],
+                    web3=self._web3
                 )
+                if event_data is None:
+                    continue
+                individual_evts.append(event_data)
                 prev_log_index[address] = event_log.logIndex
 
         # Combine trades in multiple pools into a single message
@@ -244,6 +247,8 @@ class WellsMonitor(Monitor):
                 elif (
                     evt1.event_type == "LP" and evt1.token_amounts_in is None
                     and evt2.event_type == "LP" and evt2.token_amounts_in is not None
+                    and evt1.logIndex < evt2.logIndex
+                    and evt1.well_address != evt2.well_address
                 ):
                     del individual_evts[j]
                     del individual_evts[i]
@@ -308,9 +313,13 @@ def parse_event_data(event_log, prev_log_index, web3=get_web3_instance()):
         if deposit:
             retval.token_amounts_in = list(map(int, deposit["liqReservesAmount"]))
             retval.value = float(deposit["transferVolumeUSD"])
+            if retval.value < 0.1:
+                return None
         else:
             # Redundancy in case subgraph is not available
             retval.bdv = token_to_float(lpAmountOut, WELL_LP_DECIMALS) * beanstalk_client.get_bdv(retval.well_address)
+            if retval.bdv < 0.1:
+                return None
     elif event_log.event == "RemoveLiquidity" or event_log.event == "RemoveLiquidityOneToken":
         retval.event_type = "LP"
         if event_log.event == "RemoveLiquidityOneToken":
