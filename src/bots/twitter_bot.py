@@ -34,29 +34,26 @@ class TwitterBot(object):
         # Remove URL pointy brackets used by md formatting to suppress link previews.
         msg = msg.replace("<", "").replace(">", "")
         msg = msg.replace("**", "")
-        for _ in range(3):
-            try:
-                self.client.create_tweet(text=msg)
-                break
-            except tweepy.errors.BadRequest as e:
-                logging.error(
-                    f'HTTP Error 400 (Bad Request) for tweet with body "{msg}" '
-                    f"\n{e.api_messages}\n\n{e.response}\n\n{e.api_errors}"
-                )
-            except tweepy.errors.Forbidden as e:
-                logging.error(
-                    f'HTTP Error 403 (Forbidden) for tweet with body "{msg}" '
-                    f"Was it a repeat tweet?\n{e.api_messages}\n\n{e.response}\n\n{e.api_errors}"
-                )
-                return
-            except tweepy.errors.TooManyRequests as e:
-                logging.error(
-                    f'HTTP Error 429 (Too Many Requests) for tweet with body "{msg}" '
-                    f"\n{e.api_messages}\n\n{e.response}\n\n{e.api_errors}"
-                    f"\n\nAggressively idling...trying again in 16 minutes"
-                )
-            time.sleep(30)
-        logging.info(f"Tweeted:\n{msg}\n")
+        try:
+            self.client.create_tweet(text=msg)
+            logging.info(f"Tweeted:\n{msg}\n")
+        except tweepy.errors.BadRequest as e:
+            logging.error(
+                f'HTTP Error 400 (Bad Request) for tweet with body "{msg}" '
+                f"\n{e.api_messages}\n\n{e.response}\n\n{e.api_errors}"
+            )
+        except tweepy.errors.Forbidden as e:
+            logging.error(
+                f'HTTP Error 403 (Forbidden) for tweet with body "{msg}" '
+                f"Was it a repeat tweet?\n{e.api_messages}\n\n{e.response}\n\n{e.api_errors}"
+            )
+            return
+        except tweepy.errors.TooManyRequests as e:
+            logging.error(
+                f'HTTP Error 429 (Too Many Requests) for tweet with body "{msg}" '
+                f"\n{e.api_messages}\n\n{e.response}\n\n{e.api_errors}"
+                f"\n\nAggressively idling...trying again in 16 minutes"
+            )
 
 class BeanstalkTwitterBot(TwitterBot):
     def __init__(self, prod=False, dry_run=None):
