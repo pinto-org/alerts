@@ -36,6 +36,8 @@ class SeasonsMonitor(Monitor):
         self.basin_graph_latest = BasinGraphClient(block_number="latest")
         # Most recent season processed. Do not initialize.
         self.current_season_id = None
+        # Last season the message was actually sent. Used for rate limiting twitter
+        self.last_sent_season = None
 
     def _monitor_method(self):
         while self._thread_active:
@@ -64,9 +66,20 @@ class SeasonsMonitor(Monitor):
                             sunrise_tx_logs = next(txn.logs for txn in sunrise_swap_logs if txn.txn_hash.hex() == seasonal_sg.beanstalks[0].sunrise_hash)
                             seasonal_sg.beanstalks[0].flood_swap_logs = get_logs_by_names(["Swap"], sunrise_tx_logs)
 
-                # Only even seasons go to twitter
-                if not self.short_msgs or seasonal_sg.beanstalks[0].season % 2 == 0:
+                # Twitter sends messages every 4 seasons, or if there is a positive delta_b
+                # This frequency can be exceeded due to redeployment that forfeits runtime variables
+                season = seasonal_sg.beanstalks[0].season
+                if (
+                    not self.short_msgs
+                    or (
+                        (self.last_sent_season is None and season % 4 == 0)
+                        or (self.last_sent_season is not None and season - 4 >= self.last_sent_season)
+                        or seasonal_sg.beanstalks[0].delta_b > 0
+                    )
+                ):
+                    self.last_sent_season = season
                     self.msg_seasons(self.season_summary_string(seasonal_sg))
+
 
     def _wait_until_expected_sunrise(self):
         """Wait until the top of the hour where a sunrise call is expected"""
