@@ -29,7 +29,7 @@ def spinto_str(event_log):
         if_deposited_str = "Deposited " if is_deposited else ""
 
         token_strings = [
-            f":{underlying_info.symbol}: {pinto_amount_str} {if_deposited_str}!{underlying_info.symbol}",
+            f":{underlying_info.symbol.upper()}: {pinto_amount_str} {if_deposited_str}!{underlying_info.symbol}",
             f"{sPinto_amount_str} {wrapped_info.symbol}"
         ]
         if event_log.event == "Deposit":

@@ -216,10 +216,10 @@ class BeanstalkMonitor(Monitor):
                 withdraw_token = Web3.to_checksum_address(sow.withdraw_token_info.addr)
                 direction = "📈" if withdraw_token != BEAN_ADDR else "📊"
 
-                event_str += f"\n> 📭 Sowed using :{sow.withdraw_token_info.symbol}: {sow.withdraw_amount_str} Deposited !{sow.withdraw_token_info.symbol}"
+                event_str += f"\n> 📭 Sowed using :{sow.withdraw_token_info.symbol.upper()}: {sow.withdraw_amount_str} Deposited !{sow.withdraw_token_info.symbol}"
                 event_str += f"\n> :PINTO:{direction} _{latest_pool_price_str(bean_client, BEAN_ADDR)}_"
                 if withdraw_token != BEAN_ADDR:
-                    event_str += f"\n> :{sow.withdraw_token_info.symbol}:{direction} _{latest_pool_price_str(bean_client, withdraw_token)}_"
+                    event_str += f"\n> :{sow.withdraw_token_info.symbol.upper()}:{direction} _{latest_pool_price_str(bean_client, withdraw_token)}_"
 
             event_str += f"\n{value_to_emojis(beans_value)}"
         elif event_log.event == "Harvest":
