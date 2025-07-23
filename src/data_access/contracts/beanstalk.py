@@ -77,6 +77,8 @@ class BeanstalkClient(ChainClient):
 
     def get_bdv(self, token, block_number=None):
         """Returns the current bdv of `token`."""
+        if token not in WHITELISTED_WELLS:
+            return 0
         block_number = block_number or self.block_number
         erc20_info = get_erc20_info(token)
         token = Web3.to_checksum_address(erc20_info.addr)
