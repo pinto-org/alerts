@@ -33,7 +33,7 @@ class TelegramBasinBot(object):
         self.period_monitor.start()
 
         self.wells_monitor = WellsMonitor(
-            self.send_msg, WHITELISTED_WELLS, prod=prod, dry_run=dry_run
+            self.send_msg, [*WHITELISTED_WELLS, *DEWHITELISTED_WELLS], prod=prod, dry_run=dry_run
         )
         self.wells_monitor.start()
 

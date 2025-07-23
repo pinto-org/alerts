@@ -82,8 +82,10 @@ WHITELISTED_WELLS = [
     PINTO_WETH_ADDR,
     PINTO_CBETH_ADDR,
     PINTO_CBBTC_ADDR,
-    PINTO_WSOL_ADDR,
     PINTO_USDC_ADDR
+]
+DEWHITELISTED_WELLS = [
+    PINTO_WSOL_ADDR,
 ]
 
 # Mapping of words to their emojis (see embellish_token_emojis function)

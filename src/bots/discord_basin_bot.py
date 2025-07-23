@@ -59,7 +59,7 @@ class DiscordClient(discord.ext.commands.Bot):
         self.period_monitor.start()
 
         self.well_monitor_whitelisted = WellsMonitor(
-            self.send_msg_whitelisted, WHITELISTED_WELLS, prod=prod, dry_run=dry_run
+            self.send_msg_whitelisted, [*WHITELISTED_WELLS, *DEWHITELISTED_WELLS], prod=prod, dry_run=dry_run
         )
         self.well_monitor_whitelisted.start()
 
