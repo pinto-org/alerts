@@ -287,7 +287,7 @@ class BeanstalkMonitor(Monitor):
         event_str += f"\n> :PINTO:{direction_emojis[1]} _{latest_pool_price_str(bean_client, BEAN_ADDR)}_"
         # If regular convert, identifies the non-bean address
         # If LP convert, both are added with the removed token coming first
-        if remove_token_addr in WHITELISTED_WELLS:
+        if remove_token_addr in [*WHITELISTED_WELLS, *DEWHITELISTED_WELLS]:
             event_str += f"\n> :{remove_token_symbol.upper()}:{direction_emojis[1]} _{latest_pool_price_str(bean_client, remove_token_addr)}_"
         if add_token_addr in WHITELISTED_WELLS:
             event_str += f"\n> :{add_token_symbol.upper()}:{direction_emojis[1]} _{latest_pool_price_str(bean_client, add_token_addr)}_"

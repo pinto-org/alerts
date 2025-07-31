@@ -78,7 +78,7 @@ class BasinGraphClient(object):
             query {{
                 wellHourlySnapshots(
                     {get_block_query_str(block_number or self.block_number)}
-                    where: {{ hour: {hour_id} }}
+                    where: {{ well_: {{ isBeanstalk: true }} hour: {hour_id} }}
                 ) {{
                     deltaTradeVolumeUSD
                     well {{
