@@ -324,8 +324,9 @@ class DiscordClient(discord.ext.commands.Bot):
                 for msg in messages:
                     # Discord has limit of 2k but sometimes it still fails with 2k
                     # Keep small buffer by limiting to 1950
+                    original_msg = msg
                     if len(msg) > 1950:
-                        msg = msg[-1950:]
+                        msg = msg[:1950]
                         logging.error(f"Clipping message length down to 1950.")
 
                     if channel is Channel.TELEGRAM_FWD:
@@ -335,13 +336,12 @@ class DiscordClient(discord.ext.commands.Bot):
                             except Exception as e:
                                 logging.warning(e, exc_info=True)
                                 logging.warning("Failed to send message to Telegram bot. Will ~not~ retry.")
-                            self.msg_queue.remove((channel, msg))
+                            self.msg_queue.remove((channel, original_msg))
                         else:
                             logging.warning("Discord tele_bot not configured to forward. Ignoring...")
                         continue
 
                     # Add token emoji
-                    original_msg = msg
                     msg = embellish_token_emojis(msg, DISCORD_TOKEN_EMOJIS) if channel != Channel.TELEGRAM_FWD else msg
 
                     # If adding this message would exceed limit, send and start new batch
