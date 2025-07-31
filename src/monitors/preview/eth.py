@@ -13,7 +13,7 @@ class EthPreviewMonitor(PreviewMonitor):
     """Monitor data that offers a view into Eth mainnet."""
 
     def __init__(self, name_function, status_function):
-        super().__init__("ETH", name_function, status_function, 3)
+        super().__init__("ETH", name_function, status_function, 2)
         self.beanstalk_client = BeanstalkClient()
 
     def _monitor_method(self):
@@ -30,6 +30,6 @@ class EthPreviewMonitor(PreviewMonitor):
             elif self.display_index == 1:
                 btc_price = self.beanstalk_client.get_token_usd_price(CBBTC)
                 self.status_function(f"BTC: ${round_num(btc_price)}")
-            elif self.display_index == 2:
-                sol_price = self.beanstalk_client.get_token_usd_price(WSOL)
-                self.status_function(f"SOL: ${round_num(sol_price)}")
+            # elif self.display_index == 2:
+            #     sol_price = self.beanstalk_client.get_token_usd_price(WSOL)
+            #     self.status_function(f"SOL: ${round_num(sol_price)}")
