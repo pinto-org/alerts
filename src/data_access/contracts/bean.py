@@ -19,6 +19,11 @@ class BeanClient(ChainClient):
         raw_price_info = call_contract_function_with_retry(self.price_contract.functions.price(), block_number=block_number)
         return BeanClient.map_price_info(raw_price_info)
 
+    def get_price_for_wells(self, wells, block_number=None):
+        block_number = block_number or self.block_number
+        raw_price_info = call_contract_function_with_retry(self.price_contract.functions.priceForWells(wells), block_number=block_number)
+        return BeanClient.map_price_info(raw_price_info)
+
     @abstractmethod
     def map_price_info(raw_price_info):
         price_dict = {}
@@ -65,11 +70,11 @@ class BeanClient(ChainClient):
     def get_pool_info(self, addr, block_number=None):
         """Return pool info as dict. If addr is Bean addr, return all info."""
         block_number = block_number or self.block_number
-        price_info = self.get_price_info(block_number=block_number)
         if addr == BEAN_ADDR:
-            return price_info
+            return self.get_price_info(block_number=block_number)
         else:
-            return price_info["pool_infos"][addr]
+            pool_price_info = self.get_price_for_wells([addr], block_number=block_number)
+            return pool_price_info["pool_infos"][addr]
 
     def well_bean_price(self, well_addr, block_number=None):
         """Current float Bean price in the given well."""
