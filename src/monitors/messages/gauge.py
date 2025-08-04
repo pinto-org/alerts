@@ -53,7 +53,14 @@ def get_seasons_and_blocks(current_logs):
     evt_sunrise = get_logs_by_names(["Sunrise"], current_logs)[0]
     current_season_number = evt_sunrise.args.season
 
-    prev_sunrise_txn = season_client.get_log_with_topics("Sunrise", [Web3.toHex(Web3.toBytes(current_season_number - 1).rjust(32, b'\x00'))])
+    prev_sunrise_txn = season_client.get_log_with_topics(
+        "Sunrise",
+        [Web3.toHex(Web3.toBytes(current_season_number - 1).rjust(32, b'\x00'))],
+        # Constrained the search range to work with rpc limits.
+        # In practice the previous sunrise txn will be within this block range.
+        evt_sunrise.blockNumber - 10000,
+        evt_sunrise.blockNumber - 1
+    )
     evt_prev_sunrise = prev_sunrise_txn[0].logs[0]
     return {
         "prev": { "season": current_season_number-1, "block": evt_prev_sunrise.blockNumber },
