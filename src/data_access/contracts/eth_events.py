@@ -86,8 +86,9 @@ add_event_to_dict(
     BEANSTALK_EVENT_MAP,
     BEANSTALK_SIGNATURES_LIST,
 )
+# PI-12 Convert event adds 2 new fields; for historical message processing, would need to support the old signature
 add_event_to_dict(
-    "Convert(address,address,address,uint256,uint256)",
+    "Convert(address,address,address,uint256,uint256,uint256,uint256)",
     BEANSTALK_EVENT_MAP,
     BEANSTALK_SIGNATURES_LIST,
 )
