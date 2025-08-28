@@ -53,7 +53,7 @@ def execute(client, query_str, max_tries=3):
 
             if e.code in [502, 503]:
                 # Subgraph has fallen behind OR bad gateway; insist on retrying for longer to give time for recovery
-                max_tries = 20
+                max_tries = 40
                 retry_delay = 15
         time.sleep(retry_delay)
     logging.error("Unable to access subgraph data")
