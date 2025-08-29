@@ -40,7 +40,7 @@ class CurveSpectraClient(ChainClient):
         super().__init__(web3)
         self.spectra_pool = spectra_pool
         self.block_number = block_number
-        self.contract = get_curve_spectra_contract(spectra_pool.pool, web3=web3)
+        self.contract = get_curve_spectra_contract(spectra_pool.pool, spectra_pool.is_legacy_abi, web3=web3)
 
     def get_ibt_to_pt_rate(self, block_number=None):
         """Gets the current exchange rate from one of ibt to how much pt in this pool"""
