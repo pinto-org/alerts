@@ -46,9 +46,13 @@ with open(
 ) as wrapped_silo_erc20_abi_file:
     wrapped_silo_erc20_abi = json.load(wrapped_silo_erc20_abi_file)
 with open(
-    os.path.join(os.path.dirname(__file__), "../../constants/abi/curve_spectra_abi.json")
-) as curve_spectra_abi_file:
-    curve_spectra_abi = json.load(curve_spectra_abi_file)
+    os.path.join(os.path.dirname(__file__), "../../constants/abi/legacy_spectra_abi.json")
+) as legacy_spectra_abi_file:
+    legacy_spectra_abi = json.load(legacy_spectra_abi_file)
+with open(
+    os.path.join(os.path.dirname(__file__), "../../constants/abi/spectra_abi.json")
+) as spectra_abi_file:
+    spectra_abi = json.load(spectra_abi_file)
 
 class ChainClient:
     """Base class for clients of Eth chain data."""
@@ -102,10 +106,10 @@ def get_erc1155_contract(address, web3=get_web3_instance()):
     address = web3.toChecksumAddress(address.lower())
     return web3.eth.contract(address=address, abi=erc1155_abi)
 
-def get_curve_spectra_contract(address, web3=get_web3_instance()):
+def get_curve_spectra_contract(address, is_legacy_abi, web3=get_web3_instance()):
     """Get a web3.eth.contract object for a spectra curve amm."""
     address = web3.toChecksumAddress(address.lower())
-    return web3.eth.contract(address=address, abi=curve_spectra_abi)
+    return web3.eth.contract(address=address, abi=(spectra_abi if not is_legacy_abi else legacy_spectra_abi))
 
 def get_tokens_sent(token, receipt, recipient, log_index_bounds):
     """Return the amount (as a float) of token sent in a transaction to the given recipient, within the log index bounds"""
