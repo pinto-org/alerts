@@ -160,5 +160,12 @@ def _calc_apr(spectra_pool, underlying_to_pt_rate, block_number=None, ):
     return apr, hours_to_maturity
 
 def _remove_expiry_symbol(event_str):
-    """Removes the expiry timestamp portion from the token symbol, i.e. PT-sPINTO-1758153782"""
-    return re.sub(r'(\b(?:Y|P)T-.+)-\d{8,}\b', r'\1', event_str)
+    """Removes the expiry timestamp portion from the token symbol,
+    i.e. PT-sPINTO-1758153782 or PT-sPINTO(PINTO)-2026/01/16"""
+    return re.sub(r'(\b(?:Y|P)T-[^(]+)(?:\(.*\))?-(?:\d{8,}|\d{4}/\d{2}/\d{2})\b', r'\1', event_str)
+
+if __name__ == "__main__":
+    print(_remove_expiry_symbol("PT-sPINTO-1758153782"))
+    print(_remove_expiry_symbol("PT-sPINTO(PINTO)-2026/01/16"))
+    print(_remove_expiry_symbol("YT-sPINTO-1758153782"))
+    print(_remove_expiry_symbol("YT-sPINTO(PINTO)-2026/01/16"))

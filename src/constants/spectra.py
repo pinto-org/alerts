@@ -10,7 +10,9 @@ class SpectraPool(NamedTuple):
     yt: str
     underlying: str
     ibt: str
+    is_legacy_abi: bool
 
+# September 17th 2025 maturity
 SPINTO_1 = SpectraPool(
     27767837,
     datetime.datetime.fromtimestamp(1758153782, datetime.timezone.utc),
@@ -19,6 +21,21 @@ SPINTO_1 = SpectraPool(
     "0x42AF817725D8cda8E69540d72f35dBfB17345178",
     "0xaF4f5bdF468861feF71Ed6f5ea0C01A75B62273d",
     "0xb170000aeeFa790fa61D6e837d1035906839a3c8",
-    "0x00b174d66adA7d63789087F50A9b9e0e48446dc1"
+    "0x00b174d66adA7d63789087F50A9b9e0e48446dc1",
+    True
 )
-SPECTRA_SPINTO_POOLS = [SPINTO_1]
+
+# January 15th 2026 maturity
+SPINTO_2 = SpectraPool(
+    32965381,
+    datetime.datetime.fromtimestamp(1768521600, datetime.timezone.utc),
+    "0xbCAe0ACAd03B238b97b3158B1Fe3eDa3c4DC0b83",
+    "0xbCAe0ACAd03B238b97b3158B1Fe3eDa3c4DC0b83",
+    "0x306E6EC73df3200C62a304cb8D6944e7543Fb487",
+    "0x52B1fce1784AC9dA1F31E04077F46388CC4AF7b3",
+    "0xb170000aeeFa790fa61D6e837d1035906839a3c8",
+    "0x00b174d66adA7d63789087F50A9b9e0e48446dc1",
+    False
+)
+
+SPECTRA_SPINTO_POOLS = [SPINTO_1, SPINTO_2]

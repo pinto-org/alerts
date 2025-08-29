@@ -340,7 +340,7 @@ class EthEventsClient:
                 self._events_dict.update(CONTRACTS_MIGRATED_EVENT_MAP)
             elif client_type == EventClientType.INTEGRATIONS:
                 self._contracts.append(get_wrapped_silo_contract(SPINTO_ADDR))
-                self._contracts.extend(get_curve_spectra_contract(s.pool) for s in SPECTRA_SPINTO_POOLS)
+                self._contracts.extend(get_curve_spectra_contract(s.pool, s.is_legacy_abi) for s in SPECTRA_SPINTO_POOLS)
                 self._contract_addresses.append(SPINTO_ADDR)
                 self._contract_addresses.extend(s.pool for s in SPECTRA_SPINTO_POOLS)
                 self._signature_list.extend(INTEGRATIONS_SIGNATURES_LIST)
