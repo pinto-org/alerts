@@ -240,8 +240,9 @@ def latest_pool_price_str(bean_client, addr):
 
 
 def latest_well_lp_str(basin_client, addr):
-    liquidity = basin_client.get_well_liquidity(addr)
-    return f"Well liquidity: ${round_num(liquidity, 0)}"
+    return ""
+    # liquidity = basin_client.get_well_liquidity(addr)
+    # return f"Well liquidity: ${round_num(liquidity, 0)}"
 
 
 def number_to_emoji(n):

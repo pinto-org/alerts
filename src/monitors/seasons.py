@@ -103,19 +103,21 @@ class SeasonsMonitor(Monitor):
             # Proceed once a new season is processed in each subgraph
             beanstalk_stats = self.beanstalk_graph_latest.season_stats(num_seasons=3)
             bean_stats = self.bean_graph_latest.season_stats()
-            well_hourly_stats = self.basin_graph_latest.get_well_hourlies(time.time() - SEASON_DURATION)
+            # well_hourly_stats = self.basin_graph_latest.get_well_hourlies(time.time() - SEASON_DURATION)
 
             beanstalk_ready = int(beanstalk_stats[0].created_at) > time.time() - SEASON_DURATION / 2
             bean_ready = beanstalk_stats[0].season == bean_stats[0].season
-            basin_ready = len(well_hourly_stats) == len(WHITELISTED_WELLS)
+            # basin_ready = len(well_hourly_stats) == len(WHITELISTED_WELLS)
             if (
                 self.current_season_id != beanstalk_stats[0].season
-                and beanstalk_ready and bean_ready and basin_ready
+                and beanstalk_ready and bean_ready# and basin_ready
             ) or self._dry_run:
                 self.current_season_id = beanstalk_stats[0].season
                 logging.info(f"New season detected with id {self.current_season_id}")
-                return SeasonalData(beanstalk_stats, bean_stats, well_hourly_stats)
-            logging.info(f"Sunrise blocking, waiting for subgraphs:\nbeanstalk: {beanstalk_ready}, bean: {bean_ready}, basin: {basin_ready}\n")
+                return SeasonalData(beanstalk_stats, bean_stats
+                                    # , well_hourly_stats
+                                    )
+            logging.info(f"Sunrise blocking, waiting for subgraphs:\nbeanstalk: {beanstalk_ready}, bean: {bean_ready}\n")#, basin: {basin_ready}
             time.sleep(5)
         return None
 
@@ -203,9 +205,9 @@ class SeasonsMonitor(Monitor):
             total_liquidity += token_to_float(well_info['liquidity'], 6)
         total_liquidity = round_num(total_liquidity, 0, incl_dollar=True)
 
-        wells_volume = 0
-        for stats in sg.well:
-            wells_volume += float(stats.get("deltaTradeVolumeUSD"))
+        # wells_volume = 0
+        # for stats in sg.well:
+        #     wells_volume += float(stats.get("deltaTradeVolumeUSD"))
 
         # Full string message.
         if not self.short_msgs:
@@ -238,7 +240,7 @@ class SeasonsMonitor(Monitor):
                         f"_ΔP [{round_num(token_to_float(well_info['delta_b'], 6), 0)}],_ "
                     )
                 ret_string += f"_price [${round_num(token_to_float(well_info['price'], 6), 4)}]_"
-            ret_string += f"\n⚖️ :PINTO: Hourly volume: {round_num(wells_volume, 0, incl_dollar=True)}"
+            # ret_string += f"\n⚖️ :PINTO: Hourly volume: {round_num(wells_volume, 0, incl_dollar=True)}"
 
             # Silo stats.
             was_raining = self.beanstalk_latest.is_raining(block_number=sg.beanstalks[1].sunrise_block)
@@ -384,7 +386,9 @@ class SeasonsMonitor(Monitor):
         return ret_string
 
 class SeasonalData:
-    def __init__(self, beanstalks, beans, well):
+    def __init__(self, beanstalks, beans
+                #  , well
+                 ):
         self.beanstalks = beanstalks
         self.beans = beans
-        self.well = well
+        # self.well = well
