@@ -55,6 +55,11 @@ def execute(client, query_str, max_tries=3):
                 # Subgraph has fallen behind OR bad gateway; insist on retrying for longer to give time for recovery
                 max_tries = 20
                 retry_delay = 15
+            elif e.code == 520:
+                # Subgraph is down; no retry allowed
+                logging.warning(f"Subgraph {client_subgraph_name(client)} is down. Not retrying.")
+                max_tries = 0
+                retry_delay = 0
         time.sleep(retry_delay)
     logging.error("Unable to access subgraph data")
     raise GraphAccessException
