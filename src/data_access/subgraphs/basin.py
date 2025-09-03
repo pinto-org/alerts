@@ -111,4 +111,4 @@ class BasinGraphClient(object):
             }}
         """
         result = try_execute_with_wait("trades", self.client, query_str, check_len=True)
-        return result[0] if result else None
+        return result[0] if result and len(result) > 0 else None
