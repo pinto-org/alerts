@@ -192,7 +192,7 @@ class SeasonsMonitor(Monitor):
 
         # Well info.
         wells_info = []
-        for well_addr in WHITELISTED_WELLS:
+        for well_addr in [*WHITELISTED_WELLS, *DEWHITELISTED_WELLS]:
             wells_info.append(self.bean_latest.get_pool_info(well_addr))
 
         # Sort highest liquidity wells first
@@ -233,10 +233,11 @@ class SeasonsMonitor(Monitor):
 
             for well_info in wells_info:
                 ret_string += f"\n> {SILO_TOKENS_MAP[well_info['pool'].lower()]}: ${round_num(token_to_float(well_info['liquidity'], 6), 0)} - "
-                ret_string += (
-                    f"_ΔP [{round_num(token_to_float(well_info['delta_b'], 6), 0)}], "
-                )
-                ret_string += f"price [${round_num(token_to_float(well_info['price'], 6), 4)}]_"
+                if well_info['pool'] in WHITELISTED_WELLS:
+                    ret_string += (
+                        f"_ΔP [{round_num(token_to_float(well_info['delta_b'], 6), 0)}],_ "
+                    )
+                ret_string += f"_price [${round_num(token_to_float(well_info['price'], 6), 4)}]_"
             ret_string += f"\n⚖️ :PINTO: Hourly volume: {round_num(wells_volume, 0, incl_dollar=True)}"
 
             # Silo stats.

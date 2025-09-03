@@ -236,7 +236,12 @@ def latest_pool_price_str(bean_client, addr):
     price = token_to_float(pool_info["price"], BEAN_DECIMALS)
     delta_b = token_to_float(pool_info["delta_b"], BEAN_DECIMALS)
     # liquidity = pool_info['liquidity']
-    return f"{type_str}: ΔP [{round_num(delta_b, 0)}], price [${round_num(price, 4)}]"
+
+    ret_str = f"{type_str}: "
+    if addr in WHITELISTED_WELLS:
+        ret_str += f"ΔP [{round_num(delta_b, 0)}], "
+    ret_str += f"price [${round_num(price, 4)}]"
+    return ret_str
 
 
 def latest_well_lp_str(basin_client, addr):
