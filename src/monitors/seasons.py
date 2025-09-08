@@ -107,7 +107,7 @@ class SeasonsMonitor(Monitor):
 
             beanstalk_ready = int(beanstalk_stats[0].created_at) > time.time() - SEASON_DURATION / 2
             bean_ready = beanstalk_stats[0].season == bean_stats[0].season
-            basin_ready = len(well_hourly_stats) == len(WHITELISTED_WELLS)
+            basin_ready = len(well_hourly_stats) == len([*WHITELISTED_WELLS, *DEWHITELISTED_WELLS])
             if (
                 self.current_season_id != beanstalk_stats[0].season
                 and beanstalk_ready and bean_ready and basin_ready
