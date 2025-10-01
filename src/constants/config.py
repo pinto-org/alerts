@@ -64,6 +64,12 @@ NEWLINE_CHAR = "\n"
 
 ERC20_TRANSFER_EVENT_SIG = Web3.keccak(text="Transfer(address,address,uint256)").hex()
 
+SOURCE_TOKEN_INDEX_MAPPING = {
+    2: PINTO_CBETH_ADDR,
+    3: PINTO_CBBTC_ADDR,
+    4: PINTO_USDC_ADDR,
+}
+
 # Incomplete of Beanstalk Terming of Tokens for human use.
 SILO_TOKENS_MAP = {
     BEAN_ADDR.lower(): "PINTO",
