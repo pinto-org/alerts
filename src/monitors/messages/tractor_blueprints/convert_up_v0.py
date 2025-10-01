@@ -4,11 +4,11 @@ from data_access.contracts.util import bean_to_float, token_to_float
 
 def publish_convert_up_v0_str(order):
     total_convert = bean_to_float(int(order['blueprintData']['totalBeanAmountToConvert']))
-    amount_funded = bean_to_float(int(order['blueprintData']['cascadeAmountFunded']))
     min_gs_bonus = token_to_float(int(order['blueprintData']['grownStalkPerBdvBonusBid']), 10)
     min_price = bean_to_float(int(order['blueprintData']['minPriceToConvertUp']))
     max_price = bean_to_float(int(order['blueprintData']['maxPriceToConvertUp']))
     bean_tip = bean_to_float(int(order['beanTip']))
+    amount_funded = bean_to_float(int(order['blueprintData']['cascadeAmountFunded']))
     event_str = (
         f"🖋️🚜 Published Convert Up Order {shorten_hash(order['blueprintHash'])}"
         f"\n> 🔄 ⬆️  Convert to {round_num(total_convert, precision=0, avoid_zero=True)} Pinto"
@@ -20,12 +20,16 @@ def publish_convert_up_v0_str(order):
     return event_str
 
 def cancel_convert_up_v0_str(order):
-    total_sow = bean_to_float(int(order['blueprintData']['totalAmountToSow']))
-    min_temp = bean_to_float(int(order['blueprintData']['minTemp']))
+    total_convert = bean_to_float(int(order['blueprintData']['totalBeanAmountToConvert']))
+    min_gs_bonus = token_to_float(int(order['blueprintData']['grownStalkPerBdvBonusBid']), 10)
+    min_price = bean_to_float(int(order['blueprintData']['minPriceToConvertUp']))
+    max_price = bean_to_float(int(order['blueprintData']['maxPriceToConvertUp']))
     bean_tip = bean_to_float(int(order['beanTip']))
     event_str = (
-        f"❌🚜 Cancelled Sow Order {shorten_hash(order['blueprintHash'])}"
-        f"\n> 🌱 Sow {round_num(total_sow, precision=0, avoid_zero=True)} Pinto at {round_num(min_temp, precision=2, avoid_zero=True)}% Temperature"
+        f"❌🚜 Cancelled Convert Up Order {shorten_hash(order['blueprintHash'])}"
+        f"\n> 🔄 ⬆️  Convert to {round_num(total_convert, precision=0, avoid_zero=True)} Pinto"
+        f"\n> - 🌱 Grown Stalk bonus per PDV is at least {round_num(min_gs_bonus, precision=2, avoid_zero=True)}"
+        f"\n> - Pinto price is between {round_num(min_price, precision=2, avoid_zero=True, incl_dollar=True)} and {round_num(max_price, precision=2, avoid_zero=True, incl_dollar=True)}"
         f"\n> 🤖 Operator tip: {round_num(bean_tip, precision=2, avoid_zero=True)} Pinto"
         f"\n> 🤖 Order was executed {order['executionStats']['executionCount']} time{'' if order['executionStats']['executionCount'] == 1 else 's'}"
     )
