@@ -551,8 +551,8 @@ if __name__ == "__main__":
         get_web3_instance(),
         address=BEANSTALK_ADDR,
         topics=[BEANSTALK_SIGNATURES_LIST],
-        from_block="256715188",
-        to_block="256715781",
+        from_block="0x2299ae2",
+        to_block="0x2299ecf",
     )
     entries = filter.get_new_entries()
     logging.info(f"found {len(entries)} entries")

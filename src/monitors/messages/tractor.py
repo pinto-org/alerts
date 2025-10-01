@@ -1,9 +1,10 @@
 import requests
 
-from bots.util import links_footer, round_num
+from bots.util import links_footer
 from constants.config import API_ENDPOINT
 from data_access.addresses import shorten_hash
-from data_access.contracts.util import bean_to_float, pods_to_float
+from monitors.messages.tractor_blueprints.convert_up_v0 import cancel_convert_up_v0_str, execute_convert_up_v0_str, publish_convert_up_v0_str
+from monitors.messages.tractor_blueprints.sow_v0 import cancel_sow_v0_str, execute_sow_v0_str, publish_sow_v0_str
 from tools.util import retryable
 
 def publish_requisition_str(event_log):
@@ -11,6 +12,8 @@ def publish_requisition_str(event_log):
     order = find_tractor_order(blueprint_hash, event_log.blockNumber)
     if order['orderType'] == "SOW_V0":
         event_str = publish_sow_v0_str(order)
+    elif order['orderType'] == "CONVERT_UP_V0":
+        event_str = publish_convert_up_v0_str(order)
     else:
         event_str = f"🖋️🚜 Published unknown order {shorten_hash(order['blueprintHash'])}"
     event_str += links_footer(event_log.receipt, farmer=order['publisher'])
@@ -21,6 +24,8 @@ def cancel_blueprint_str(event_log):
     order = find_tractor_order(blueprint_hash, event_log.blockNumber)
     if order['orderType'] == "SOW_V0":
         event_str = cancel_sow_v0_str(order)
+    elif order['orderType'] == "CONVERT_UP_V0":
+        event_str = cancel_convert_up_v0_str(order)
     else:
         event_str = f"❌🚜 Cancelled unknown order {shorten_hash(order['blueprintHash'])}"
     event_str += links_footer(event_log.receipt, farmer=order['publisher'])
@@ -32,6 +37,8 @@ def tractor_str(event_log):
     order = find_tractor_order(blueprint_hash, event_log.blockNumber)
     if order['orderType'] == "SOW_V0":
         event_str = execute_sow_v0_str(execution, order)
+    elif order['orderType'] == "CONVERT_UP_V0":
+        event_str = execute_convert_up_v0_str(execution, order)
     else:
         event_str = f"💥🚜 Executed unknown order {shorten_hash(order['blueprintHash'])}"
     event_str += links_footer(event_log.receipt, farmer=order['publisher'])
