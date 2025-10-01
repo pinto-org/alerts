@@ -245,6 +245,7 @@ class BeanstalkMonitor(Monitor):
         bdv_float = 0
         value = 0
         penalty_bonus_str = None
+        account = None
         for event_log in event_logs:
             if event_log.event == "AddDeposit":
                 bdv_float = bean_to_float(event_log.args.get("bdv"))
@@ -256,6 +257,7 @@ class BeanstalkMonitor(Monitor):
                 _, _, add_token_symbol, add_decimals = get_erc20_info(add_token_addr).parse()
                 remove_amount = event_log.args.get("fromAmount")
                 add_amount = event_log.args.get("toAmount")
+                account = event_log.args.get("account")
             elif event_log.event == "ConvertDownPenalty":
                 stalk_penalized = stalk_to_float(event_log.args.grownStalkLost)
                 if stalk_penalized > 0:
@@ -295,7 +297,7 @@ class BeanstalkMonitor(Monitor):
         if not remove_token_addr.startswith(UNRIPE_TOKEN_PREFIX):
             event_str += f"\n{value_to_emojis(value)}"
 
-        event_str += links_footer(event_logs[0].receipt, farmer=event_logs[0].args.account)
+        event_str += links_footer(event_logs[0].receipt, farmer=account)
         # Indicate whether this is lambda convert
         return event_str, add_token_addr == remove_token_addr
 
