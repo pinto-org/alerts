@@ -23,7 +23,7 @@ def seasonal_gauge_str(sunrise_receipt):
     parallelized.append(lambda: beanstalk_client.get_deposited_bdv_totals(b_prev))
     parallelized.append(lambda: beanstalk_client.get_deposited_bdv_totals(b))
 
-    gauge_str_methods = [cultivation_factor_str, cultivation_gauge_str, convert_down_penalty_str]
+    gauge_str_methods = [cultivation_factor_str, cultivation_gauge_str, convert_down_penalty_str, convert_up_bonus_str]
     for i in range(len(gauge_str_methods)):
         parallelized.append(lambda gauge_id=gauge_str_methods[i].gauge_id, fn=gauge_str_methods[i].data_getter, block=b_prev: getattr(beanstalk_client, fn)(gauge_id, block))
         parallelized.append(lambda gauge_id=gauge_str_methods[i].gauge_id, fn=gauge_str_methods[i].data_getter, block=b: getattr(beanstalk_client, fn)(gauge_id, block))
@@ -150,6 +150,18 @@ def convert_down_penalty_str(value_bytes):
     )
 convert_down_penalty_str.gauge_id = 1
 convert_down_penalty_str.data_getter = 'get_gauge_value'
+
+def convert_up_bonus_str(value_bytes):
+    decoded = [decode_abi(['uint256', 'uint256', 'uint256'], bytes) for bytes in value_bytes]
+    bonus_stalk_per_bdv = [token_to_float(v[0], 18) for v in decoded]
+    max_convert_capacity = [token_to_float(v[1], 6) for v in decoded]
+    return (
+        f"⬆️ Convert Up Bonus: {round_num(bonus_stalk_per_bdv[1], precision=2)} Stalk per PDV"
+        f"\n> {amt_change_str(bonus_stalk_per_bdv[0], bonus_stalk_per_bdv[1], precision=2, is_percent=False, use_emoji=True)}"
+        f"\n> 🛢️ Seasonal Capacity: {round_num(max_convert_capacity[1], precision=0)} PDV ({amt_change_str(max_convert_capacity[0], max_convert_capacity[1], precision=0)})"
+    )
+convert_up_bonus_str.gauge_id = 2
+convert_up_bonus_str.data_getter = 'get_gauge_value'
 
 def amt_change_str(before, after, precision=2, is_percent=False, use_emoji=False):
     diff = abs(after - before)
