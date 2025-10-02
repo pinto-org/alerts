@@ -11,6 +11,7 @@ from data_access.contracts.beanstalk import BeanstalkClient
 from data_access.util import *
 from constants.addresses import *
 from constants.config import *
+from eth_abi import decode_abi
 
 from tools.combined_actions import withdraw_sow_info
 from tools.silo import net_deposit_withdrawal_stalk
@@ -255,6 +256,7 @@ class BeanstalkMonitor(Monitor):
         Returns string, boolean
         boolean indicates whether this is a lambda convert
         """
+        beanstalk_client = BeanstalkClient(block_number=event_logs[0].blockNumber)
         bean_client = BeanClient(block_number=event_logs[0].blockNumber)
 
         bean_price = bean_client.avg_bean_price()
@@ -291,9 +293,18 @@ class BeanstalkMonitor(Monitor):
                 gs_bonus_stalk = stalk_to_float(event_log.args.grownStalkGained)
                 gs_bonus_bdv = bean_to_float(event_log.args.bdvCapacityUsed)
                 gs_bonus_per_bdv = gs_bonus_stalk / gs_bonus_bdv
+
+                max_seasonal_capacity = decode_abi(['uint256', 'uint256', 'uint256'], beanstalk_client.get_gauge_value(2))[1]
+                bdv_converted_this_season = decode_abi(
+                    ['uint256', 'uint256', 'uint256', 'uint256', 'uint256', 'uint256', 'uint256', 'uint256'],
+                    beanstalk_client.get_gauge_data(2)
+                )[4]
+                remaining_capacity = bean_to_float(max_seasonal_capacity - bdv_converted_this_season)
+
                 penalty_bonus_str = (
                     f"🌱 Awarded {round_num(gs_bonus_stalk, 2, avoid_zero=True)} Grown Stalk bonus "
                     f"({round_num(gs_bonus_per_bdv, 3, avoid_zero=True)} per PDV) to {round_num(gs_bonus_bdv, 2, avoid_zero=True)} PDV"
+                    f"\n:PINTO: Remaining Seasonal bonus capacity: {round_num(remaining_capacity, 2, avoid_zero=True)} PDV"
                 )
 
         if remove_token_addr == BEAN_ADDR:
