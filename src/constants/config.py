@@ -19,8 +19,9 @@ LOGGING_FORMATTER = logging.Formatter(LOGGING_FORMAT_STR_SUFFIX)
 BEANSTALK_GRAPH_ENDPOINT = "https://graph.pinto.money/pintostalk"
 BEAN_GRAPH_ENDPOINT = "https://graph.pinto.money/pinto"
 BASIN_GRAPH_ENDPOINT = "https://graph.pinto.money/exchange"
-# API_ENDPOINT = "https://api.pinto.money" # TODO(tractor): revert this!
-API_ENDPOINT = "http://localhost:3000"
+API_ENDPOINT = "https://api.pinto.money"
+if os.environ.get("API_ENDPOINT"):
+    API_ENDPOINT = os.environ.get("API_ENDPOINT")
 
 # The following time values are all provided in seconds.
 SEASON_DURATION = 3600
