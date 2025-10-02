@@ -89,13 +89,31 @@ class BeanstalkMonitor(Monitor):
                 self.msg_silo(event_str)
             remove_events_from_logs_by_name("ClaimFertilizer", event_logs)
 
-        # Process conversion logs as a batch.
-        if event_in_logs("Convert", event_logs):
-            msg, is_lambda = self.silo_conversion_str(event_logs)
-            if not is_lambda:
-                self.msg_silo(msg)
+        # Process Convert events in batches. Multiple Convert events may emit at once, particularly with Tractor convert up.
+        while event_in_logs("Convert", event_logs):
+            # Find the first Convert event
+            convert_index = None
+            for i, event_log in enumerate(event_logs):
+                if event_log.event == "Convert":
+                    convert_index = i
+                    break
+
+            if convert_index is not None:
+                # Get all events from the beginning up to and including the Convert event
+                batch_events = event_logs[:convert_index + 1]
+
+                # Process the batch
+                msg, is_lambda = self.silo_conversion_str(batch_events)
+                if not is_lambda:
+                    self.msg_silo(msg)
+
+                # Remove the processed events from the main event_logs
+                for _ in range(convert_index + 1):
+                    event_logs.pop(0)
+
+        # If no events remain, return
+        if not event_logs:
             return
-        # Else handle txn logs individually using default strings.
 
         # Determine net deposit/withdraw of each account/token, removing relevant events from the log list
         net_deposits = net_deposit_withdrawal_stalk(event_logs=event_logs, remove_from_logs=True)
@@ -106,6 +124,7 @@ class BeanstalkMonitor(Monitor):
                 if event_str:
                     self.msg_silo(event_str)
 
+        # Anything left is field
         for event_log in event_logs:
             event_str = self.field_event_str(event_log)
             if event_str:
