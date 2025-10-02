@@ -287,6 +287,14 @@ class BeanstalkMonitor(Monitor):
                         f"🌱🔥 {round_num(stalk_penalized, 0, avoid_zero=True)} Mown Stalk burned from penalty "
                         f"({round_num(penalty_percent, 2, avoid_zero=True)}%)"
                     )
+            elif event_log.event == "ConvertUpBonus":
+                gs_bonus_stalk = stalk_to_float(event_log.args.grownStalkGained)
+                gs_bonus_bdv = bean_to_float(event_log.args.bdvCapacityUsed)
+                gs_bonus_per_bdv = gs_bonus_stalk / gs_bonus_bdv
+                penalty_bonus_str = (
+                    f"🌱 Awarded {round_num(gs_bonus_stalk, 2, avoid_zero=True)} Grown Stalk bonus "
+                    f"({round_num(gs_bonus_per_bdv, 3, avoid_zero=True)} per PDV) to {round_num(gs_bonus_bdv, 2, avoid_zero=True)} PDV"
+                )
 
         if remove_token_addr == BEAN_ADDR:
             direction_emojis = ["⬇️", "📉"]

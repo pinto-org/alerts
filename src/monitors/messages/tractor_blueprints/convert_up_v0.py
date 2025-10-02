@@ -54,7 +54,7 @@ def execute_convert_up_v0_str(execution, order):
         f"💥🚜 Executed Convert Up Order {shorten_hash(order['blueprintHash'])}"
         f"\n> 🔄 ⬆️ Converted {used_lp_token_icons} LP to {round_num(beans_converted, precision=0, avoid_zero=True)} Pinto"
         f"\n> - 🌱 Awarded {round_num(gs_bonus_stalk, precision=2, avoid_zero=True)} Grown Stalk bonus "
-        f"({round_num(gs_bonus_per_bdv, precision=3, avoid_zero=True)} per PDV) to {round_num(gs_bonus_bdv, precision=0, avoid_zero=True)} PDV"
+        f"({round_num(gs_bonus_per_bdv, precision=3, avoid_zero=True)} per PDV) to {round_num(gs_bonus_bdv, precision=2, avoid_zero=True)} PDV"
 
         f"\n> - Pinto price increased from {round_num(price_before, precision=4, avoid_zero=True, incl_dollar=True)} to {round_num(price_after, precision=4, avoid_zero=True, incl_dollar=True)}"
         f"\n> 🤖 Operator received {round_num(bean_tip, precision=2, avoid_zero=True)} Pinto"
