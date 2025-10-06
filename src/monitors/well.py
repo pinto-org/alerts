@@ -135,7 +135,11 @@ class WellsMonitor(Monitor):
 
     def _monitor_method(self):
         self.last_check_time = 0
+        self.last_heartbeat_time = time.time()
         while self._thread_active:
+            if time.time() - self.last_heartbeat_time > 15 * 60:
+                logging.info("WellsMonitor heartbeat")
+                self.last_heartbeat_time = time.time()
             if time.time() < self.last_check_time + self.query_rate:
                 time.sleep(0.5)
                 continue
@@ -175,7 +179,7 @@ class WellsMonitor(Monitor):
                             except Exception as e:
                                 # Failure should be isolated to this transaction
                                 logging.error(f"\n\n=> Exception during processing of transaction: {future_to_hash[future].hex()}\n")
-            elif time.time() - self.last_event_time > 1800: # 30 minutes
+            elif time.time() - self.last_event_time > 30 * 60: # 30 minutes
                 if not self.alerted_no_recent_events:
                     self.alerted_no_recent_events = True
                     logging.error("\n!! No Well events encountered in the last 30 minutes. The bots may need to be restarted.")
