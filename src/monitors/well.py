@@ -128,10 +128,18 @@ class WellsMonitor(Monitor):
         self.arbitrage_senders = arbitrage_senders
         self._eth_event_client = EthEventsClient([EventClientType.WELL], self.pool_addresses)
         self.bean_reporting = bean_reporting
+        # For purposes of error detection, identifies when events are encountered. If no event has been found
+        # for some duration of time, it is likely the application is in an error state (well swaps are high frequency)
+        self.last_event_time = time.time()
+        self.alerted_no_recent_events = False
 
     def _monitor_method(self):
         self.last_check_time = 0
+        self.last_heartbeat_time = time.time()
         while self._thread_active:
+            if time.time() - self.last_heartbeat_time > 15 * 60:
+                logging.info("WellsMonitor heartbeat")
+                self.last_heartbeat_time = time.time()
             if time.time() < self.last_check_time + self.query_rate:
                 time.sleep(0.5)
                 continue
@@ -139,6 +147,9 @@ class WellsMonitor(Monitor):
 
             new_logs = self._eth_event_client.get_new_logs(dry_run=self._dry_run)
             if new_logs:
+                self.last_event_time = time.time()
+                self.alerted_no_recent_events = False
+
                 BATCH_SIZE = 25
                 with ThreadPoolExecutor(max_workers=BATCH_SIZE) as executor:
                     for i in range(0, len(new_logs), BATCH_SIZE):
@@ -168,6 +179,10 @@ class WellsMonitor(Monitor):
                             except Exception as e:
                                 # Failure should be isolated to this transaction
                                 logging.error(f"\n\n=> Exception during processing of transaction: {future_to_hash[future].hex()}\n")
+            elif time.time() - self.last_event_time > 30 * 60: # 30 minutes
+                if not self.alerted_no_recent_events:
+                    self.alerted_no_recent_events = True
+                    logging.error("\n!! No Well events encountered in the last 30 minutes. The bots may need to be restarted.")
 
     def _handle_txn_logs(self, txn_hash, event_logs):
         """Process the well event logs for a single txn."""

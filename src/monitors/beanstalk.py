@@ -36,7 +36,11 @@ class BeanstalkMonitor(Monitor):
 
     def _monitor_method(self):
         self.last_check_time = 0
+        self.last_heartbeat_time = time.time()
         while self._thread_active:
+            if time.time() - self.last_heartbeat_time > 15 * 60:
+                logging.info("BeanstalkMonitor heartbeat")
+                self.last_heartbeat_time = time.time()
             if time.time() < self.last_check_time + self.query_rate:
                 time.sleep(0.5)
                 continue
