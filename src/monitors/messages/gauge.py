@@ -1,6 +1,6 @@
 import logging
 from bots.util import get_logs_by_names, round_num
-from constants.addresses import BEAN_ADDR
+from constants.addresses import BEAN_ADDR, BEANSTALK_ADDR
 from constants.config import SILO_TOKENS_MAP, WHITELISTED_WELLS
 from data_access.contracts.beanstalk import BeanstalkClient
 from data_access.contracts.eth_events import EthEventsClient, EventClientType
@@ -48,22 +48,28 @@ def seasonal_gauge_str(sunrise_receipt):
 
 def get_seasons_and_blocks(current_logs):
     """Gets the season number and block associated with the current and previous season"""
-    season_client = EthEventsClient([EventClientType.SEASON])
-
     evt_sunrise = get_logs_by_names(["Sunrise"], current_logs)[0]
     current_season_number = evt_sunrise.args.season
 
-    prev_sunrise_txn = season_client.get_log_with_topics(
-        "Sunrise",
-        [Web3.toHex(Web3.toBytes(current_season_number - 1).rjust(32, b'\x00'))],
-        # Constrained the search range to work with rpc limits.
-        # In practice the previous sunrise txn will be within this block range.
-        evt_sunrise.blockNumber - 10000,
-        evt_sunrise.blockNumber - 1
-    )
-    evt_prev_sunrise = prev_sunrise_txn[0].logs[0]
+    # Direct eth_getLogs call to find previous Sunrise event
+    web3 = get_web3_instance()
+    sunrise_signature = Web3.keccak(text="Sunrise(uint256)").hex()
+
+    prev_sunrise_logs = web3.eth.get_logs({
+        'address': BEANSTALK_ADDR,
+        'topics': [
+            sunrise_signature,
+            Web3.toHex(Web3.toBytes(current_season_number - 1).rjust(32, b'\x00'))
+        ],
+        'fromBlock': evt_sunrise.blockNumber - 10000,
+        'toBlock': evt_sunrise.blockNumber - 1
+    })
+
+    # Extract blockNumber directly from the raw log
+    prev_sunrise_block = prev_sunrise_logs[0]['blockNumber']
+
     return {
-        "prev": { "season": current_season_number-1, "block": evt_prev_sunrise.blockNumber },
+        "prev": { "season": current_season_number-1, "block": prev_sunrise_block },
         "current": { "season": current_season_number, "block": evt_sunrise.blockNumber },
     }
 

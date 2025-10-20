@@ -380,24 +380,6 @@ class EthEventsClient:
             )
         return self.get_new_logs(filters=filters, get_all=True)
 
-    def get_log_with_topics(self, event_name, indexed_topics, from_block, to_block="latest"):
-        """Returns all matching logs"""
-        signature = [s for s in self._events_dict if event_name in self._events_dict[s]]
-        if signature:
-            filters = []
-            for address in self._contract_addresses:
-                filters.append(
-                    safe_create_filter(
-                        self._web3,
-                        address=address,
-                        topics=[signature[0], *indexed_topics],
-                        from_block=from_block,
-                        to_block=to_block
-                    )
-                )
-            return self.get_new_logs(filters=filters, get_all=True)
-        return []
-
     def get_new_logs(self, dry_run=None, filters=None, get_all=False):
         """Iterate through all entries passing filter and return list of decoded Log Objects.
 
