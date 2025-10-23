@@ -11,6 +11,7 @@ from data_access.contracts.beanstalk import BeanstalkClient
 from data_access.util import *
 from constants.addresses import *
 from constants.config import *
+from eth_abi import decode_abi
 
 from tools.combined_actions import withdraw_sow_info
 from tools.silo import net_deposit_withdrawal_stalk
@@ -93,13 +94,31 @@ class BeanstalkMonitor(Monitor):
                 self.msg_silo(event_str)
             remove_events_from_logs_by_name("ClaimFertilizer", event_logs)
 
-        # Process conversion logs as a batch.
-        if event_in_logs("Convert", event_logs):
-            msg, is_lambda = self.silo_conversion_str(event_logs)
-            if not is_lambda:
-                self.msg_silo(msg)
+        # Process Convert events in batches. Multiple Convert events may emit at once, particularly with Tractor convert up.
+        while event_in_logs("Convert", event_logs):
+            # Find the first Convert event
+            convert_index = None
+            for i, event_log in enumerate(event_logs):
+                if event_log.event == "Convert":
+                    convert_index = i
+                    break
+
+            if convert_index is not None:
+                # Get all events from the beginning up to and including the Convert event
+                batch_events = event_logs[:convert_index + 1]
+
+                # Process the batch
+                msg, is_lambda = self.silo_conversion_str(batch_events)
+                if not is_lambda:
+                    self.msg_silo(msg)
+
+                # Remove the processed events from the main event_logs
+                for _ in range(convert_index + 1):
+                    event_logs.pop(0)
+
+        # If no events remain, return
+        if not event_logs:
             return
-        # Else handle txn logs individually using default strings.
 
         # Determine net deposit/withdraw of each account/token, removing relevant events from the log list
         net_deposits = net_deposit_withdrawal_stalk(event_logs=event_logs, remove_from_logs=True)
@@ -110,6 +129,7 @@ class BeanstalkMonitor(Monitor):
                 if event_str:
                     self.msg_silo(event_str)
 
+        # Anything left is field
         for event_log in event_logs:
             event_str = self.field_event_str(event_log)
             if event_str:
@@ -240,6 +260,7 @@ class BeanstalkMonitor(Monitor):
         Returns string, boolean
         boolean indicates whether this is a lambda convert
         """
+        beanstalk_client = BeanstalkClient(block_number=event_logs[0].blockNumber)
         bean_client = BeanClient(block_number=event_logs[0].blockNumber)
 
         bean_price = bean_client.avg_bean_price()
@@ -249,6 +270,7 @@ class BeanstalkMonitor(Monitor):
         bdv_float = 0
         value = 0
         penalty_bonus_str = None
+        account = None
         for event_log in event_logs:
             if event_log.event == "AddDeposit":
                 bdv_float = bean_to_float(event_log.args.get("bdv"))
@@ -260,6 +282,7 @@ class BeanstalkMonitor(Monitor):
                 _, _, add_token_symbol, add_decimals = get_erc20_info(add_token_addr).parse()
                 remove_amount = event_log.args.get("fromAmount")
                 add_amount = event_log.args.get("toAmount")
+                account = event_log.args.get("account")
             elif event_log.event == "ConvertDownPenalty":
                 stalk_penalized = stalk_to_float(event_log.args.grownStalkLost)
                 if stalk_penalized > 0:
@@ -270,6 +293,23 @@ class BeanstalkMonitor(Monitor):
                         f"🌱🔥 {round_num(stalk_penalized, 0, avoid_zero=True)} Mown Stalk burned from penalty "
                         f"({round_num(penalty_percent, 2, avoid_zero=True)}%)"
                     )
+            elif event_log.event == "ConvertUpBonus":
+                gs_bonus_stalk = stalk_to_float(event_log.args.grownStalkGained)
+                gs_bonus_bdv = bean_to_float(event_log.args.bdvCapacityUsed)
+                gs_bonus_per_bdv = gs_bonus_stalk / gs_bonus_bdv
+
+                max_seasonal_capacity = decode_abi(['uint256', 'uint256', 'uint256'], beanstalk_client.get_gauge_value(2))[1]
+                bdv_converted_this_season = decode_abi(
+                    ['uint256', 'uint256', 'uint256', 'uint256', 'uint256', 'uint256', 'uint256', 'uint256'],
+                    beanstalk_client.get_gauge_data(2)
+                )[4]
+                remaining_capacity = bean_to_float(max_seasonal_capacity - bdv_converted_this_season)
+
+                penalty_bonus_str = (
+                    f"🌱 Awarded {round_num(gs_bonus_stalk, 2, avoid_zero=True)} Grown Stalk bonus "
+                    f"({round_num(gs_bonus_per_bdv, 3, avoid_zero=True)} per PDV) to {round_num(gs_bonus_bdv, 2, avoid_zero=True)} PDV"
+                    f"\n:PINTO: Remaining Seasonal bonus capacity: {round_num(remaining_capacity, 2, avoid_zero=True)} PDV"
+                )
 
         if remove_token_addr == BEAN_ADDR:
             direction_emojis = ["⬇️", "📉"]
@@ -299,7 +339,7 @@ class BeanstalkMonitor(Monitor):
         if not remove_token_addr.startswith(UNRIPE_TOKEN_PREFIX):
             event_str += f"\n{value_to_emojis(value)}"
 
-        event_str += links_footer(event_logs[0].receipt, farmer=event_logs[0].args.account)
+        event_str += links_footer(event_logs[0].receipt, farmer=account)
         # Indicate whether this is lambda convert
         return event_str, add_token_addr == remove_token_addr
 

@@ -86,13 +86,19 @@ add_event_to_dict(
     BEANSTALK_EVENT_MAP,
     BEANSTALK_SIGNATURES_LIST,
 )
+# PI-12 Convert event adds 2 new fields; for historical message processing, would need to support the old signature
 add_event_to_dict(
-    "Convert(address,address,address,uint256,uint256)",
+    "Convert(address,address,address,uint256,uint256,uint256,uint256)",
     BEANSTALK_EVENT_MAP,
     BEANSTALK_SIGNATURES_LIST,
 )
 add_event_to_dict(
     "ConvertDownPenalty(address,uint256,uint256)",
+    BEANSTALK_EVENT_MAP,
+    BEANSTALK_SIGNATURES_LIST,
+)
+add_event_to_dict(
+    "ConvertUpBonus(address,uint256,uint256,uint256,uint256)",
     BEANSTALK_EVENT_MAP,
     BEANSTALK_SIGNATURES_LIST,
 )
@@ -532,8 +538,8 @@ if __name__ == "__main__":
         get_web3_instance(),
         address=BEANSTALK_ADDR,
         topics=[BEANSTALK_SIGNATURES_LIST],
-        from_block="256715188",
-        to_block="256715781",
+        from_block="0x2299ae2",
+        to_block="0x2299ecf",
     )
     entries = filter.get_new_entries()
     logging.info(f"found {len(entries)} entries")
