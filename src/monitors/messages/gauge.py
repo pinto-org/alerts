@@ -159,7 +159,7 @@ convert_down_penalty_str.data_getter = 'get_gauge_value'
 
 def convert_up_bonus_str(value_bytes):
     decoded = [decode_abi(['uint256', 'uint256', 'uint256'], bytes) for bytes in value_bytes]
-    bonus_stalk_per_bdv = [token_to_float(v[0], 18) for v in decoded]
+    bonus_stalk_per_bdv = [token_to_float(v[0], 10) for v in decoded]
     max_convert_capacity = [token_to_float(v[1], 6) for v in decoded]
     return (
         f"⬆️ Convert Up Bonus: {round_num(bonus_stalk_per_bdv[1], precision=2)} Stalk per PDV"
