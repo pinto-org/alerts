@@ -17,9 +17,9 @@ def get_with_retries(request_url, max_tries=10, timeout=6):
 
         except Exception as e:
             if try_count < max_tries:
-                logging.error(f"Failed GET request ({request_url}). Retrying...", exc_info=True)
                 time.sleep(1)
             else:
+                logging.error(f"Failed GET request ({request_url}). Not retrying", exc_info=True)
                 raise e
         try_count += 1
 

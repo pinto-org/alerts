@@ -300,9 +300,9 @@ class BeanstalkMonitor(Monitor):
 
                 max_seasonal_capacity = decode_abi(['uint256', 'uint256', 'uint256'], beanstalk_client.get_gauge_value(2))[1]
                 bdv_converted_this_season = decode_abi(
-                    ['uint256', 'uint256', 'uint256', 'uint256', 'uint256', 'uint256', 'uint256', 'uint256'],
+                    ['uint256', 'uint256', 'uint256', 'uint256', 'uint256', 'uint256', 'uint256', 'uint256', 'uint256'],
                     beanstalk_client.get_gauge_data(2)
-                )[4]
+                )[5]
                 remaining_capacity = bean_to_float(max_seasonal_capacity - bdv_converted_this_season)
 
                 penalty_bonus_str = (
