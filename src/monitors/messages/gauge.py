@@ -163,20 +163,26 @@ def convert_up_bonus_str(value_bytes):
     max_convert_capacity = [token_to_float(v[1], 6) for v in decoded]
     return (
         f"⬆️ Convert Up Bonus: {round_num(bonus_stalk_per_bdv[1], precision=2)} Stalk per PDV"
-        f"\n> {amt_change_str(bonus_stalk_per_bdv[0], bonus_stalk_per_bdv[1], precision=2, is_percent=False, use_emoji=True)}"
+        f"\n> {amt_change_str(bonus_stalk_per_bdv[0], bonus_stalk_per_bdv[1], scientific=True, use_emoji=True)}"
         f"\n> 🛢️ Seasonal Capacity: {round_num(max_convert_capacity[1], precision=0)} PDV ({amt_change_str(max_convert_capacity[0], max_convert_capacity[1], precision=0)})"
     )
 convert_up_bonus_str.gauge_id = 2
 convert_up_bonus_str.data_getter = 'get_gauge_value'
 
-def amt_change_str(before, after, precision=2, is_percent=False, use_emoji=False):
+def amt_change_str(before, after, precision=2, is_percent=False, use_emoji=False, scientific=False):
     diff = abs(after - before)
     if before < after:
-        diff_str = round_num(diff, precision=precision, avoid_zero=True)
-        return f"{'📈 ' if use_emoji else ''}+{' ' if diff_str.startswith('<') else ''}{diff_str}{'%' if is_percent else ''} this Season"
+        if not scientific:
+            diff_str = round_num(diff, precision=precision, avoid_zero=True)
+            return f"{'📈 ' if use_emoji else ''}+{' ' if diff_str.startswith('<') else ''}{diff_str}{'%' if is_percent else ''} this Season"
+        else:
+            return f"{'📈 ' if use_emoji else ''}+{diff:.2e} this Season"
     elif after < before:
-        diff_str = round_num(diff, precision=precision, avoid_zero=True)
-        return f"{'📉 ' if use_emoji else ''}-{' ' if diff_str.startswith('<') else ''}{diff_str}{'%' if is_percent else ''} this Season"
+        if not scientific:
+            diff_str = round_num(diff, precision=precision, avoid_zero=True)
+            return f"{'📉 ' if use_emoji else ''}-{' ' if diff_str.startswith('<') else ''}{diff_str}{'%' if is_percent else ''} this Season"
+        else:
+            return f"{'📉 ' if use_emoji else ''}-{diff:.2e} this Season"
     else:
         return f"{'📊 ' if use_emoji else ''}No change this Season"
 
