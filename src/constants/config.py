@@ -66,12 +66,15 @@ NEWLINE_CHAR = "\n"
 ERC20_TRANSFER_EVENT_SIG = Web3.keccak(text="Transfer(address,address,uint256)").hex()
 
 SOURCE_TOKEN_INDEX_MAPPING = {
+    0: BEAN_ADDR,
+    1: PINTO_WETH_ADDR,
     2: PINTO_CBETH_ADDR,
     3: PINTO_CBBTC_ADDR,
     4: PINTO_USDC_ADDR,
+    5: PINTO_WSOL_ADDR,
+    6: PINTO_WSTETH_ADDR,
 }
 
-# Incomplete of Beanstalk Terming of Tokens for human use.
 SILO_TOKENS_MAP = {
     BEAN_ADDR.lower(): "PINTO",
     WETH.lower(): "WETH",
@@ -79,17 +82,20 @@ SILO_TOKENS_MAP = {
     CBBTC.lower(): "cbBTC",
     WSOL.lower(): "WSOL",
     USDC.lower(): "USDC",
+    WSTETH.lower(): "wstETH",
     PINTO_WETH_ADDR.lower(): "PINTOWETH",
     PINTO_CBETH_ADDR.lower(): "PINTOcbETH",
     PINTO_CBBTC_ADDR.lower(): "PINTOcbBTC",
     PINTO_WSOL_ADDR.lower(): "PINTOWSOL",
     PINTO_USDC_ADDR.lower(): "PINTOUSDC",
+    PINTO_WSTETH_ADDR.lower(): "PINTOwstETH",
 }
 
 WHITELISTED_WELLS = [
     PINTO_CBETH_ADDR,
     PINTO_CBBTC_ADDR,
-    PINTO_USDC_ADDR
+    PINTO_USDC_ADDR,
+    PINTO_WSTETH_ADDR,
 ]
 DEWHITELISTED_WELLS = [
     PINTO_WSOL_ADDR,
@@ -109,12 +115,14 @@ DISCORD_TOKEN_EMOJIS = {
     "PINTOCBBTC": "<:PINTOcbBTC:1308203753354166333>" if is_prod else "<:PINTOcbBTC:1300620473591271515>",
     "PINTOWSOL": "<:PINTOWSOL:1308203729769463901>" if is_prod else "<:PINTOWSOL:1304499399669321859>",
     "PINTOUSDC": "<:PINTOUSDC:1308203762434969721>" if is_prod else "<:PINTOUSDC:1301707622839226388>",
+    "PINTOWSTETH": "TODO(wsteth)" if is_prod else "TODO(wsteth)",
     "SPINTO": "<:sPINTO:1346662452695273502>" if is_prod else "<:sPINTO:1346661973181333514>",
     "WETH": "<:WETH:1308203713164214312>" if is_prod else "<:WETH:1301707663830155368>",
     "CBETH": "<:cbETH:1308203784861650985>" if is_prod else "<:cbETH:1301707504627220511>",
     "CBBTC": "<:cbBTC:1308203792818241628>" if is_prod else "<:cbBTC:1301707489527464056>",
     "WSOL": "<:WSOL:1308203700149555231>" if is_prod else "<:WSOL:1304499424545996831>",
     "USDC": "<:USDC:1308203721225670656>" if is_prod else "<:USDC:1301707657270267966>",
+    "WSTETH": "TODO(wsteth)" if is_prod else "TODO(wsteth)",
     "MC": "<:PintoMC:1346666068717863025>" if is_prod else "<:PintoMC:1346666003097980968>"
 }
 TG_TOKEN_EMOJIS = {
@@ -124,12 +132,14 @@ TG_TOKEN_EMOJIS = {
     "PINTOCBBTC": "🟠",
     "PINTOWSOL": "🟣",
     "PINTOUSDC": "🔵",
+    "PINTOWSTETH": "TODO(wsteth)",
     "SPINTO": "⚪️",
     "WETH": "🟤",
     "CBETH": "🔴",
     "CBBTC": "🟠",
     "WSOL": "🟣",
     "USDC": "🔵",
+    "WSTETH": "TODO(wsteth)",
     "MC": "🧑‍🌾"
 }
 
