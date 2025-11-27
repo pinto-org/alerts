@@ -115,14 +115,14 @@ DISCORD_TOKEN_EMOJIS = {
     "PINTOCBBTC": "<:PINTOcbBTC:1308203753354166333>" if is_prod else "<:PINTOcbBTC:1300620473591271515>",
     "PINTOWSOL": "<:PINTOWSOL:1308203729769463901>" if is_prod else "<:PINTOWSOL:1304499399669321859>",
     "PINTOUSDC": "<:PINTOUSDC:1308203762434969721>" if is_prod else "<:PINTOUSDC:1301707622839226388>",
-    "PINTOWSTETH": "TODO(wsteth)" if is_prod else "TODO(wsteth)",
+    "PINTOWSTETH": "<:PINTOwstETH:1443471674048778382>" if is_prod else "<:PINTOwstETH:1443470921800093826>",
     "SPINTO": "<:sPINTO:1346662452695273502>" if is_prod else "<:sPINTO:1346661973181333514>",
     "WETH": "<:WETH:1308203713164214312>" if is_prod else "<:WETH:1301707663830155368>",
     "CBETH": "<:cbETH:1308203784861650985>" if is_prod else "<:cbETH:1301707504627220511>",
     "CBBTC": "<:cbBTC:1308203792818241628>" if is_prod else "<:cbBTC:1301707489527464056>",
     "WSOL": "<:WSOL:1308203700149555231>" if is_prod else "<:WSOL:1304499424545996831>",
     "USDC": "<:USDC:1308203721225670656>" if is_prod else "<:USDC:1301707657270267966>",
-    "WSTETH": "TODO(wsteth)" if is_prod else "TODO(wsteth)",
+    "WSTETH": "<:wstETH:1443471652129345617>" if is_prod else "<:wstETH:1443470954310144132>",
     "MC": "<:PintoMC:1346666068717863025>" if is_prod else "<:PintoMC:1346666003097980968>"
 }
 TG_TOKEN_EMOJIS = {
@@ -132,14 +132,14 @@ TG_TOKEN_EMOJIS = {
     "PINTOCBBTC": "🟠",
     "PINTOWSOL": "🟣",
     "PINTOUSDC": "🔵",
-    "PINTOWSTETH": "TODO(wsteth)",
+    "PINTOWSTETH": "🔵",
     "SPINTO": "⚪️",
     "WETH": "🟤",
     "CBETH": "🔴",
     "CBBTC": "🟠",
     "WSOL": "🟣",
     "USDC": "🔵",
-    "WSTETH": "TODO(wsteth)",
+    "WSTETH": "🔵",
     "MC": "🧑‍🌾"
 }
 
