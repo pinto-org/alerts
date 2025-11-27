@@ -30,7 +30,7 @@ class BeanstalkGraphClient(object):
             query {{
                 field(
                     {get_block_query_str(block_number or self.block_number)}
-                    id: "{farmer}"
+                    id: "{farmer.lower()}"
                 ) {{
                     unharvestablePods
                 }}
