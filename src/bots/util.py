@@ -200,7 +200,7 @@ def round_num_abbreviated(number, precision=2, capitalize=True):
 
 
 def round_token(number, decimals, addr=''):
-    if addr.lower() in {token.lower() for token in {WETH, CBETH, CBBTC, WSOL, PINTO_WETH_ADDR, PINTO_CBETH_ADDR}}:
+    if addr.lower() in {token.lower() for token in {WETH, CBETH, WSTETH, CBBTC, WSOL, PINTO_WETH_ADDR, PINTO_CBETH_ADDR, PINTO_WSTETH_ADDR}}:
         precision = 2
     elif addr.lower() in {token.lower() for token in {PINTO_WSOL_ADDR}}:
         precision = 5
