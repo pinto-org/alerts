@@ -208,6 +208,9 @@ class BeanstalkMonitor(Monitor):
         beans_value = beans_amount * bean_price
 
         if event_log.event == "Sow":
+            if beans_amount == 0:
+                # Occurs for referral sows
+                return ""
             effective_temp = (pods_amount / beans_amount - 1) * 100
             max_temp = beanstalk_client.get_max_temp()
             current_soil = beanstalk_client.get_current_soil()
