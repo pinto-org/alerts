@@ -2,7 +2,7 @@ from bots.util import round_num
 from data_access.addresses import shorten_hash
 from data_access.contracts.util import bean_to_float, pods_to_float
 
-def publish_sow_v0_str(order):
+def publish_sow_str(order):
     total_sow = bean_to_float(int(order['blueprintData']['totalAmountToSow']))
     amount_funded = bean_to_float(int(order['blueprintData']['cascadeAmountFunded']))
     min_temp = bean_to_float(int(order['blueprintData']['minTemp']))
@@ -15,7 +15,7 @@ def publish_sow_v0_str(order):
     )
     return event_str
 
-def cancel_sow_v0_str(order):
+def cancel_sow_str(order):
     total_sow = bean_to_float(int(order['blueprintData']['totalAmountToSow']))
     min_temp = bean_to_float(int(order['blueprintData']['minTemp']))
     bean_tip = bean_to_float(int(order['beanTip']))
@@ -27,7 +27,7 @@ def cancel_sow_v0_str(order):
     )
     return event_str
 
-def execute_sow_v0_str(execution, order):
+def execute_sow_str(execution, order):
     beans = bean_to_float(int(execution['blueprintData']['beans']))
     pods = pods_to_float(int(execution['blueprintData']['pods']))
     temperature = (pods / beans - 1) * 100
