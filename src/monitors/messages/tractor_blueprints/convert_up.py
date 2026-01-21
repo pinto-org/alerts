@@ -3,7 +3,7 @@ from data_access.addresses import shorten_hash
 from data_access.contracts.util import bean_to_float, stalk_to_float, token_to_float
 from monitors.messages.tractor_blueprints.shared import lp_icon_str_from_source_token_indices, lp_icon_str_from_used_tokens
 
-def publish_convert_up_v0_str(order):
+def publish_convert_up_str(order):
     total_convert = bean_to_float(int(order['blueprintData']['totalBeanAmountToConvert']))
     lp_token_icons = lp_icon_str_from_source_token_indices(order['blueprintData']['sourceTokenIndices'])
     min_gs_bonus = token_to_float(int(order['blueprintData']['grownStalkPerBdvBonusBid']), 10)
@@ -21,7 +21,7 @@ def publish_convert_up_v0_str(order):
     )
     return event_str
 
-def cancel_convert_up_v0_str(order):
+def cancel_convert_up_str(order):
     total_convert = bean_to_float(int(order['blueprintData']['totalBeanAmountToConvert']))
     lp_token_icons = lp_icon_str_from_source_token_indices(order['blueprintData']['sourceTokenIndices'])
     min_gs_bonus = token_to_float(int(order['blueprintData']['grownStalkPerBdvBonusBid']), 10)
@@ -38,7 +38,7 @@ def cancel_convert_up_v0_str(order):
     )
     return event_str
 
-def execute_convert_up_v0_str(execution, order):
+def execute_convert_up_str(execution, order):
     beans_converted = bean_to_float(int(execution['blueprintData']['beansConverted']))
     used_lp_token_icons = lp_icon_str_from_used_tokens(execution['blueprintData']['usedTokens'])
     price_before = execution['blueprintData']['beanPriceBefore']

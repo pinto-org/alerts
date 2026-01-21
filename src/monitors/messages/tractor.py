@@ -3,17 +3,17 @@ import requests
 from bots.util import links_footer
 from constants.config import API_ENDPOINT
 from data_access.addresses import shorten_hash
-from monitors.messages.tractor_blueprints.convert_up_v0 import cancel_convert_up_v0_str, execute_convert_up_v0_str, publish_convert_up_v0_str
-from monitors.messages.tractor_blueprints.sow_v0 import cancel_sow_v0_str, execute_sow_v0_str, publish_sow_v0_str
+from monitors.messages.tractor_blueprints.convert_up import cancel_convert_up_str, execute_convert_up_str, publish_convert_up_str
+from monitors.messages.tractor_blueprints.sow import cancel_sow_str, execute_sow_str, publish_sow_str
 from tools.util import retryable
 
 def publish_requisition_str(event_log):
     blueprint_hash = f"0x{event_log.args.requisition[1].hex()}"
     order = find_tractor_order(blueprint_hash, event_log.blockNumber)
-    if order['orderType'] == "SOW_V0":
-        event_str = publish_sow_v0_str(order)
-    elif order['orderType'] == "CONVERT_UP_V0":
-        event_str = publish_convert_up_v0_str(order)
+    if order['orderType'] == "SOW":
+        event_str = publish_sow_str(order)
+    elif order['orderType'] == "CONVERT_UP":
+        event_str = publish_convert_up_str(order)
     else:
         event_str = f"🖋️🚜 Published unknown order {shorten_hash(order['blueprintHash'])}"
     event_str += links_footer(event_log.receipt, farmer=order['publisher'])
@@ -22,10 +22,10 @@ def publish_requisition_str(event_log):
 def cancel_blueprint_str(event_log):
     blueprint_hash = f"0x{event_log.args.blueprintHash.hex()}"
     order = find_tractor_order(blueprint_hash, event_log.blockNumber)
-    if order['orderType'] == "SOW_V0":
-        event_str = cancel_sow_v0_str(order)
-    elif order['orderType'] == "CONVERT_UP_V0":
-        event_str = cancel_convert_up_v0_str(order)
+    if order['orderType'] == "SOW":
+        event_str = cancel_sow_str(order)
+    elif order['orderType'] == "CONVERT_UP":
+        event_str = cancel_convert_up_str(order)
     else:
         event_str = f"❌🚜 Cancelled unknown order {shorten_hash(order['blueprintHash'])}"
     event_str += links_footer(event_log.receipt, farmer=order['publisher'])
@@ -35,10 +35,10 @@ def tractor_str(event_log):
     blueprint_hash = f"0x{event_log.args.blueprintHash.hex()}"
     execution = find_tractor_execution(blueprint_hash, event_log.args.nonce, event_log.blockNumber)
     order = find_tractor_order(blueprint_hash, event_log.blockNumber)
-    if order['orderType'] == "SOW_V0":
-        event_str = execute_sow_v0_str(execution, order)
-    elif order['orderType'] == "CONVERT_UP_V0":
-        event_str = execute_convert_up_v0_str(execution, order)
+    if order['orderType'] == "SOW":
+        event_str = execute_sow_str(execution, order)
+    elif order['orderType'] == "CONVERT_UP":
+        event_str = execute_convert_up_str(execution, order)
     else:
         event_str = f"💥🚜 Executed unknown order {shorten_hash(order['blueprintHash'])}"
     event_str += links_footer(event_log.receipt, farmer=order['publisher'])
