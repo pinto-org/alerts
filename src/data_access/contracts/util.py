@@ -2,11 +2,12 @@ import logging
 import json
 import os
 import time
+from collections import Counter
 from tools.util import topic_is_address
 import websockets
 import threading
 
-from web3 import HTTPProvider
+from web3 import HTTPProvider, Web3
 
 from constants.addresses import *
 from constants.config import *
@@ -60,12 +61,106 @@ class ChainClient:
     def __init__(self, web3=None):
         self._web3 = web3 or get_web3_instance()
 
+_rpc_request_lock = threading.Lock()
+_rpc_request_counts = Counter()
+_rpc_request_window_counts = Counter()
+_rpc_request_total = 0
+_rpc_request_window_total = 0
+_rpc_request_last_log_time = time.time()
+
+def _rpc_request_log_interval_seconds():
+    try:
+        return int(os.environ.get("RPC_REQUEST_LOG_INTERVAL_SECONDS", "300"))
+    except ValueError:
+        return 300
+
+def _format_rpc_method_counts(method_counts):
+    if not method_counts:
+        return "none"
+    return ", ".join(
+        f"{method}={count}" for method, count in method_counts.most_common()
+    )
+
+def _record_rpc_request(method):
+    global _rpc_request_total
+    global _rpc_request_window_total
+    global _rpc_request_last_log_time
+    global _rpc_request_window_counts
+
+    method = method or "unknown"
+    now = time.time()
+    log_snapshot = None
+    with _rpc_request_lock:
+        _rpc_request_counts[method] += 1
+        _rpc_request_window_counts[method] += 1
+        _rpc_request_total += 1
+        _rpc_request_window_total += 1
+
+        interval = _rpc_request_log_interval_seconds()
+        if interval > 0 and now - _rpc_request_last_log_time >= interval:
+            log_snapshot = (
+                _rpc_request_total,
+                Counter(_rpc_request_counts),
+                _rpc_request_window_total,
+                Counter(_rpc_request_window_counts),
+            )
+            _rpc_request_window_counts = Counter()
+            _rpc_request_window_total = 0
+            _rpc_request_last_log_time = now
+
+    if log_snapshot:
+        total, total_methods, window_total, window_methods = log_snapshot
+        logging.info(
+            "RPC request counts: "
+            f"window_total={window_total}, total={total}, "
+            f"window_methods=[{_format_rpc_method_counts(window_methods)}], "
+            f"total_methods=[{_format_rpc_method_counts(total_methods)}]"
+        )
+
+class CountingHTTPProvider(HTTPProvider):
+    def make_request(self, method, params):
+        _record_rpc_request(method)
+        return super().make_request(method, params)
+
+def get_rpc_request_counts():
+    """Return a snapshot of RPC request counts since process start or the last reset."""
+    with _rpc_request_lock:
+        return {
+            "total": _rpc_request_total,
+            "methods": dict(_rpc_request_counts),
+            "window_total": _rpc_request_window_total,
+            "window_methods": dict(_rpc_request_window_counts),
+        }
+
+def reset_rpc_request_counts():
+    """Reset RPC request counters. Intended for local verification and dry runs."""
+    global _rpc_request_total
+    global _rpc_request_window_total
+    global _rpc_request_last_log_time
+    global _rpc_request_counts
+    global _rpc_request_window_counts
+
+    with _rpc_request_lock:
+        _rpc_request_counts = Counter()
+        _rpc_request_window_counts = Counter()
+        _rpc_request_total = 0
+        _rpc_request_window_total = 0
+        _rpc_request_last_log_time = time.time()
+
+def log_rpc_request_counts(prefix="RPC request counts"):
+    """Log the current RPC method counts."""
+    snapshot = get_rpc_request_counts()
+    logging.info(
+        f"{prefix}: total={snapshot['total']}, "
+        f"methods=[{_format_rpc_method_counts(Counter(snapshot['methods']))}]"
+    )
+
 # Thread-local storage for web3 instances
 _thread_local = threading.local()
 def get_web3_instance():
     """Get an instance of web3 lib. Creates a new instance per thread if one doesn't exist."""
     if not hasattr(_thread_local, 'web3_instance'):
-        _thread_local.web3_instance = Web3(HTTPProvider(RPC_URL))
+        _thread_local.web3_instance = Web3(CountingHTTPProvider(RPC_URL))
     return _thread_local.web3_instance
 
 def get_well_contract(address, web3=get_web3_instance()):

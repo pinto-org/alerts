@@ -187,9 +187,11 @@ class WellsMonitor(Monitor):
     def _handle_txn_logs(self, txn_hash, event_logs):
         """Process the well event logs for a single txn."""
         messages = []
+        if not event_logs:
+            return messages
 
         # Convert alerts should appear in both exchange + silo event channels, but don't doublepost in telegram
-        is_convert = event_sig_in_txn(BEANSTALK_EVENT_MAP["Convert"], txn_hash)
+        is_convert = event_sig_in_receipt(BEANSTALK_EVENT_MAP["Convert"], event_logs[0].receipt)
         to_tg = self.bean_reporting is False or not is_convert 
 
         individual_evts: List[WellEventData] = []

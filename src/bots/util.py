@@ -135,6 +135,11 @@ def event_sig_in_txn(event_sig, txn_hash, web3=None):
     if not web3:
         web3 = get_web3_instance()
     receipt = get_txn_receipt(web3, txn_hash)
+    return event_sig_in_receipt(event_sig, receipt)
+
+
+def event_sig_in_receipt(event_sig, receipt):
+    """Return True if an event signature appears in any raw logs from a receipt."""
     for log in receipt.logs:
         try:
             if log.topics[0].hex() == event_sig:
