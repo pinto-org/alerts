@@ -23,18 +23,23 @@ from tools.util import detached_future_done
 class BeanstalkMonitor(Monitor):
     """Monitor the Beanstalk contract for events."""
 
-    def __init__(self, msg_silo, msg_field, msg_tractor, prod=False, dry_run=None):
+    def __init__(self, msg_silo, msg_field, msg_tractor, prod=False, dry_run=None, shared_event_dispatcher=False):
         super().__init__(
             "Beanstalk", None, BEANSTALK_CHECK_RATE, prod=prod, dry_run=dry_run
         )
         self.msg_silo = msg_silo
         self.msg_field = msg_field
         self.msg_tractor = msg_tractor
-        self._eth_event_client = EthEventsClient([EventClientType.BEANSTALK])
+        self._eth_event_client = None if shared_event_dispatcher else EthEventsClient([EventClientType.BEANSTALK])
         self.beanstalk_contract = get_beanstalk_contract()
         self.tractor_executor = ThreadPoolExecutor(max_workers=30)
 
     def _monitor_method(self):
+        if self._eth_event_client is None:
+            while self._thread_active:
+                time.sleep(1)
+            return
+
         self.last_check_time = 0
         self.last_heartbeat_time = time.time()
         while self._thread_active:

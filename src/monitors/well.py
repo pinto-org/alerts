@@ -120,13 +120,13 @@ class WellsMonitor(Monitor):
     ^^ make this assumption less strict, instead only skip valuation if no BDV
     """
 
-    def __init__(self, msg_exchange, msg_arbitrage, addresses, arbitrage_senders=[], bean_reporting=False, prod=False, dry_run=None):
+    def __init__(self, msg_exchange, msg_arbitrage, addresses, arbitrage_senders=[], bean_reporting=False, prod=False, dry_run=None, shared_event_dispatcher=False):
         super().__init__(f"specific well", None, WELL_CHECK_RATE, prod=prod, dry_run=dry_run)
         self.msg_exchange = msg_exchange
         self.msg_arbitrage = msg_arbitrage
         self.pool_addresses = addresses
         self.arbitrage_senders = arbitrage_senders
-        self._eth_event_client = EthEventsClient([EventClientType.WELL], self.pool_addresses)
+        self._eth_event_client = None if shared_event_dispatcher else EthEventsClient([EventClientType.WELL], self.pool_addresses)
         self.bean_reporting = bean_reporting
         # For purposes of error detection, identifies when events are encountered. If no event has been found
         # for some duration of time, it is likely the application is in an error state (well swaps are high frequency)
@@ -134,6 +134,11 @@ class WellsMonitor(Monitor):
         self.alerted_no_recent_events = False
 
     def _monitor_method(self):
+        if self._eth_event_client is None:
+            while self._thread_active:
+                time.sleep(1)
+            return
+
         self.last_check_time = 0
         self.last_heartbeat_time = time.time()
         while self._thread_active:
@@ -183,6 +188,15 @@ class WellsMonitor(Monitor):
                 if not self.alerted_no_recent_events:
                     self.alerted_no_recent_events = True
                     logging.error("\n!! No Well events encountered in the last 30 minutes. The bots may need to be restarted.")
+
+    def on_event_dispatcher_cycle(self, routed_txn_count):
+        if routed_txn_count:
+            self.last_event_time = time.time()
+            self.alerted_no_recent_events = False
+        elif time.time() - self.last_event_time > 30 * 60:
+            if not self.alerted_no_recent_events:
+                self.alerted_no_recent_events = True
+                logging.error("\n!! No Well events encountered in the last 30 minutes. The bots may need to be restarted.")
 
     def _handle_txn_logs(self, txn_hash, event_logs):
         """Process the well event logs for a single txn."""

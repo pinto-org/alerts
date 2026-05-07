@@ -19,9 +19,11 @@ class Monitor:
         self.query_rate = query_rate
         self.prod = prod
         self._dry_run = dry_run
+        self.last_check_time = 0
         # Time to wait before restarting monitor after an unhandled exception. Exponential backoff.
         self.monitor_reset_delay = RESET_MONITOR_DELAY_INIT
         self._thread_active = False
+        self._thread_started = False
         self._thread_wrapper = threading.Thread(target=self._thread_wrapper_method)
         self._web3 = get_web3_instance()
 
@@ -32,6 +34,7 @@ class Monitor:
     def start(self):
         logging.info(f"Starting {self.name} monitoring thread{' (with simulated data)' if self._dry_run else ''}...")
         self._thread_active = True
+        self._thread_started = True
         self._thread_wrapper.start()
 
     def stop(self):
@@ -39,7 +42,8 @@ class Monitor:
         if not self.prod and self.message_function is not None:
             self.message_function(f"{self.name} monitoring stopped.")
         self._thread_active = False
-        self._thread_wrapper.join(3 * self.query_rate)
+        if self._thread_started:
+            self._thread_wrapper.join(3 * self.query_rate if self.query_rate else 3)
 
     def _thread_wrapper_method(self):
         """
