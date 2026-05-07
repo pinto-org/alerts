@@ -16,6 +16,15 @@ if sys.version_info < MIN_PYTHON:
 LOGGING_FORMAT_STR_SUFFIX = "%(levelname)s : %(asctime)s : %(message)s"
 LOGGING_FORMATTER = logging.Formatter(LOGGING_FORMAT_STR_SUFFIX)
 
+is_prod = os.environ.get("IS_PROD", "false").lower() == "true"
+
+def int_env(name, default):
+    try:
+        return int(os.environ.get(name, default))
+    except ValueError:
+        logging.warning(f"Invalid {name} value. Falling back to {default}.")
+        return default
+
 BEANSTALK_GRAPH_ENDPOINT = "https://graph.pinto.money/pintostalk"
 BEAN_GRAPH_ENDPOINT = "https://graph.pinto.money/pinto"
 BASIN_GRAPH_ENDPOINT = "https://graph.pinto.money/exchange"
@@ -25,7 +34,8 @@ if os.environ.get("API_ENDPOINT"):
 
 # The following time values are all provided in seconds.
 SEASON_DURATION = 3600
-PREVIEW_CHECK_PERIOD = 10
+PREVIEW_CHECK_PERIOD = int_env("PREVIEW_CHECK_PERIOD", 60 if is_prod else 10)
+NFT_PREVIEW_CHECK_PERIOD = int_env("NFT_PREVIEW_CHECK_PERIOD", PREVIEW_CHECK_PERIOD)
 BEANSTALK_CHECK_RATE = 10
 PEG_CHECK_PERIOD = 10
 WELL_CHECK_RATE = 10
@@ -104,7 +114,6 @@ DEWHITELISTED_WELLS = [
 
 # Mapping of words to their emojis (see embellish_token_emojis function)
 # Keys must be uppercase
-is_prod = os.environ["IS_PROD"].lower() == "true"
 DISCORD_TOKEN_EMOJIS = {
     "PT-SPINTO": "<:SpectraPT:1353112256723816488>" if is_prod else "<:SpectraPT:1353111805508976770>",
     "YT-SPINTO": "<:SpectraYT:1353112247240753162>" if is_prod else "<:SpectraYT:1353111793203019858>",
