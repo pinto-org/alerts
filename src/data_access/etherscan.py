@@ -31,7 +31,10 @@ def get_gas_base_fee(chain):
         return float(int(result["result"], 16)) / 10 ** 9
     elif chain == Chain.BASE:
         request_url = BASESCAN_API_URL.format(
-            module="proxy", action="eth_gasPrice", payload="", key=os.environ["ETHERSCAN_TOKEN"]
+            module="proxy",
+            action="eth_gasPrice",
+            payload="",
+            key=os.environ.get("BASESCAN_TOKEN") or os.environ["ETHERSCAN_TOKEN"],
         )
         result = get_with_retries(request_url, max_tries=4, timeout=10)
         return float(int(result["result"], 16)) / 10 ** 9

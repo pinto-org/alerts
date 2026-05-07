@@ -292,92 +292,181 @@ class TxnPair:
         self.logs = logs
 
 class EthEventsClient:
-    def __init__(self, client_types, addresses=[]):
+    def __init__(self, client_types, addresses=None, combine_filters=False, install_filters=True):
         if not client_types:
             raise ValueError("Mut specify at least one client type")
+        if addresses is None:
+            addresses = []
+        elif isinstance(addresses, str):
+            addresses = [addresses]
 
         # Track recently seen txns to avoid processing same txn multiple times.
         self._recent_processed_txns = OrderedDict()
         self._web3 = get_web3_instance()
         self._client_types = client_types
+        self._combine_filters = combine_filters
 
         self._contracts = []
+        self._contracts_by_key = {}
+        self._contract_keys = set()
+        self._contract_event_sources = OrderedDict()
         self._contract_addresses = []
         self._signature_list = []
         self._events_dict = {}
+        self._filter_specs = []
 
         for client_type in client_types:
             if client_type == EventClientType.AQUIFER:
-                self._contracts.append(get_aquifer_contract())
-                self._contract_addresses.append(AQUIFER_ADDR)
+                contract = self._add_contract("aquifer", get_aquifer_contract())
+                self._add_contract_event_names("aquifer", contract, AQUIFER_EVENT_MAP)
+                self._add_filter_spec(client_type, [AQUIFER_ADDR], AQUIFER_SIGNATURES_LIST)
                 self._signature_list.extend(AQUIFER_SIGNATURES_LIST)
                 self._events_dict.update(AQUIFER_EVENT_MAP)
             elif client_type == EventClientType.WELL:
-                self._contracts.append(get_well_contract(None))
-                self._contract_addresses.extend(addresses)
+                contract = self._add_contract("well", get_well_contract(None))
+                self._add_contract_event_names("well", contract, WELL_EVENT_MAP)
+                self._add_filter_spec(client_type, addresses, WELL_SIGNATURES_LIST)
                 self._signature_list.extend(WELL_SIGNATURES_LIST)
                 self._events_dict.update(WELL_EVENT_MAP)
             elif client_type == EventClientType.BEANSTALK:
-                self._contracts.append(get_beanstalk_contract())
-                self._contract_addresses.append(BEANSTALK_ADDR)
+                contract = self._add_contract("beanstalk", get_beanstalk_contract())
+                self._add_contract_event_names("beanstalk", contract, BEANSTALK_EVENT_MAP)
+                self._add_filter_spec(client_type, [BEANSTALK_ADDR], BEANSTALK_SIGNATURES_LIST)
                 self._signature_list.extend(BEANSTALK_SIGNATURES_LIST)
                 self._events_dict.update(BEANSTALK_EVENT_MAP)
             elif client_type == EventClientType.SEASON:
-                self._contracts.append(get_beanstalk_contract())
-                self._contract_addresses.append(BEANSTALK_ADDR)
+                contract = self._add_contract("beanstalk", get_beanstalk_contract())
+                self._add_contract_event_names("beanstalk", contract, SEASON_EVENT_MAP)
+                self._add_filter_spec(client_type, [BEANSTALK_ADDR], SEASON_SIGNATURES_LIST)
                 self._signature_list.extend(SEASON_SIGNATURES_LIST)
                 self._events_dict.update(SEASON_EVENT_MAP)
             elif client_type == EventClientType.MARKET:
-                self._contracts.append(get_beanstalk_contract())
-                self._contract_addresses.append(BEANSTALK_ADDR)
+                contract = self._add_contract("beanstalk", get_beanstalk_contract())
+                self._add_contract_event_names("beanstalk", contract, MARKET_EVENT_MAP)
+                self._add_filter_spec(client_type, [BEANSTALK_ADDR], MARKET_SIGNATURES_LIST)
                 self._signature_list.extend(MARKET_SIGNATURES_LIST)
                 self._events_dict.update(MARKET_EVENT_MAP)
             elif client_type == EventClientType.BARN_RAISE:
-                self._contracts.append(get_fertilizer_contract())
-                self._contracts.append(get_beanstalk_contract())
-                self._contract_addresses.extend([FERTILIZER_ADDR, BEANSTALK_ADDR])
+                fertilizer_contract = self._add_contract("fertilizer", get_fertilizer_contract())
+                beanstalk_contract = self._add_contract("beanstalk", get_beanstalk_contract())
+                self._add_contract_event_names("fertilizer", fertilizer_contract, FERTILIZER_EVENT_MAP)
+                self._add_contract_event_names("beanstalk", beanstalk_contract, FERTILIZER_EVENT_MAP)
+                self._add_filter_spec(
+                    client_type, [FERTILIZER_ADDR, BEANSTALK_ADDR], FERTILIZER_SIGNATURES_LIST
+                )
                 self._signature_list.extend(FERTILIZER_SIGNATURES_LIST)
                 self._events_dict.update(FERTILIZER_EVENT_MAP)
             elif client_type == EventClientType.CONTRACT_MIGRATED:
-                self._contracts.append(get_beanstalk_contract())
-                self._contract_addresses.append(BEANSTALK_ADDR)
+                contract = self._add_contract("beanstalk", get_beanstalk_contract())
+                self._add_contract_event_names("beanstalk", contract, CONTRACTS_MIGRATED_EVENT_MAP)
+                self._add_filter_spec(
+                    client_type, [BEANSTALK_ADDR], CONTRACTS_MIGRATED_SIGNATURES_LIST
+                )
                 self._signature_list.extend(CONTRACTS_MIGRATED_SIGNATURES_LIST)
                 self._events_dict.update(CONTRACTS_MIGRATED_EVENT_MAP)
             elif client_type == EventClientType.INTEGRATIONS:
-                self._contracts.append(get_wrapped_silo_contract(SPINTO_ADDR))
-                self._contracts.extend(get_curve_spectra_contract(s.pool, s.is_legacy_abi) for s in SPECTRA_SPINTO_POOLS)
-                self._contract_addresses.append(SPINTO_ADDR)
-                self._contract_addresses.extend(s.pool for s in SPECTRA_SPINTO_POOLS)
+                contract = self._add_contract(SPINTO_ADDR.lower(), get_wrapped_silo_contract(SPINTO_ADDR))
+                self._add_contract_event_names(SPINTO_ADDR.lower(), contract, INTEGRATIONS_EVENT_MAP)
+                for s in SPECTRA_SPINTO_POOLS:
+                    contract = self._add_contract(s.pool.lower(), get_curve_spectra_contract(s.pool, s.is_legacy_abi))
+                    self._add_contract_event_names(s.pool.lower(), contract, INTEGRATIONS_EVENT_MAP)
+                self._add_filter_spec(
+                    client_type,
+                    [SPINTO_ADDR, *[s.pool for s in SPECTRA_SPINTO_POOLS]],
+                    INTEGRATIONS_SIGNATURES_LIST,
+                )
                 self._signature_list.extend(INTEGRATIONS_SIGNATURES_LIST)
                 self._events_dict.update(INTEGRATIONS_EVENT_MAP)
-        self._set_filters()
-
-    def _set_filters(self):
-        """This is located in a method so it can be reset on the fly."""
-        self._event_filters = []
-        for address in self._contract_addresses:
-            self._event_filters.append(
-                safe_create_filter(
-                    self._web3,
-                    address=address,
-                    topics=[self._signature_list],
-                    from_block=os.environ.get("DRY_RUN_FROM_BLOCK", "latest"),
-                    to_block=os.environ.get("DRY_RUN_TO_BLOCK", "latest"),
-                )
+        if install_filters:
+            self._set_filters()
+        else:
+            self._event_filters = []
+            logging.info(
+                f"{', '.join(ct.name for ct in self._client_types)} EthEventsClient "
+                "initialized without realtime filters"
             )
 
-    def get_log_range(self, from_block, to_block="latest"):
+    def _add_contract(self, key, contract):
+        if key in self._contract_keys:
+            return self._contracts_by_key[key]
+        self._contracts.append(contract)
+        self._contracts_by_key[key] = contract
+        self._contract_keys.add(key)
+        return contract
+
+    def _add_contract_event_names(self, contract_key, contract, event_map):
+        for event_name in self._event_names_from_map(event_map):
+            self._contract_event_sources[(contract_key, event_name)] = contract
+
+    def _event_names_from_map(self, event_map):
+        return [
+            key for key in event_map
+            if isinstance(key, str) and not key.startswith("0x")
+        ]
+
+    def _add_filter_spec(self, client_type, addresses, signatures):
+        addresses = list(OrderedDict.fromkeys(addresses))
+        self._contract_addresses.extend(addresses)
+        if addresses:
+            self._filter_specs.append({
+                "client_type": client_type,
+                "addresses": addresses,
+                "signatures": signatures,
+            })
+
+    def _filter_address_param(self, addresses):
+        if len(addresses) == 1:
+            return addresses[0]
+        return addresses
+
+    def _create_filters(self, from_block, to_block):
+        if self._combine_filters:
+            addresses = []
+            signatures = []
+            for spec in self._filter_specs:
+                addresses.extend(spec["addresses"])
+                signatures.extend(spec["signatures"])
+            addresses = list(OrderedDict.fromkeys(addresses))
+            signatures = list(OrderedDict.fromkeys(signatures))
+            if not addresses or not signatures:
+                return []
+            return [
+                safe_create_filter(
+                    self._web3,
+                    address=self._filter_address_param(addresses),
+                    topics=[signatures],
+                    from_block=from_block,
+                    to_block=to_block,
+                )
+            ]
+
         filters = []
-        for address in self._contract_addresses:
+        for spec in self._filter_specs:
             filters.append(
                 safe_create_filter(
                     self._web3,
-                    address=address,
-                    topics=[self._signature_list],
+                    address=self._filter_address_param(spec["addresses"]),
+                    topics=[spec["signatures"]],
                     from_block=from_block,
                     to_block=to_block,
                 )
             )
+        return filters
+
+    def _set_filters(self):
+        """This is located in a method so it can be reset on the fly."""
+        self._event_filters = self._create_filters(
+            from_block=os.environ.get("DRY_RUN_FROM_BLOCK", "latest"),
+            to_block=os.environ.get("DRY_RUN_TO_BLOCK", "latest"),
+        )
+        logging.info(
+            f"{', '.join(ct.name for ct in self._client_types)} EthEventsClient "
+            f"configured {len(self._event_filters)} filter(s) across "
+            f"{sum(len(spec['addresses']) for spec in self._filter_specs)} address(es)"
+        )
+
+    def get_log_range(self, from_block, to_block="latest"):
+        filters = self._create_filters(from_block=from_block, to_block=to_block)
         return self.get_new_logs(filters=filters, get_all=True)
 
     def get_new_logs(self, dry_run=None, filters=None, get_all=False):
@@ -500,18 +589,15 @@ class EthEventsClient:
     def logs_from_receipt(self, receipt):
         """Decode and return all logs of interest from the given receipt"""
         decoded_logs = []
-        for signature in self._signature_list:
-            for contract in self._contracts:
-                try:
-                    decoded_type_logs = contract.events[
-                        self._events_dict[signature]
-                    ]().processReceipt(receipt, errors=DISCARD)
-                except web3_exceptions.ABIEventFunctionNotFound:
-                    continue
-                for log in decoded_type_logs:
-                    # Attach the full receipt
-                    updated_log = AttributeDict({**dict(log), "receipt": receipt})
-                    decoded_logs.append(updated_log)
+        for (_, event_name), contract in self._contract_event_sources.items():
+            try:
+                decoded_type_logs = contract.events[event_name]().processReceipt(receipt, errors=DISCARD)
+            except web3_exceptions.ABIEventFunctionNotFound:
+                continue
+            for log in decoded_type_logs:
+                # Attach the full receipt
+                updated_log = AttributeDict({**dict(log), "receipt": receipt})
+                decoded_logs.append(updated_log)
         return decoded_logs
 
 def safe_create_filter(web3, address, topics, from_block, to_block):

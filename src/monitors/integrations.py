@@ -12,15 +12,20 @@ from constants.config import *
 class IntegrationsMonitor(Monitor):
     """Monitors various external contracts interacting with beanstalk."""
 
-    def __init__(self, msg_spinto, msg_spectra, prod=False, dry_run=None):
+    def __init__(self, msg_spinto, msg_spectra, prod=False, dry_run=None, shared_event_dispatcher=False):
         super().__init__(
             "Integrations", None, BEANSTALK_CHECK_RATE, prod=prod, dry_run=dry_run
         )
         self.msg_spinto = msg_spinto
         self.msg_spectra = msg_spectra
-        self._eth_event_client = EthEventsClient([EventClientType.INTEGRATIONS])
+        self._eth_event_client = None if shared_event_dispatcher else EthEventsClient([EventClientType.INTEGRATIONS])
 
     def _monitor_method(self):
+        if self._eth_event_client is None:
+            while self._thread_active:
+                time.sleep(1)
+            return
+
         self.last_check_time = 0
         self.last_heartbeat_time = time.time()
         while self._thread_active:

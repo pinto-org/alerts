@@ -13,14 +13,19 @@ from constants.config import *
 class MarketMonitor(Monitor):
     """Monitor the Beanstalk contract for market events."""
 
-    def __init__(self, message_function, prod=False, dry_run=None):
+    def __init__(self, message_function, prod=False, dry_run=None, shared_event_dispatcher=False):
         super().__init__(
             "Market", message_function, BEANSTALK_CHECK_RATE, prod=prod, dry_run=dry_run
         )
-        self._eth_event_client = EthEventsClient([EventClientType.MARKET])
+        self._eth_event_client = None if shared_event_dispatcher else EthEventsClient([EventClientType.MARKET])
         self.beanstalk_contract = get_beanstalk_contract()
 
     def _monitor_method(self):
+        if self._eth_event_client is None:
+            while self._thread_active:
+                time.sleep(1)
+            return
+
         self.last_check_time = 0
         self.last_heartbeat_time = time.time()
         while self._thread_active:
@@ -43,8 +48,11 @@ class MarketMonitor(Monitor):
 
         Note that Event Log Object is not the same as Event object.
         """
+        if not event_logs:
+            return
+
         # Match the txn invoked method. Matching is done on the first 10 characters of the hash.
-        transaction_receipt = get_txn_receipt(self._web3, txn_hash)
+        transaction_receipt = event_logs[0].receipt
 
         # Handle txn logs individually using default strings.
         for event_log in event_logs:

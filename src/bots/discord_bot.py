@@ -21,6 +21,7 @@ from constants.config import *
 from data_access.contracts.util import is_valid_wallet_address
 
 from monitors.beanstalk import BeanstalkMonitor
+from monitors.event_dispatcher import EventDispatcher, main_discord_event_routes
 from monitors.market import MarketMonitor
 from monitors.peg_cross import PegCrossMonitor
 from monitors.seasons import SeasonsMonitor
@@ -129,22 +130,35 @@ class DiscordClient(discord.ext.commands.Bot):
         self.well_monitor_whitelisted = WellsMonitor(
             self.send_msg_exchange, self.send_msg_arbitrage, [*WHITELISTED_WELLS, *DEWHITELISTED_WELLS],
             arbitrage_senders=[],
-            bean_reporting=True, prod=prod, dry_run=dry_run
+            bean_reporting=True, prod=prod, dry_run=dry_run, shared_event_dispatcher=True
         )
-        self.well_monitor_whitelisted.start()
 
         self.beanstalk_monitor = BeanstalkMonitor(
-            self.send_msg_silo, self.send_msg_field, self.send_msg_tractor, prod=prod, dry_run=dry_run
+            self.send_msg_silo, self.send_msg_field, self.send_msg_tractor, prod=prod, dry_run=dry_run,
+            shared_event_dispatcher=True
         )
-        self.beanstalk_monitor.start()
 
-        self.market_monitor = MarketMonitor(self.send_msg_market, prod=prod, dry_run=dry_run)
-        self.market_monitor.start()
+        self.market_monitor = MarketMonitor(
+            self.send_msg_market, prod=prod, dry_run=dry_run, shared_event_dispatcher=True
+        )
 
         self.integrations_monitor = IntegrationsMonitor(
-            self.send_msg_silo, self.send_msg_spectra, prod=prod, dry_run=dry_run
+            self.send_msg_silo, self.send_msg_spectra, prod=prod, dry_run=dry_run,
+            shared_event_dispatcher=True
         )
-        self.integrations_monitor.start()
+
+        self.event_dispatcher = EventDispatcher(
+            main_discord_event_routes(
+                self.well_monitor_whitelisted,
+                self.beanstalk_monitor,
+                self.market_monitor,
+                self.integrations_monitor,
+            ),
+            self.well_monitor_whitelisted.pool_addresses,
+            prod=prod,
+            dry_run=dry_run,
+        )
+        self.event_dispatcher.start()
 
         # Start monitor status logging
         threading.Thread(target=self.log_monitor_status).start()
@@ -176,6 +190,7 @@ class DiscordClient(discord.ext.commands.Bot):
                 logging.info(f"Beanstalk Monitor last update:      {datetime.datetime.fromtimestamp(self.beanstalk_monitor.last_check_time)}")
                 logging.info(f"Market Monitor last update:         {datetime.datetime.fromtimestamp(self.market_monitor.last_check_time)}")
                 logging.info(f"Integrations Monitor last update:   {datetime.datetime.fromtimestamp(self.integrations_monitor.last_check_time)}")
+                logging.info(f"Event Dispatcher last update:       {datetime.datetime.fromtimestamp(self.event_dispatcher.last_check_time)}")
                 logging.info(f"Peg Monitor last update:            {datetime.datetime.fromtimestamp(self.peg_cross_monitor.last_check_time)}")
             except Exception as e:
                 logging.error("Error in monitor status logging", exc_info=True)
@@ -185,6 +200,7 @@ class DiscordClient(discord.ext.commands.Bot):
         # self.upload_channel_to_wallets()
         self.peg_cross_monitor.stop()
         self.sunrise_monitor.stop()
+        self.event_dispatcher.stop()
         self.well_monitor_whitelisted.stop()
         self.beanstalk_monitor.stop()
         self.market_monitor.stop()
